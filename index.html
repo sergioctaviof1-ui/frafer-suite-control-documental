@@ -168,8 +168,16 @@ input,textarea,select{font-family:inherit}
 .collapsed .chevron{transform:rotate(-90deg)}
 
 /* FORM */
-.form-card{background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:28px}
-.form-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}
+.form-card{background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:0;overflow:hidden}
+.form-card-body{padding:28px}
+.form-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:16px;padding:28px 28px 0}
+.pol-ident-strip{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px 16px;padding:12px 28px;background:var(--linen);border-top:1px solid var(--stone);border-bottom:1px solid var(--stone);margin-bottom:0}
+.pol-ident-item{display:flex;flex-direction:column;gap:2px}
+.pol-ident-label{font-family:var(--ff-mono);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog)}
+.pol-ident-value{font-family:var(--ff-mono);font-size:10px;color:var(--navy);font-weight:600}
+.pol-ident-sep{color:var(--stone);font-size:14px;margin-top:12px;line-height:1}
+.pol-tabs-wrap{padding:0 28px}
+.pol-form-sections{padding:0 28px 28px}
 .form-title{font-family:var(--ff-display);font-size:20px;font-weight:400;color:var(--ink);letter-spacing:.04em}
 .form-code{font-size:11px;font-family:var(--ff-mono);color:var(--gold);margin-top:4px;letter-spacing:.06em}
 .form-section{margin-bottom:28px}
@@ -444,36 +452,85 @@ input,textarea,select{font-family:inherit}
           </div>
         </div>
 
-        <!-- FLUJO DE STATUS -->
-        <div style="margin-bottom:24px">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ciclo de Vida</div>
-          <div class="flow-row" id="status-flow"></div>
+        <!-- STRIP DE IDENTIFICACIÓN JERÁRQUICA -->
+        <div class="pol-ident-strip">
+          <div class="pol-ident-item">
+            <span class="pol-ident-label">Grupo</span>
+            <span class="pol-ident-value">Grupo Morsa</span>
+          </div>
+          <span class="pol-ident-sep">›</span>
+          <div class="pol-ident-item">
+            <span class="pol-ident-label">Dirección</span>
+            <span class="pol-ident-value" id="pol-ident-dir">—</span>
+          </div>
+          <span class="pol-ident-sep">›</span>
+          <div class="pol-ident-item">
+            <span class="pol-ident-label">Área</span>
+            <span class="pol-ident-value" id="pol-ident-area">—</span>
+          </div>
+          <span class="pol-ident-sep">›</span>
+          <div class="pol-ident-item">
+            <span class="pol-ident-label">Departamento</span>
+            <span class="pol-ident-value" id="pol-ident-dept">—</span>
+          </div>
+          <span class="pol-ident-sep">›</span>
+          <div class="pol-ident-item">
+            <span class="pol-ident-label">Actividad</span>
+            <span class="pol-ident-value" id="pol-ident-act">—</span>
+          </div>
         </div>
 
-        <div class="tabs">
-          <button class="tab active" onclick="switchTab(this,'tab-contenido')">Contenido</button>
-          <button class="tab" onclick="switchTab(this,'tab-tracking')">Tracking</button>
-          <button class="tab" onclick="switchTab(this,'tab-historial')">Historial</button>
-          <button class="tab" onclick="switchTab(this,'tab-comentarios')">Comentarios</button>
+        <div class="pol-tabs-wrap" style="padding-top:20px;margin-bottom:0">
+          <!-- FLUJO DE STATUS -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-bottom:10px;font-family:var(--ff-mono)">Ciclo de Vida</div>
+            <div class="flow-row" id="status-flow"></div>
+          </div>
+          <div class="tabs" style="margin-bottom:0">
+            <button class="tab active" onclick="switchTab(this,'tab-contenido')">Contenido</button>
+            <button class="tab" onclick="switchTab(this,'tab-tracking')">Tracking</button>
+            <button class="tab" onclick="switchTab(this,'tab-historial')">Historial</button>
+            <button class="tab" onclick="switchTab(this,'tab-comentarios')">Comentarios</button>
+          </div>
         </div>
 
         <!-- TAB: CONTENIDO -->
-        <div class="tab-panel active" id="tab-contenido">
+        <div class="tab-panel active pol-form-sections" id="tab-contenido">
           <div class="form-section">
-            <div class="form-section-title">Identificación</div>
+            <div class="form-section-title">Propósito</div>
             <div class="form-grid cols3">
               <div class="form-group full">
-                <label>Nombre de la Política</label>
-                <input id="pol-nombre" type="text">
-              </div>
-              <div class="form-group full">
-                <label>Objeto</label>
-                <textarea id="pol-objeto" rows="2" placeholder="Propósito y objetivo de la política"></textarea>
+                <label>Objetivo de la Política</label>
+                <textarea id="pol-objeto" rows="2" placeholder="Qué busca lograr esta política y por qué existe"></textarea>
               </div>
               <div class="form-group full">
                 <label>Alcance</label>
-                <textarea id="pol-alcance" rows="2" placeholder="A quién aplica y en qué áreas o sucursales"></textarea>
+                <textarea id="pol-alcance" rows="2" placeholder="A quién aplica · áreas · sucursales · excepciones de alcance"></textarea>
               </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Definiciones</div>
+            <div class="form-group full">
+              <textarea id="pol-definiciones" rows="3" placeholder="Glosario de términos clave utilizados en esta política (uno por línea o en formato libre)"></textarea>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Reglas y Lineamientos</div>
+            <div class="form-group full">
+              <textarea id="pol-contenido" rows="8" placeholder="Reglas específicas, lineamientos, obligaciones y prohibiciones que establece esta política"></textarea>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Sanciones</div>
+            <div class="form-group full">
+              <textarea id="pol-sanciones" rows="3" placeholder="Consecuencias por incumplimiento: tipo de sanción, severidad, proceso disciplinario aplicable"></textarea>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Excepciones</div>
+            <div class="form-group full">
+              <textarea id="pol-excepciones" rows="3" placeholder="Casos o situaciones específicas que quedan fuera del alcance de esta política y cómo se gestionan"></textarea>
             </div>
           </div>
           <div class="form-section">
@@ -481,7 +538,7 @@ input,textarea,select{font-family:inherit}
             <div class="form-grid">
               <div class="form-group">
                 <label>Dirección Responsable</label>
-                <input id="pol-resp-dir" placeholder="Ej: Dirección de RRHH">
+                <input id="pol-resp-dir" placeholder="Ej: Dirección de Recursos Humanos">
               </div>
               <div class="form-group">
                 <label>Elaborado por</label>
@@ -489,15 +546,8 @@ input,textarea,select{font-family:inherit}
               </div>
               <div class="form-group full">
                 <label>Colaboradores</label>
-                <input id="pol-colab" placeholder="Otras áreas o personas involucradas">
+                <input id="pol-colab" placeholder="Otras áreas o personas involucradas en la elaboración">
               </div>
-            </div>
-          </div>
-          <div class="form-section">
-            <div class="form-section-title">Contenido de la Política</div>
-            <div class="form-group full">
-              <label>Contenido</label>
-              <textarea id="pol-contenido" rows="8" placeholder="Desarrollo completo de la política: reglas, lineamientos, procedimiento general, excepciones..."></textarea>
             </div>
           </div>
           <div class="form-section">
@@ -509,7 +559,7 @@ input,textarea,select{font-family:inherit}
               </div>
               <div class="form-group">
                 <label>Esquema de Capacitación</label>
-                <input id="pol-esquema-capacitacion" placeholder="Ej: Taller anual, inducción">
+                <input id="pol-esquema-capacitacion" placeholder="Ej: Taller anual, inducción a nuevos ingresos">
               </div>
               <div class="form-group full">
                 <label>Directrices y Valores Asociados</label>
@@ -537,7 +587,7 @@ input,textarea,select{font-family:inherit}
         </div>
 
         <!-- TAB: TRACKING -->
-        <div class="tab-panel" id="tab-tracking">
+        <div class="tab-panel pol-form-sections" id="tab-tracking">
           <div class="form-section">
             <div class="form-section-title">Actores del Flujo</div>
             <div class="form-grid">
@@ -582,12 +632,12 @@ input,textarea,select{font-family:inherit}
         </div>
 
         <!-- TAB: HISTORIAL -->
-        <div class="tab-panel" id="tab-historial">
+        <div class="tab-panel pol-form-sections" id="tab-historial">
           <div class="historial-list" id="historial-list"><div class="loading">Cargando…</div></div>
         </div>
 
         <!-- TAB: COMENTARIOS -->
-        <div class="tab-panel" id="tab-comentarios">
+        <div class="tab-panel pol-form-sections" id="tab-comentarios">
           <div id="comentarios-list" style="margin-bottom:16px"></div>
           <div class="form-group" style="margin-bottom:8px">
             <label>Nuevo Comentario</label>
@@ -1089,6 +1139,23 @@ async function openPolitica(catalogoId, polId) {
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
   document.getElementById('pol-form-code').textContent  = cat ? cat.codigo_documento : '';
 
+  // Poblar strip de identificación jerárquica
+  if (cat) {
+    const area = areas.find(a=>a.id===cat.area_id);
+    const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
+    const act  = cat.actividad_id ? actividades.find(a=>a.id===cat.actividad_id) : null;
+    const dept = act ? departamentos.find(d=>d.id===act.departamento_id) : null;
+    const deptCode = dept ? String(dept.orden).padStart(3,'0') : '—';
+    const deptActs = dept ? actividades.filter(a=>a.departamento_id===dept.id)
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)) : [];
+    const actIdx  = act ? deptActs.indexOf(act) : -1;
+    const actCode = actIdx >= 0 ? String(actIdx+1).padStart(2,'0') : '—';
+    document.getElementById('pol-ident-dir').textContent  = dir  ? `${dir.codigo} · ${dir.nombre}`   : '—';
+    document.getElementById('pol-ident-area').textContent = area ? `${area.numero} · ${area.nombre}`  : '—';
+    document.getElementById('pol-ident-dept').textContent = dept ? `${deptCode} · ${dept.nombre}`     : '—';
+    document.getElementById('pol-ident-act').textContent  = act  ? `${actCode} · ${act.nombre}`       : '—';
+  }
+
   if (polId) {
     const { data: pol } = await sb.from('pol_politicas').select('*').eq('id', polId).single();
     if (pol) {
@@ -1111,8 +1178,9 @@ async function openPolitica(catalogoId, polId) {
 }
 
 function fillPoliticaForm(pol) {
-  const fields = ['objeto','alcance','contenido','canal_comunicacion','esquema_capacitacion',
-    'directrices_valores','levantado_por','revisado_por','autorizado_por'];
+  const fields = ['objeto','alcance','definiciones','contenido','sanciones','excepciones',
+    'canal_comunicacion','esquema_capacitacion','directrices_valores',
+    'levantado_por','revisado_por','autorizado_por'];
   fields.forEach(f => {
     const el = document.getElementById('pol-' + f.replace(/_/g,'-'));
     if (el) el.value = pol[f] || '';
@@ -1154,10 +1222,13 @@ async function savePolitica() {
   const payload = {
     objeto:                   document.getElementById('pol-objeto').value,
     alcance:                  document.getElementById('pol-alcance').value,
+    definiciones:             document.getElementById('pol-definiciones').value,
+    contenido:                document.getElementById('pol-contenido').value,
+    sanciones:                document.getElementById('pol-sanciones').value,
+    excepciones:              document.getElementById('pol-excepciones').value,
     responsable_direccion:    document.getElementById('pol-resp-dir').value,
     responsable_elaboracion:  document.getElementById('pol-resp-elab').value,
     colaboradores:            document.getElementById('pol-colab').value,
-    contenido:                document.getElementById('pol-contenido').value,
     canal_comunicacion:       document.getElementById('pol-canal-comunicacion').value,
     esquema_capacitacion:     document.getElementById('pol-esquema-capacitacion').value,
     directrices_valores:      document.getElementById('pol-directrices-valores').value,
