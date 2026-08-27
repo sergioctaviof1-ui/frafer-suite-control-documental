@@ -151,7 +151,8 @@ input,textarea,select{font-family:inherit}
 .tree-acts{padding:1px 0 2px 40px;display:flex;flex-direction:column;gap:1px}
 .tree-act-row{display:flex;align-items:center;gap:8px;padding:2px 4px;border-radius:3px}
 .tree-act-code{font-family:var(--ff-mono);font-size:8px;color:var(--fog);min-width:18px}
-.tree-act-name{font-size:10px;color:var(--dust)}
+.tree-act-name{font-size:10px;color:var(--dust);flex:1}
+.tree-act-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.04em;margin-left:auto;padding-right:6px}
 .badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
 .maestro-table{width:100%;border-collapse:collapse;font-size:11px}
 .maestro-table th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--navy);font-weight:700;border-bottom:2px solid var(--stone);background:var(--linen);white-space:nowrap}
@@ -439,8 +440,8 @@ input,textarea,select{font-family:inherit}
   <div class="view" id="view-catalogo">
     <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
       <div>
-        <h1>Catálogo de Políticas</h1>
-        <p>Árbol organizacional · Dirección → Área → Documentos</p>
+        <h1>Catálogo de Referencia</h1>
+        <p>Consulta de estructura organizacional · Dirección → Área → Departamento → Actividad</p>
       </div>
     </div>
     <!-- POLÍTICA FORM (embebida, se muestra al seleccionar) -->
@@ -946,9 +947,7 @@ async function loadCatalogo() {
         <span class="tree-empresa-name">${emp.nombre}</span>
       </div>
       <div class="tree-empresa-body">`;
-    if (!empDirs.length) {
-      html += `<div style="padding:12px;font-size:12px;color:var(--muted)">Sin direcciones. Agrégalas en Admin.</div>`;
-    }
+    if (!empDirs.length) return;
     empDirs.forEach(dir => {
       const dirAreas = areas.filter(a=>a.direccion_id===dir.id);
       const dirCats  = dirAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
@@ -987,9 +986,15 @@ async function loadCatalogo() {
               html += `<div class="tree-acts">`;
               deptActs.forEach((act,idx)=>{
                 const actCode = String(idx+1).padStart(2,'0');
+                const actCat  = catalogo.find(c=>c.actividad_id===act.id);
+                const actPol  = actCat ? latestPols[actCat.id] : null;
+                const folioBadge = actCat
+                  ? `<span class="tree-act-folio">${actCat.codigo_documento}</span>${badge(actPol?.status||'pendiente')}`
+                  : '';
                 html += `<div class="tree-act-row">
                   <span class="tree-act-code">${actCode}</span>
                   <span class="tree-act-name">${act.nombre}</span>
+                  ${folioBadge}
                 </div>`;
               });
               html += `</div>`;
@@ -997,25 +1002,11 @@ async function loadCatalogo() {
             html += `</div>`;
           });
         }
-        areaCats.forEach(cat => {
-          const pol = latestPols[cat.id];
-          const st  = pol ? pol.status : 'pendiente';
-          const typeColor = {PLT:'var(--gold)',PCS:'var(--blue)',PCD:'var(--salmon)'}[cat.tipo_documento]||'var(--muted)';
-          html += `<div class="tree-pol-row" onclick="openPolitica('${cat.id}','${pol?pol.id:''}')">
-            <span style="font-size:9px;color:${typeColor};font-weight:700;min-width:28px">${cat.tipo_documento}</span>
-            <span class="tree-pol-code">${cat.codigo_documento}</span>
-            <span class="tree-pol-name">${cat.nombre}</span>
-            ${badge(st)}
-          </div>`;
-        });
-        html += `<button class="tree-add-btn" onclick="openModalCatalogo('${area.id}');event.stopPropagation()">+ Agregar documento a ${area.numero} · ${area.nombre}</button>
-          </div></div>`;
+        html += `</div></div>`;
       });
-      html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalArea('${dir.id}');event.stopPropagation()">+ Nueva Área en ${dir.codigo}</button>
-        </div></div>`;
+      html += `</div></div>`;
     });
-    html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalDireccion('${emp.id}');event.stopPropagation()">+ Nueva Dirección en ${emp.nombre}</button>
-      </div></div>`;
+    html += `</div></div>`;
   });
   html += '</div>';
   document.getElementById('tree-container').innerHTML = html;
