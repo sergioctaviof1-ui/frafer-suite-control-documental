@@ -937,17 +937,7 @@ async function loadCatalogo() {
 
 
   let html = '<div class="tree">';
-  empresas.forEach(emp => {
-    const empDirs = direcciones.filter(d=>d.empresa_id===emp.id);
-    if (!empDirs.length) return;
-    html += `<div class="tree-empresa">
-      <div class="tree-empresa-header" onclick="toggleNode(this)">
-        <span class="chevron">▼</span>
-        <span class="tree-empresa-code">${emp.codigo}</span>
-        <span class="tree-empresa-name">${emp.nombre}</span>
-      </div>
-      <div class="tree-empresa-body">`;
-    empDirs.forEach(dir => {
+  direcciones.forEach(dir => {
       const dirAreas = areas.filter(a=>a.direccion_id===dir.id);
       const dirCats  = dirAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
       const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Porter · Primaria'}[dir.tipo]||dir.tipo;
@@ -1004,8 +994,6 @@ async function loadCatalogo() {
         html += `</div></div>`;
       });
       html += `</div></div>`;
-    });
-    html += `</div></div>`;
   });
   html += '</div>';
   document.getElementById('tree-container').innerHTML = html;
