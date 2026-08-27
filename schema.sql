@@ -1,26 +1,25 @@
 -- ============================================================
--- Sistema de Control Documental — Grupo Morsa
--- Frafer Consulting · Schema v2.0
--- Arquitectura de 5 niveles con catálogos base pre-alimentados
+-- Frafer Suite Control Documental · Schema v2.1
+-- Estructura Organizacional v3.2 — aprobada 2026-08-27
+-- 4 Direcciones · 18 Áreas (600–617) · Departamentos reales
 -- ============================================================
 
 -- 1. LIMPIAR ESQUEMA ANTERIOR
-drop table if exists pol_comentarios  cascade;
-drop table if exists pol_historial    cascade;
-drop table if exists pol_politicas    cascade;
-drop table if exists pol_catalogo     cascade;
-drop table if exists pol_actividades  cascade;
+drop table if exists pol_comentarios   cascade;
+drop table if exists pol_historial     cascade;
+drop table if exists pol_politicas     cascade;
+drop table if exists pol_catalogo      cascade;
+drop table if exists pol_actividades   cascade;
 drop table if exists pol_departamentos cascade;
-drop table if exists pol_areas        cascade;
-drop table if exists pol_divisiones   cascade;
-drop table if exists pol_direcciones  cascade;
+drop table if exists pol_areas         cascade;
+drop table if exists pol_divisiones    cascade;
+drop table if exists pol_direcciones   cascade;
 
 drop function if exists update_pol_updated_at cascade;
 drop function if exists log_pol_status        cascade;
 
 -- 2. TABLAS
 
--- EMPRESAS (ya existe con GM y EPL)
 create table if not exists pol_empresas (
   id         uuid primary key default gen_random_uuid(),
   codigo     text not null unique,
@@ -29,11 +28,10 @@ create table if not exists pol_empresas (
   created_at timestamptz default now()
 );
 
--- DIRECCIONES
 create table pol_direcciones (
   id         uuid primary key default gen_random_uuid(),
   empresa_id uuid references pol_empresas(id) on delete cascade,
-  codigo     text not null,          -- DG, DA, DO, DC
+  codigo     text not null,
   nombre     text not null,
   tipo       text check (tipo in ('gobierno','soporte','primaria')) default 'soporte',
   orden      int  default 0,
@@ -42,11 +40,10 @@ create table pol_direcciones (
   unique(empresa_id, codigo)
 );
 
--- ÁREAS (600–613)
 create table pol_areas (
   id           uuid primary key default gen_random_uuid(),
   direccion_id uuid references pol_direcciones(id) on delete cascade,
-  numero       text not null,        -- '600', '601', etc.
+  numero       text not null,
   nombre       text not null,
   orden        int  default 0,
   activa       boolean default true,
@@ -54,7 +51,6 @@ create table pol_areas (
   unique(direccion_id, numero)
 );
 
--- DEPARTAMENTOS
 create table pol_departamentos (
   id         uuid primary key default gen_random_uuid(),
   area_id    uuid references pol_areas(id) on delete cascade,
@@ -64,7 +60,6 @@ create table pol_departamentos (
   created_at timestamptz default now()
 );
 
--- ACTIVIDADES / TRANSACCIONES
 create table pol_actividades (
   id               uuid primary key default gen_random_uuid(),
   area_id          uuid references pol_areas(id) on delete cascade,
@@ -76,14 +71,13 @@ create table pol_actividades (
   created_at       timestamptz default now()
 );
 
--- CATÁLOGO DE DOCUMENTOS
 create table pol_catalogo (
   id               uuid primary key default gen_random_uuid(),
   area_id          uuid references pol_areas(id) on delete cascade,
   actividad_id     uuid references pol_actividades(id) on delete set null,
   tipo_documento   text not null check (tipo_documento in ('PLT','PCS','PCD')),
   numero           int  not null,
-  codigo_documento text not null unique,   -- PLT-DA-604-001
+  codigo_documento text not null unique,
   nombre           text not null,
   descripcion      text,
   prioridad        text check (prioridad in ('alta','media','baja')) default 'media',
@@ -92,7 +86,6 @@ create table pol_catalogo (
   unique(area_id, tipo_documento, numero)
 );
 
--- POLÍTICAS / DOCUMENTOS
 create table pol_politicas (
   id           uuid primary key default gen_random_uuid(),
   catalogo_id  uuid references pol_catalogo(id) on delete cascade,
@@ -126,7 +119,6 @@ create table pol_politicas (
   unique(catalogo_id, version)
 );
 
--- HISTORIAL
 create table pol_historial (
   id              uuid primary key default gen_random_uuid(),
   politica_id     uuid references pol_politicas(id) on delete cascade,
@@ -137,7 +129,6 @@ create table pol_historial (
   created_at      timestamptz default now()
 );
 
--- COMENTARIOS
 create table pol_comentarios (
   id          uuid primary key default gen_random_uuid(),
   politica_id uuid references pol_politicas(id) on delete cascade,
@@ -195,7 +186,7 @@ create policy "auth_all" on pol_historial     for all to authenticated using (tr
 create policy "auth_all" on pol_comentarios   for all to authenticated using (true) with check (true);
 
 -- ============================================================
--- 5. SEED DATA — Catálogos Base (Propuesta Frafer · Grupo Morsa)
+-- 5. SEED DATA — Estructura Organizacional v3.2
 -- ============================================================
 
 -- EMPRESAS
@@ -204,7 +195,7 @@ insert into pol_empresas (codigo, nombre) values
   ('EPL', 'Energy Parts LTH')
 on conflict (codigo) do nothing;
 
--- DIRECCIONES
+-- DIRECCIONES (4)
 with emp as (select id from pol_empresas where codigo = 'GM')
 insert into pol_direcciones (empresa_id, codigo, nombre, tipo, orden)
 select emp.id, d.codigo, d.nombre, d.tipo::text, d.orden
@@ -216,81 +207,109 @@ from emp, (values
 ) as d(codigo, nombre, tipo, orden)
 on conflict do nothing;
 
--- ÁREAS
+-- ÁREAS (18 · 600–617)
 insert into pol_areas (direccion_id, numero, nombre, orden)
 select dir.id, a.numero, a.nombre, a.orden
 from pol_direcciones dir
 join (values
-  ('DG','600','Dirección General y Gobierno Corporativo', 1),
-  ('DG','601','Contraloría',                              2),
-  ('DG','602','Auditoría Interna',                        3),
-  ('DG','603','Calidad y Mejora Continua',                4),
-  ('DA','604','Administración y Finanzas',                1),
-  ('DA','605','Recursos Humanos',                         2),
-  ('DA','606','Tecnología e Información',                 3),
-  ('DA','607','Jurídico y Legal',                         4),
-  ('DA','608','RSE / ESR',                                5),
-  ('DO','609','Logística y Almacén',                      1),
-  ('DO','610','Operaciones (Sucursales y Tiendas)',        2),
-  ('DC','611','Compras y Abastecimiento de Producto',     1),
-  ('DC','612','Comercial y Ventas',                       2),
-  ('DC','613','Servicio al Cliente',                      3)
+  -- DG · Gobierno
+  ('DG','600','Dirección General',                       1),
+  ('DG','601','Contraloría',                             2),
+  ('DG','602','Auditoría Interna',                       3),
+  ('DG','603','Calidad y Mejora Continua',               4),
+  -- DA · Soporte
+  ('DA','604','Administración y Finanzas',               1),
+  ('DA','605','Recursos Humanos',                        2),
+  ('DA','606','Tecnología e Información',                3),
+  ('DA','607','Jurídico y Legal',                        4),
+  ('DA','608','RSE / ESR',                               5),
+  -- DO · Operaciones Primaria
+  ('DO','609','Logística Interna y Almacén',             1),
+  ('DO','610','Cadena de Suministro',                    2),
+  ('DO','611','Operaciones / Puntos de Venta',           3),
+  ('DO','612','Logística Externa y Distribución',        4),
+  -- DC · Comercial Primaria
+  ('DC','613','Planeación Comercial',                    1),
+  ('DC','614','Product Management',                      2),
+  ('DC','615','Marketing y Comunicación Comercial',      3),
+  ('DC','616','Comercial y Ventas',                      4),
+  ('DC','617','Servicio al Cliente',                     5)
 ) as a(dir_codigo, numero, nombre, orden) on dir.codigo = a.dir_codigo
 on conflict do nothing;
 
--- DEPARTAMENTOS
+-- DEPARTAMENTOS (solo unidades organizacionales reales)
 insert into pol_departamentos (area_id, nombre, orden)
 select ar.id, d.nombre, d.orden
 from pol_areas ar
 join (values
-  ('600','Consejo Administrativo',             1),
-  ('600','Planeación Estratégica',             2),
-  ('600','Comunicación Institucional',         3),
-  ('601','Control Presupuestal',               1),
-  ('601','Control de Gestión',                 2),
-  ('601','Reportes Directivos',                3),
-  ('602','Auditoría de Sucursales',            1),
-  ('602','Control Interno',                    2),
-  ('602','Gestión de Riesgos',                 3),
-  ('603','Gestión de Calidad',                 1),
-  ('603','Mejora de Procesos',                 2),
-  ('603','Certificaciones',                    3),
-  ('604','Contabilidad',                       1),
-  ('604','Tesorería',                          2),
-  ('604','Fiscal e Impuestos',                 3),
-  ('604','Nómina',                             4),
-  ('604','Compras de Servicios y Suministros', 5),
-  ('605','Reclutamiento y Selección',          1),
-  ('605','Capacitación y Desarrollo',          2),
-  ('605','Compensaciones y Beneficios',        3),
-  ('605','Relaciones Laborales',               4),
-  ('605','Seguridad e Higiene',                5),
-  ('606','Infraestructura y Redes',            1),
-  ('606','Sistemas / ERP',                     2),
-  ('606','Soporte Técnico',                    3),
-  ('606','Seguridad de la Información',        4),
-  ('607','Contratos',                          1),
-  ('607','Litigios y Cumplimiento',            2),
-  ('607','Poderes y Actos Corporativos',       3),
-  ('608','Responsabilidad Social',             1),
-  ('608','Medio Ambiente',                     2),
-  ('608','Comunidad y Bienestar',              3),
-  ('609','Recepción de Mercancía',             1),
-  ('609','Almacén Central',                    2),
-  ('609','Distribución y Flota',               3),
-  ('609','Control de Inventarios',             4),
-  ('610','Grupo Morsa — Sucursales',           1),
-  ('610','Energy Parts LTH — Tiendas',         2),
-  ('610','Puntos Mayoristas',                  3),
-  ('611','Compras Nacionales',                 1),
-  ('611','Importaciones',                      2),
-  ('611','Gestión de Proveedores',             3),
-  ('611','Planeación de la Demanda',           4),
-  ('612','Ventas Mayoristas',                  1),
-  ('612','Ventas Sucursales',                  2),
-  ('612','Precios y Catálogo',                 3),
-  ('612','Crédito y Cobranza',                 4),
-  ('613','Atención al Cliente',                1),
-  ('613','Garantías y Reclamaciones',          2),
-  ('613','Postventa',                          3)
+  -- 600 · Dirección General
+  ('600','Oficina del Director General',          1),
+  ('600','Comité Directivo',                      2),
+  ('600','Planeación Estratégica',                3),
+  ('600','Comunicación Institucional',            4),
+  -- 601 · Contraloría
+  ('601','Contraloría',                           1),
+  -- 602 · Auditoría Interna
+  ('602','Auditoría Interna',                     1),
+  -- 603 · Calidad
+  ('603','Calidad',                               1),
+  -- 604 · Administración y Finanzas
+  ('604','Contabilidad',                          1),
+  ('604','Tesorería',                             2),
+  ('604','Administración Fiscal',                 3),
+  ('604','Administración Financiera',             4),
+  ('604','Nómina',                                5),
+  ('604','Compras de Servicios y Suministros',    6),
+  -- 605 · Recursos Humanos
+  ('605','Atracción de Talento',                  1),
+  ('605','Desarrollo Organizacional',             2),
+  ('605','Compensaciones y Beneficios',           3),
+  ('605','Relaciones Laborales',                  4),
+  ('605','Seguridad e Higiene (SHE)',             5),
+  -- 606 · Tecnología e Información
+  ('606','Infraestructura y Redes',               1),
+  ('606','Sistemas / ERP',                        2),
+  ('606','Soporte Técnico',                       3),
+  ('606','Seguridad de la Información',           4),
+  -- 607 · Jurídico y Legal
+  ('607','Corporativo',                           1),
+  ('607','Contencioso',                           2),
+  -- 608 · RSE / ESR
+  ('608','Responsabilidad Social',                1),
+  -- 609 · Logística Interna y Almacén
+  ('609','Almacén Central',                       1),
+  ('609','Recepción y Control de Mercancía',      2),
+  ('609','Control de Inventarios',                3),
+  -- 610 · Cadena de Suministro
+  ('610','Administración de Compras',             1),
+  ('610','Importaciones',                         2),
+  ('610','Gestión de Proveeduría',                3),
+  -- 611 · Operaciones / Puntos de Venta
+  ('611','Grupo Morsa — Sucursales',              1),
+  ('611','Energy Parts LTH — Tiendas',            2),
+  ('611','Canal Mayorista',                       3),
+  -- 612 · Logística Externa y Distribución
+  ('612','Flota y Distribución',                  1),
+  ('612','Abastecimiento a Sucursales',           2),
+  ('612','Entrega a Cliente',                     3),
+  -- 613 · Planeación Comercial
+  ('613','Planeación de la Demanda',              1),
+  ('613','Cálculo de Compra',                     2),
+  ('613','Análisis Comercial e Inteligencia',     3),
+  -- 614 · Product Management
+  ('614','Gestión de Categorías',                 1),
+  ('614','Pricing y Revenue Management',          2),
+  -- 615 · Marketing y Comunicación Comercial
+  ('615','Marketing Digital',                     1),
+  ('615','Marca y Comunicación',                  2),
+  ('615','Promociones y Trade Marketing',         3),
+  ('615','Inteligencia de Mercado',               4),
+  -- 616 · Comercial y Ventas
+  ('616','Ventas Mayoristas',                     1),
+  ('616','Ventas Sucursales',                     2),
+  ('616','Crédito y Cobranza',                    3),
+  -- 617 · Servicio al Cliente
+  ('617','Atención al Cliente',                   1),
+  ('617','Garantías y Reclamaciones',             2),
+  ('617','Postventa',                             3)
 ) as d(area_num, nombre, orden) on ar.numero = d.area_num;
