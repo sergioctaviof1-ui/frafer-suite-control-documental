@@ -939,6 +939,7 @@ async function loadCatalogo() {
   let html = '<div class="tree">';
   empresas.forEach(emp => {
     const empDirs = direcciones.filter(d=>d.empresa_id===emp.id);
+    if (!empDirs.length) return;
     html += `<div class="tree-empresa">
       <div class="tree-empresa-header" onclick="toggleNode(this)">
         <span class="chevron">▼</span>
@@ -946,7 +947,6 @@ async function loadCatalogo() {
         <span class="tree-empresa-name">${emp.nombre}</span>
       </div>
       <div class="tree-empresa-body">`;
-    if (!empDirs.length) return;
     empDirs.forEach(dir => {
       const dirAreas = areas.filter(a=>a.direccion_id===dir.id);
       const dirCats  = dirAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
