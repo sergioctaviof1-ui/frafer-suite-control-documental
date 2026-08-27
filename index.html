@@ -740,8 +740,8 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
-        <table class="admin-table"><thead><tr><th>Empresa</th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
-        <tbody id="admin-direcciones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
+        <tbody id="admin-direcciones-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -1475,12 +1475,11 @@ async function loadAdmin() {
 
   document.getElementById('admin-direcciones-body').innerHTML =
     direcciones.map(d=>`<tr>
-      <td><span class="code-tag">${empById[d.empresa_id]?.codigo||'?'}</span></td>
       <td><span class="code-tag">${d.codigo}</span></td>
       <td>${d.nombre}</td>
       <td style="font-size:11px;color:var(--muted)">${tipoLabel[d.tipo]||d.tipo}</td>
       <td><span class="badge ${d.activa?'badge-publicado':'badge-vencido'}">${d.activa?'Activa':'Inactiva'}</span></td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
   document.getElementById('admin-areas-body').innerHTML =
     areas.map(a=>{
