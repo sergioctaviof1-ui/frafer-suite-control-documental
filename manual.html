@@ -164,7 +164,7 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
     <div class="cover-meta">
       <div class="cover-meta-item">
         <div class="cover-meta-label">Versión</div>
-        <div class="cover-meta-value">1.1</div>
+        <div class="cover-meta-value">1.2</div>
       </div>
       <div class="cover-meta-item">
         <div class="cover-meta-label">Fecha</div>
@@ -550,246 +550,166 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
     <div class="section-divider"></div>
     <p class="section-lead">Las actividades son la unidad mínima del sistema. Cada una es definida por el ciclo natural del departamento — su entrada, transformación y salida — y es el origen de cada documento PLT, PCS o PCD.</p>
 
+<!-- helper style para actividades -->
+<style>
+.act-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.act-table td{padding:5px 10px;border-bottom:1px solid var(--stone);vertical-align:top}
+.act-table tr:last-child td{border-bottom:none}
+.act-num{font-family:var(--ff-mono);font-size:9px;color:var(--ember-deep);min-width:28px;white-space:nowrap}
+.act-name{color:var(--ink)}
+.dept-section{margin-bottom:14px}
+.dept-label{font-family:var(--ff-mono);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);padding:6px 10px;background:var(--linen);border-radius:4px;margin-bottom:2px;display:block}
+.area-block{padding:12px 16px;border-bottom:1px solid var(--stone)}
+.area-block:last-child{border-bottom:none}
+.area-header-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+</style>
+
     <!-- DGR -->
     <div class="dir-block">
-      <div class="dir-header">
-        <span class="dir-code">DGR</span>
-        <span class="dir-name">Dirección General</span>
-        <span class="dir-tipo tipo-gobierno">Gobierno</span>
+      <div class="dir-header"><span class="dir-code">DGR</span><span class="dir-name">Dirección General</span><span class="dir-tipo tipo-gobierno">Gobierno</span></div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">600</span><span class="area-name">Dirección General</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Oficina del Director General</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de agenda directiva</td></tr><tr><td class="act-num">02</td><td class="act-name">Atención de stakeholders clave</td></tr><tr><td class="act-num">03</td><td class="act-name">Seguimiento a indicadores del negocio</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Comité Directivo</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Convocatoria y sesión de comité</td></tr><tr><td class="act-num">02</td><td class="act-name">Seguimiento a acuerdos y minutas</td></tr><tr><td class="act-num">03</td><td class="act-name">Reporte a consejo / socios</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Planeación Estratégica</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Elaboración del plan estratégico</td></tr><tr><td class="act-num">02</td><td class="act-name">Seguimiento a iniciativas estratégicas</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de KPIs corporativos</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">004 · Comunicación Institucional</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Comunicación interna</td></tr><tr><td class="act-num">02</td><td class="act-name">Comunicación externa e imagen corporativa</td></tr></table></div>
       </div>
-      <div class="dir-areas">
-        <div class="area-row">
-          <span class="area-num">600</span>
-          <div>
-            <div class="area-name">Dirección General</div>
-            <div class="area-depts">
-              <span class="dept-chip">Oficina del Director General</span>
-              <span class="dept-chip">Comité Directivo</span>
-              <span class="dept-chip">Planeación Estratégica</span>
-              <span class="dept-chip">Comunicación Institucional</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">601</span>
-          <div>
-            <div class="area-name">Contraloría</div>
-            <div class="area-depts"><span class="dept-chip">Contraloría</span></div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">602</span>
-          <div>
-            <div class="area-name">Auditoría Interna</div>
-            <div class="area-depts"><span class="dept-chip">Auditoría Interna</span></div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">603</span>
-          <div>
-            <div class="area-name">Calidad y Mejora Continua</div>
-            <div class="area-depts"><span class="dept-chip">Calidad</span></div>
-          </div>
-        </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">601</span><span class="area-name">Contraloría</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Contraloría</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Control interno</td></tr><tr><td class="act-num">02</td><td class="act-name">Cumplimiento normativo</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de riesgos</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">602</span><span class="area-name">Auditoría Interna</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Auditoría Interna</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Planeación de auditorías</td></tr><tr><td class="act-num">02</td><td class="act-name">Ejecución de auditoría</td></tr><tr><td class="act-num">03</td><td class="act-name">Emisión de informe de hallazgos</td></tr><tr><td class="act-num">04</td><td class="act-name">Seguimiento a hallazgos</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">603</span><span class="area-name">Calidad y Mejora Continua</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Calidad</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión del sistema de calidad</td></tr><tr><td class="act-num">02</td><td class="act-name">Auditoría de calidad interna</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de no conformidades</td></tr><tr><td class="act-num">04</td><td class="act-name">Mejora continua / Lean</td></tr></table></div>
       </div>
     </div>
 
     <!-- DAF -->
     <div class="dir-block">
-      <div class="dir-header">
-        <span class="dir-code">DAF</span>
-        <span class="dir-name">Dirección de Administración y Finanzas</span>
-        <span class="dir-tipo tipo-soporte">Soporte</span>
+      <div class="dir-header"><span class="dir-code">DAF</span><span class="dir-name">Dirección de Administración y Finanzas</span><span class="dir-tipo tipo-soporte">Soporte</span></div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">604</span><span class="area-name">Administración y Finanzas</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Contabilidad</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Registro contable (pólizas)</td></tr><tr><td class="act-num">02</td><td class="act-name">Conciliaciones bancarias</td></tr><tr><td class="act-num">03</td><td class="act-name">Cierre mensual y anual</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Tesorería</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de flujo de caja</td></tr><tr><td class="act-num">02</td><td class="act-name">Pagos a proveedores</td></tr><tr><td class="act-num">03</td><td class="act-name">Cobranza y aplicación de pagos</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Administración Fiscal</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Declaraciones fiscales (ISR / IVA / IMSS)</td></tr><tr><td class="act-num">02</td><td class="act-name">Facturación electrónica (CFDI)</td></tr><tr><td class="act-num">03</td><td class="act-name">Atención a requerimientos SAT</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">004 · Administración Financiera</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Presupuesto y control presupuestal</td></tr><tr><td class="act-num">02</td><td class="act-name">Análisis financiero y variaciones</td></tr><tr><td class="act-num">03</td><td class="act-name">Forecasting y proyecciones</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">005 · Nómina</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Cálculo de nómina ordinaria</td></tr><tr><td class="act-num">02</td><td class="act-name">Finiquitos y liquidaciones</td></tr><tr><td class="act-num">03</td><td class="act-name">Obligaciones patronales (IMSS / Infonavit)</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">006 · Compras de Servicios y Suministros</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Solicitud y cotización de servicios</td></tr><tr><td class="act-num">02</td><td class="act-name">Orden de compra de servicios</td></tr><tr><td class="act-num">03</td><td class="act-name">Control de contratos de servicios</td></tr></table></div>
       </div>
-      <div class="dir-areas">
-        <div class="area-row">
-          <span class="area-num">604</span>
-          <div>
-            <div class="area-name">Administración y Finanzas</div>
-            <div class="area-depts">
-              <span class="dept-chip">Contabilidad</span>
-              <span class="dept-chip">Tesorería</span>
-              <span class="dept-chip">Administración Fiscal</span>
-              <span class="dept-chip">Administración Financiera</span>
-              <span class="dept-chip">Nómina</span>
-              <span class="dept-chip">Compras de Servicios y Suministros</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">606</span>
-          <div>
-            <div class="area-name">Tecnología e Información</div>
-            <div class="area-depts">
-              <span class="dept-chip">Infraestructura y Redes</span>
-              <span class="dept-chip">Sistemas / ERP</span>
-              <span class="dept-chip">Soporte Técnico</span>
-              <span class="dept-chip">Seguridad de la Información</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">607</span>
-          <div>
-            <div class="area-name">Jurídico y Legal</div>
-            <div class="area-depts">
-              <span class="dept-chip">Corporativo</span>
-              <span class="dept-chip">Contencioso</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">608</span>
-          <div>
-            <div class="area-name">RSE / ESR</div>
-            <div class="area-depts"><span class="dept-chip">Responsabilidad Social</span></div>
-          </div>
-        </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">606</span><span class="area-name">Tecnología e Información</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Infraestructura y Redes</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de red y conectividad</td></tr><tr><td class="act-num">02</td><td class="act-name">Administración de servidores</td></tr><tr><td class="act-num">03</td><td class="act-name">Respaldo y recuperación de información</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Sistemas / ERP</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Administración y configuración del ERP</td></tr><tr><td class="act-num">02</td><td class="act-name">Desarrollos y customizaciones</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de licencias y actualizaciones</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Soporte Técnico</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Mesa de ayuda (tickets)</td></tr><tr><td class="act-num">02</td><td class="act-name">Soporte a usuarios (hardware / software)</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de activos tecnológicos</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">004 · Seguridad de la Información</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de accesos y permisos</td></tr><tr><td class="act-num">02</td><td class="act-name">Monitoreo de ciberseguridad</td></tr><tr><td class="act-num">03</td><td class="act-name">Recuperación ante desastres (DR)</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">607</span><span class="area-name">Jurídico y Legal</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Corporativo</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Revisión y elaboración de contratos</td></tr><tr><td class="act-num">02</td><td class="act-name">Actas de asamblea y poderes notariales</td></tr><tr><td class="act-num">03</td><td class="act-name">Asesoría legal a dirección</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Contencioso</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de litigios y demandas</td></tr><tr><td class="act-num">02</td><td class="act-name">Atención a autoridades (SAT / STPS / PROFECO)</td></tr><tr><td class="act-num">03</td><td class="act-name">Recuperación de cartera por vía legal</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">608</span><span class="area-name">RSE / ESR</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Responsabilidad Social</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Programas de responsabilidad social</td></tr><tr><td class="act-num">02</td><td class="act-name">Donaciones y patrocinios</td></tr><tr><td class="act-num">03</td><td class="act-name">Reporte de sustentabilidad</td></tr></table></div>
       </div>
     </div>
 
     <!-- DRH -->
     <div class="dir-block">
-      <div class="dir-header">
-        <span class="dir-code">DRH</span>
-        <span class="dir-name">Dirección de Recursos Humanos y Desarrollo Organizacional</span>
-        <span class="dir-tipo tipo-soporte">Soporte</span>
-      </div>
-      <div class="dir-areas">
-        <div class="area-row">
-          <span class="area-num">605</span>
-          <div>
-            <div class="area-name">Recursos Humanos</div>
-            <div class="area-depts">
-              <span class="dept-chip">Atracción de Talento</span>
-              <span class="dept-chip">Desarrollo Organizacional</span>
-              <span class="dept-chip">Compensaciones y Beneficios</span>
-              <span class="dept-chip">Relaciones Laborales</span>
-              <span class="dept-chip">Seguridad e Higiene (SHE)</span>
-            </div>
-          </div>
-        </div>
+      <div class="dir-header"><span class="dir-code">DRH</span><span class="dir-name">Dirección de Recursos Humanos y Desarrollo Organizacional</span><span class="dir-tipo tipo-soporte">Soporte</span></div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">605</span><span class="area-name">Recursos Humanos</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Atracción de Talento</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Requisición de personal</td></tr><tr><td class="act-num">02</td><td class="act-name">Reclutamiento y selección</td></tr><tr><td class="act-num">03</td><td class="act-name">Contratación e inducción</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Desarrollo Organizacional</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Detección de necesidades de capacitación (DNC)</td></tr><tr><td class="act-num">02</td><td class="act-name">Programas de capacitación</td></tr><tr><td class="act-num">03</td><td class="act-name">Evaluación de desempeño</td></tr><tr><td class="act-num">04</td><td class="act-name">Planes de carrera y sucesión</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Compensaciones y Beneficios</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Administración de tabulador salarial</td></tr><tr><td class="act-num">02</td><td class="act-name">Gestión de beneficios</td></tr><tr><td class="act-num">03</td><td class="act-name">Bonos e incentivos</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">004 · Relaciones Laborales</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de contrato colectivo</td></tr><tr><td class="act-num">02</td><td class="act-name">Atención de conflictos laborales</td></tr><tr><td class="act-num">03</td><td class="act-name">Trámites ante IMSS / STPS</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">005 · Seguridad e Higiene (SHE)</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de comisiones mixtas de seguridad</td></tr><tr><td class="act-num">02</td><td class="act-name">Inspecciones y programas de prevención</td></tr><tr><td class="act-num">03</td><td class="act-name">Atención de accidentes e incidentes</td></tr></table></div>
       </div>
     </div>
 
     <!-- DOP -->
     <div class="dir-block">
-      <div class="dir-header">
-        <span class="dir-code">DOP</span>
-        <span class="dir-name">Dirección de Operaciones</span>
-        <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
+      <div class="dir-header"><span class="dir-code">DOP</span><span class="dir-name">Dirección de Operaciones</span><span class="dir-tipo tipo-primaria">Porter · Primaria</span></div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">609</span><span class="area-name">Logística Interna y Almacén</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Almacén Central</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Control de entradas al almacén</td></tr><tr><td class="act-num">02</td><td class="act-name">Control de salidas del almacén</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de mermas y devoluciones</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Recepción y Control de Mercancía</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Recepción física de mercancía</td></tr><tr><td class="act-num">02</td><td class="act-name">Verificación de pedido vs. recepción</td></tr><tr><td class="act-num">03</td><td class="act-name">Inspección de calidad en recepción</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Control de Inventarios</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Conteos cíclicos</td></tr><tr><td class="act-num">02</td><td class="act-name">Inventario físico general</td></tr><tr><td class="act-num">03</td><td class="act-name">Ajustes de inventario</td></tr><tr><td class="act-num">04</td><td class="act-name">Análisis de rotación y obsolescencia</td></tr></table></div>
       </div>
-      <div class="dir-areas">
-        <div class="area-row">
-          <span class="area-num">609</span>
-          <div>
-            <div class="area-name">Logística Interna y Almacén</div>
-            <div class="area-depts">
-              <span class="dept-chip">Almacén Central</span>
-              <span class="dept-chip">Recepción y Control de Mercancía</span>
-              <span class="dept-chip">Control de Inventarios</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">610</span>
-          <div>
-            <div class="area-name">Cadena de Suministro</div>
-            <div class="area-depts">
-              <span class="dept-chip">Administración de Compras</span>
-              <span class="dept-chip">Importaciones</span>
-              <span class="dept-chip">Gestión de Proveeduría</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">611</span>
-          <div>
-            <div class="area-name">Operaciones / Puntos de Venta</div>
-            <div class="area-depts">
-              <span class="dept-chip">Grupo Morsa — Sucursales</span>
-              <span class="dept-chip">Energy Parts LTH — Tiendas</span>
-              <span class="dept-chip">Canal Mayorista</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">612</span>
-          <div>
-            <div class="area-name">Logística Externa y Distribución</div>
-            <div class="area-depts">
-              <span class="dept-chip">Flota y Distribución</span>
-              <span class="dept-chip">Abastecimiento a Sucursales</span>
-              <span class="dept-chip">Entrega a Cliente</span>
-            </div>
-          </div>
-        </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">610</span><span class="area-name">Cadena de Suministro</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Administración de Compras</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Generación de órdenes de compra</td></tr><tr><td class="act-num">02</td><td class="act-name">Seguimiento y confirmación de pedidos</td></tr><tr><td class="act-num">03</td><td class="act-name">Negociación de condiciones con proveedores</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Importaciones</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión aduanal y documentación</td></tr><tr><td class="act-num">02</td><td class="act-name">Coordinación con agente aduanal</td></tr><tr><td class="act-num">03</td><td class="act-name">Cálculo y pago de aranceles</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Gestión de Proveeduría</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Alta y validación de proveedores</td></tr><tr><td class="act-num">02</td><td class="act-name">Contratos marco con proveedores</td></tr><tr><td class="act-num">03</td><td class="act-name">Evaluación de desempeño de proveedores</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">611</span><span class="area-name">Operaciones / Puntos de Venta</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Grupo Morsa — Sucursales</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Apertura y cierre de sucursal</td></tr><tr><td class="act-num">02</td><td class="act-name">Gestión de caja y corte</td></tr><tr><td class="act-num">03</td><td class="act-name">Surtido y exhibición</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Energy Parts LTH — Tiendas</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Operación de tienda especializada</td></tr><tr><td class="act-num">02</td><td class="act-name">Venta técnica de refacciones</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de inventario en tienda</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Canal Mayorista</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Atención a clientes mayoristas</td></tr><tr><td class="act-num">02</td><td class="act-name">Procesamiento de pedidos mayoreo</td></tr><tr><td class="act-num">03</td><td class="act-name">Condiciones comerciales mayoreo</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">612</span><span class="area-name">Logística Externa y Distribución</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Flota y Distribución</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de vehículos y mantenimiento</td></tr><tr><td class="act-num">02</td><td class="act-name">Asignación de rutas</td></tr><tr><td class="act-num">03</td><td class="act-name">Monitoreo GPS y cumplimiento de ruta</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Abastecimiento a Sucursales</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Cálculo de necesidades por sucursal</td></tr><tr><td class="act-num">02</td><td class="act-name">Picking y packing</td></tr><tr><td class="act-num">03</td><td class="act-name">Despacho y confirmación de recepción</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Entrega a Cliente</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Programación de entregas</td></tr><tr><td class="act-num">02</td><td class="act-name">Entrega y firma de conformidad</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de devoluciones en entrega</td></tr></table></div>
       </div>
     </div>
 
     <!-- DCO -->
     <div class="dir-block">
-      <div class="dir-header">
-        <span class="dir-code">DCO</span>
-        <span class="dir-name">Dirección Comercial</span>
-        <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
+      <div class="dir-header"><span class="dir-code">DCO</span><span class="dir-name">Dirección Comercial</span><span class="dir-tipo tipo-primaria">Porter · Primaria</span></div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">613</span><span class="area-name">Planeación Comercial</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Planeación de la Demanda</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Análisis de históricos de venta</td></tr><tr><td class="act-num">02</td><td class="act-name">Elaboración de forecast de demanda</td></tr><tr><td class="act-num">03</td><td class="act-name">Validación con equipo comercial</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Cálculo de Compra</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Determinación de necesidades de compra</td></tr><tr><td class="act-num">02</td><td class="act-name">Cálculo de OTB (Open to Buy)</td></tr><tr><td class="act-num">03</td><td class="act-name">Liberación del plan de compras</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Análisis Comercial e Inteligencia</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Análisis de sell-out por SKU / categoría</td></tr><tr><td class="act-num">02</td><td class="act-name">Benchmarking competitivo</td></tr><tr><td class="act-num">03</td><td class="act-name">Reportes de desempeño comercial</td></tr></table></div>
       </div>
-      <div class="dir-areas">
-        <div class="area-row">
-          <span class="area-num">613</span>
-          <div>
-            <div class="area-name">Planeación Comercial</div>
-            <div class="area-depts">
-              <span class="dept-chip">Planeación de la Demanda</span>
-              <span class="dept-chip">Cálculo de Compra</span>
-              <span class="dept-chip">Análisis Comercial e Inteligencia</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">614</span>
-          <div>
-            <div class="area-name">Product Management</div>
-            <div class="area-depts">
-              <span class="dept-chip">Gestión de Categorías</span>
-              <span class="dept-chip">Pricing y Revenue Management</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">615</span>
-          <div>
-            <div class="area-name">Marketing y Comunicación Comercial</div>
-            <div class="area-depts">
-              <span class="dept-chip">Marketing Digital</span>
-              <span class="dept-chip">Marca y Comunicación</span>
-              <span class="dept-chip">Promociones y Trade Marketing</span>
-              <span class="dept-chip">Inteligencia de Mercado</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">616</span>
-          <div>
-            <div class="area-name">Comercial y Ventas</div>
-            <div class="area-depts">
-              <span class="dept-chip">Ventas Mayoristas</span>
-              <span class="dept-chip">Ventas Sucursales</span>
-              <span class="dept-chip">Crédito y Cobranza</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">617</span>
-          <div>
-            <div class="area-name">Servicio al Cliente</div>
-            <div class="area-depts">
-              <span class="dept-chip">Atención al Cliente</span>
-              <span class="dept-chip">Garantías y Reclamaciones</span>
-              <span class="dept-chip">Postventa</span>
-            </div>
-          </div>
-        </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">614</span><span class="area-name">Product Management</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Gestión de Categorías</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Definición de surtido por categoría</td></tr><tr><td class="act-num">02</td><td class="act-name">Alta y baja de productos</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión del ciclo de vida del producto</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Pricing y Revenue Management</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Definición de precios de lista</td></tr><tr><td class="act-num">02</td><td class="act-name">Gestión de márgenes por categoría</td></tr><tr><td class="act-num">03</td><td class="act-name">Actualización de precios en sistema</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">615</span><span class="area-name">Marketing y Comunicación Comercial</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Marketing Digital</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de redes sociales</td></tr><tr><td class="act-num">02</td><td class="act-name">Campañas digitales (SEM / SEO)</td></tr><tr><td class="act-num">03</td><td class="act-name">Análisis de métricas digitales</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Marca y Comunicación</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de identidad de marca</td></tr><tr><td class="act-num">02</td><td class="act-name">Producción de materiales de comunicación</td></tr><tr><td class="act-num">03</td><td class="act-name">Calendario editorial</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Promociones y Trade Marketing</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Diseño de promociones</td></tr><tr><td class="act-num">02</td><td class="act-name">Ejecución en punto de venta</td></tr><tr><td class="act-num">03</td><td class="act-name">Medición de efectividad de promociones</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">004 · Inteligencia de Mercado</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Investigación de mercado</td></tr><tr><td class="act-num">02</td><td class="act-name">Análisis de competencia</td></tr><tr><td class="act-num">03</td><td class="act-name">Tendencias del sector automotriz</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">616</span><span class="area-name">Comercial y Ventas</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Ventas Mayoristas</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Prospección y desarrollo de cuentas</td></tr><tr><td class="act-num">02</td><td class="act-name">Negociación y cierre de venta mayoreo</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de pedidos mayoreo</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Ventas Sucursales</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Gestión de fuerza de ventas en sucursal</td></tr><tr><td class="act-num">02</td><td class="act-name">Metas y seguimiento de vendedores</td></tr><tr><td class="act-num">03</td><td class="act-name">Cierre y reporte de ventas diarias</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Crédito y Cobranza</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Análisis y autorización de crédito</td></tr><tr><td class="act-num">02</td><td class="act-name">Facturación a crédito</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de cobranza</td></tr><tr><td class="act-num">04</td><td class="act-name">Cartera vencida y castigos</td></tr></table></div>
+      </div>
+
+      <div class="area-block">
+        <div class="area-header-row"><span class="area-num">617</span><span class="area-name">Servicio al Cliente</span></div>
+        <div class="dept-section"><span class="dept-label">001 · Atención al Cliente</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Recepción y atención de consultas</td></tr><tr><td class="act-num">02</td><td class="act-name">Gestión de quejas y reclamaciones</td></tr><tr><td class="act-num">03</td><td class="act-name">Escalamiento y seguimiento a resolución</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">002 · Garantías y Reclamaciones</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Recepción de garantía</td></tr><tr><td class="act-num">02</td><td class="act-name">Validación y dictamen</td></tr><tr><td class="act-num">03</td><td class="act-name">Reposición o devolución</td></tr></table></div>
+        <div class="dept-section"><span class="dept-label">003 · Postventa</span><table class="act-table"><tr><td class="act-num">01</td><td class="act-name">Encuestas de satisfacción</td></tr><tr><td class="act-num">02</td><td class="act-name">Programa de fidelización</td></tr><tr><td class="act-num">03</td><td class="act-name">Gestión de devoluciones y cambios</td></tr></table></div>
       </div>
     </div>
 
@@ -798,7 +718,7 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
   <!-- FOOTER -->
   <div class="footer">
     <div class="footer-brand">Frafer Suite</div>
-    <div class="footer-meta">Control Documental · Versión 1.0 · Agosto 2026 · Frafer Consulting</div>
+    <div class="footer-meta">Control Documental · Versión 1.2 · Agosto 2026 · Frafer Consulting</div>
   </div>
 
 </div>
