@@ -221,32 +221,40 @@ input,textarea,select{font-family:inherit}
   <span class="topbar-user" id="topbar-user"></span>
 </div>
 
-<!-- MODAL: Nueva división -->
-<div class="modal-overlay" id="modal-division">
+<!-- MODAL: Nueva dirección -->
+<div class="modal-overlay" id="modal-direccion">
   <div class="modal">
-    <h3>Nueva División</h3>
-    <div class="alert alert-error" id="mdiv-error"></div>
+    <h3>Nueva Dirección</h3>
+    <div class="alert alert-error" id="mdir-error"></div>
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group">
         <label>Empresa</label>
-        <select id="mdiv-empresa"></select>
+        <select id="mdir-empresa"></select>
       </div>
       <div class="form-group">
-        <label>Código</label>
-        <input id="mdiv-codigo" placeholder="Ej: RH" maxlength="10" style="text-transform:uppercase">
+        <label>Código (siglas)</label>
+        <input id="mdir-codigo" placeholder="Ej: DA" maxlength="4" style="text-transform:uppercase">
       </div>
       <div class="form-group full">
         <label>Nombre</label>
-        <input id="mdiv-nombre" placeholder="Ej: Recursos Humanos">
+        <input id="mdir-nombre" placeholder="Ej: Dirección de Operaciones">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="mdir-tipo">
+          <option value="gobierno">Gobierno</option>
+          <option value="soporte" selected>Soporte</option>
+          <option value="primaria">Primaria (Porter)</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Orden</label>
-        <input id="mdiv-orden" type="number" value="0">
+        <input id="mdir-orden" type="number" value="0">
       </div>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveDivision()">Guardar</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-division')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDireccion()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-direccion')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -258,12 +266,12 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="marea-error"></div>
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group full">
-        <label>División</label>
-        <select id="marea-division"></select>
+        <label>Dirección</label>
+        <select id="marea-direccion"></select>
       </div>
       <div class="form-group">
-        <label>Código</label>
-        <input id="marea-codigo" placeholder="Ej: COMP" maxlength="10" style="text-transform:uppercase">
+        <label>Número (600-699)</label>
+        <input id="marea-numero" placeholder="Ej: 614" maxlength="3" type="number">
       </div>
       <div class="form-group">
         <label>Orden</label>
@@ -271,7 +279,7 @@ input,textarea,select{font-family:inherit}
       </div>
       <div class="form-group full">
         <label>Nombre</label>
-        <input id="marea-nombre" placeholder="Ej: Compensaciones">
+        <input id="marea-nombre" placeholder="Ej: Comercio Exterior">
       </div>
     </div>
     <div class="actions-row">
@@ -281,21 +289,21 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
-<!-- MODAL: Nueva política en catálogo -->
+<!-- MODAL: Nueva entrada en catálogo -->
 <div class="modal-overlay" id="modal-catalogo">
   <div class="modal">
-    <h3>Agregar Política al Catálogo</h3>
+    <h3>Agregar Documento al Catálogo</h3>
     <div class="alert alert-error" id="mcat-error"></div>
     <input type="hidden" id="mcat-area-id">
-    <div class="form-group" style="margin-bottom:8px"><label>Código generado</label><div id="mcat-codigo-preview" style="font-family:monospace;font-size:14px;color:var(--gold);padding:8px 0"></div></div>
+    <div class="form-group" style="margin-bottom:8px"><label>Código generado</label><div id="mcat-codigo-preview" style="font-family:monospace;font-size:16px;color:var(--gold);padding:8px 0;letter-spacing:.06em"></div></div>
     <div class="form-grid" style="margin-bottom:14px">
-      <div class="form-group full">
-        <label>Nombre de la Política</label>
-        <input id="mcat-nombre" placeholder="Ej: Política de Vacaciones">
-      </div>
-      <div class="form-group full">
-        <label>Descripción (opcional)</label>
-        <textarea id="mcat-desc" rows="2" placeholder="Propósito general de la política"></textarea>
+      <div class="form-group">
+        <label>Tipo de Documento</label>
+        <select id="mcat-tipo" onchange="updateCodigoPreview()">
+          <option value="PLT">PLT — Política</option>
+          <option value="PCS">PCS — Proceso</option>
+          <option value="PCD">PCD — Procedimiento</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Prioridad</label>
@@ -305,9 +313,17 @@ input,textarea,select{font-family:inherit}
           <option value="baja">Baja</option>
         </select>
       </div>
+      <div class="form-group full">
+        <label>Nombre del Documento</label>
+        <input id="mcat-nombre" placeholder="Ej: Política de Vacaciones y Permisos">
+      </div>
+      <div class="form-group full">
+        <label>Descripción (opcional)</label>
+        <textarea id="mcat-desc" rows="2" placeholder="Propósito general del documento"></textarea>
+      </div>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveCatalogo()">Agregar</button>
+      <button class="btn btn-primary" onclick="saveCatalogo()">Agregar al Catálogo</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-catalogo')">Cancelar</button>
     </div>
   </div>
@@ -351,7 +367,7 @@ input,textarea,select{font-family:inherit}
     <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
       <div>
         <h1>Catálogo de Políticas</h1>
-        <p>Árbol organizacional · División → Área → Casillero de Políticas</p>
+        <p>Árbol organizacional · Dirección → Área → Documentos</p>
       </div>
     </div>
     <!-- POLÍTICA FORM (embebida, se muestra al seleccionar) -->
@@ -552,20 +568,21 @@ input,textarea,select{font-family:inherit}
   <div class="view" id="view-admin">
     <div class="page-header">
       <h1>Administración</h1>
-      <p>Gestión de Divisiones y Áreas del Grupo</p>
+      <p>Gestión de Direcciones, Áreas y Departamentos</p>
     </div>
     <div class="tabs">
-      <button class="tab active" onclick="switchTab(this,'atab-divisiones')">Divisiones</button>
+      <button class="tab active" onclick="switchTab(this,'atab-direcciones')">Direcciones</button>
       <button class="tab" onclick="switchTab(this,'atab-areas')">Áreas</button>
+      <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
     </div>
 
-    <div class="tab-panel active" id="atab-divisiones">
+    <div class="tab-panel active" id="atab-direcciones">
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-        <button class="btn btn-primary btn-sm" onclick="openModalDivision()">+ Nueva División</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-        <table class="admin-table"><thead><tr><th>Empresa</th><th>Código</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
-        <tbody id="admin-divisiones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Empresa</th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
+        <tbody id="admin-direcciones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -574,8 +591,15 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-        <table class="admin-table"><thead><tr><th>División</th><th>Código</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
+        <table class="admin-table"><thead><tr><th>Dirección</th><th>Núm.</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-areas-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-depto">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="admin-table"><thead><tr><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
+        <tbody id="admin-deptos-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
   </div>
@@ -586,6 +610,7 @@ input,textarea,select{font-family:inherit}
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
 const SB_URL  = 'https://lygpotmaneqgewjcetzw.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5Z3BvdG1hbmVxZ2V3amNldHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTA3MjYsImV4cCI6MjEwMzQyNjcyNn0.0nIHvEuH6AKRymb_IjlxS_zfYTw8aXhGxUTxYUorNbM';
+
 
 let _jwt = sessionStorage.getItem('frafer_jwt') || localStorage.getItem('frafer_jwt') || null;
 
@@ -605,7 +630,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON, {
 });
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let empresas = [], divisiones = [], areas = [], catalogo = [], politicaActual = null;
+let empresas = [], direcciones = [], areas = [], departamentos = [], catalogo = [], politicaActual = null;
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function showView(name) {
@@ -681,11 +706,12 @@ function renderAdvanceActions(pol) {
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
-  const [{ data: pols }, { data: cats }, { data: divs }, { data: emps }] = await Promise.all([
+  const [{ data: pols }, { data: cats }, { data: dirs }, { data: emps }, { data: areasData }] = await Promise.all([
     sb.from('pol_politicas').select('id,status,catalogo_id,fecha_vencimiento'),
-    sb.from('pol_catalogo').select('id,area_id,codigo_politica'),
-    sb.from('pol_divisiones').select('id,nombre,empresa_id,codigo'),
-    sb.from('pol_empresas').select('id,nombre,codigo')
+    sb.from('pol_catalogo').select('id,area_id,codigo_documento'),
+    sb.from('pol_direcciones').select('id,nombre,empresa_id,codigo,tipo').order('orden'),
+    sb.from('pol_empresas').select('id,nombre,codigo'),
+    sb.from('pol_areas').select('id,direccion_id')
   ]);
 
   const total  = pols?.length || 0;
@@ -703,46 +729,37 @@ async function loadDashboard() {
   document.getElementById('stat-pend').textContent   = pend;
   document.getElementById('stat-venc').textContent   = (venc+alertas) || '—';
 
-  // Semáforo por División
-  if (!emps || !divs) return;
-  const catById = Object.fromEntries((cats||[]).map(c=>[c.id,c]));
-  const polsByDiv = {};
+  if (!emps || !dirs) return;
+  const catById  = Object.fromEntries((cats||[]).map(c=>[c.id,c]));
+  const areaToDir = Object.fromEntries((areasData||[]).map(a=>[a.id,a.direccion_id]));
 
+  const dirStats = {};
   (pols||[]).forEach(p => {
     const cat = catById[p.catalogo_id]; if (!cat) return;
-    // necesito area→division mapping: lo hacemos con divs
+    const dirId = areaToDir[cat.area_id]; if (!dirId) return;
+    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0};
+    if (p.status==='publicado') dirStats[dirId].pub++;
+    else if (p.status==='pendiente') dirStats[dirId].pend++;
+    else if (p.status==='vencido') dirStats[dirId].venc++;
+    else dirStats[dirId].proc++;
   });
 
-  // Rebuilding with area data
-  const { data: areasData } = await sb.from('pol_areas').select('id,division_id');
-  const areaToDiv = Object.fromEntries((areasData||[]).map(a=>[a.id,a.division_id]));
-
-  const divStats = {};
-  (pols||[]).forEach(p => {
-    const cat = catById[p.catalogo_id]; if (!cat) return;
-    const divId = areaToDiv[cat.area_id]; if (!divId) return;
-    if (!divStats[divId]) divStats[divId] = {pub:0,proc:0,pend:0,venc:0};
-    if (p.status==='publicado') divStats[divId].pub++;
-    else if (p.status==='pendiente') divStats[divId].pend++;
-    else if (p.status==='vencido') divStats[divId].venc++;
-    else divStats[divId].proc++;
-  });
-
+  const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
   let tbody = '';
   (emps||[]).forEach(emp => {
-    const empDivs = divs.filter(d=>d.empresa_id===emp.id);
-    if (!empDivs.length) return;
+    const empDirs = dirs.filter(d=>d.empresa_id===emp.id);
+    if (!empDirs.length) return;
     tbody += `<tr class="empresa-row"><td colspan="6">${emp.codigo} · ${emp.nombre}</td></tr>`;
-    empDivs.forEach(div => {
-      const s = divStats[div.id] || {pub:0,proc:0,pend:0,venc:0};
-      const total = s.pub+s.proc+s.pend+s.venc;
-      const pct = total ? Math.round((s.pub/total)*100) : 0;
+    empDirs.forEach(dir => {
+      const s = dirStats[dir.id] || {pub:0,proc:0,pend:0,venc:0};
+      const tot = s.pub+s.proc+s.pend+s.venc;
+      const pct = tot ? Math.round((s.pub/tot)*100) : 0;
       tbody += `<tr>
-        <td><span class="div-label">${div.nombre}</span></td>
+        <td><span class="div-label">[${dir.codigo}] ${dir.nombre}</span><br><span style="font-size:10px;color:var(--muted)">${tipoLabel[dir.tipo]||dir.tipo}</span></td>
         <td style="color:var(--green)">${s.pub}</td>
         <td style="color:var(--amber)">${s.proc}</td>
         <td style="color:var(--muted)">${s.pend}</td>
-        <td>${total}</td>
+        <td>${tot}</td>
         <td style="min-width:120px">
           <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pct}%</div>
           <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -750,28 +767,33 @@ async function loadDashboard() {
       </tr>`;
     });
   });
-  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos. Configura divisiones y agrega políticas al catálogo.</td></tr>';
+  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos. Corre el schema y seed en Supabase primero.</td></tr>';
 }
 
 // ── CATÁLOGO / ÁRBOL ──────────────────────────────────────────────────────────
 async function loadCatalogo() {
-  const [{ data: emps }, { data: divs }, { data: areasData }, { data: cats }, { data: pols }] = await Promise.all([
+  const [{ data: emps }, { data: dirsData }, { data: areasData }, { data: deptos }, { data: cats }, { data: pols }] = await Promise.all([
     sb.from('pol_empresas').select('*').eq('activa',true),
-    sb.from('pol_divisiones').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_direcciones').select('*').eq('activa',true).order('orden'),
     sb.from('pol_areas').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
     sb.from('pol_politicas').select('id,catalogo_id,status,version')
   ]);
-  empresas = emps||[]; divisiones = divs||[]; areas = areasData||[]; catalogo = cats||[];
+  empresas = emps||[]; direcciones = dirsData||[]; areas = areasData||[];
+  departamentos = deptos||[]; catalogo = cats||[];
+
   const latestPols = {};
   (pols||[]).forEach(p => {
     if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
       latestPols[p.catalogo_id] = p;
   });
 
+  const tipoColors = {gobierno:'var(--gold)',soporte:'var(--blue)',primaria:'var(--green)'};
+
   let html = '<div class="tree">';
   empresas.forEach(emp => {
-    const empDivs = divisiones.filter(d=>d.empresa_id===emp.id);
+    const empDirs = direcciones.filter(d=>d.empresa_id===emp.id);
     html += `<div class="tree-empresa">
       <div class="tree-empresa-header" onclick="toggleNode(this)">
         <span class="chevron">▼</span>
@@ -779,46 +801,57 @@ async function loadCatalogo() {
         <span class="tree-empresa-name">${emp.nombre}</span>
       </div>
       <div class="tree-empresa-body">`;
-    if (!empDivs.length) {
-      html += `<div style="padding:12px;font-size:12px;color:var(--muted)">Sin divisiones. Agrégalas en Admin.</div>`;
+    if (!empDirs.length) {
+      html += `<div style="padding:12px;font-size:12px;color:var(--muted)">Sin direcciones. Agrégalas en Admin.</div>`;
     }
-    empDivs.forEach(div => {
-      const divAreas = areas.filter(a=>a.division_id===div.id);
-      const divPols  = divAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
+    empDirs.forEach(dir => {
+      const dirAreas = areas.filter(a=>a.direccion_id===dir.id);
+      const dirCats  = dirAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
+      const dotColor = tipoColors[dir.tipo]||'var(--muted)';
       html += `<div class="tree-division">
         <div class="tree-division-header" onclick="toggleNode(this)">
           <span class="chevron">▼</span>
-          <span class="tree-div-code">${div.codigo}</span>
-          <span class="tree-div-name">${div.nombre}</span>
-          <span class="tree-div-count">${divPols.length} pol.</span>
+          <span class="tree-div-code" style="color:${dotColor}">${dir.codigo}</span>
+          <span class="tree-div-name">${dir.nombre}</span>
+          <span class="tree-div-count">${dirCats.length} doc.</span>
         </div>
         <div class="tree-areas">`;
-      divAreas.forEach(area => {
-        const areaPols = catalogo.filter(c=>c.area_id===area.id);
+      dirAreas.forEach(area => {
+        const areaCats  = catalogo.filter(c=>c.area_id===area.id);
+        const areaDeptos = departamentos.filter(d=>d.area_id===area.id);
         html += `<div class="tree-area">
           <div class="tree-area-header" onclick="toggleNode(this)">
             <span class="chevron">▼</span>
-            <span class="tree-area-code">${area.codigo}</span>
+            <span class="tree-area-code">${area.numero}</span>
             <span class="tree-area-name">${area.nombre}</span>
-            <span class="tree-area-count">${areaPols.length} pol.</span>
+            <span class="tree-area-count">${areaCats.length} doc.</span>
           </div>
           <div class="tree-politicas">`;
-        areaPols.forEach(cat => {
+        if (areaDeptos.length) {
+          html += `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:4px 4px 8px;border-bottom:1px solid var(--border);margin-bottom:4px">`;
+          areaDeptos.forEach(d => {
+            html += `<span style="font-size:10px;background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:4px;color:var(--muted)">${d.nombre}</span>`;
+          });
+          html += `</div>`;
+        }
+        areaCats.forEach(cat => {
           const pol = latestPols[cat.id];
           const st  = pol ? pol.status : 'pendiente';
+          const typeColor = {PLT:'var(--gold)',PCS:'var(--blue)',PCD:'var(--salmon)'}[cat.tipo_documento]||'var(--muted)';
           html += `<div class="tree-pol-row" onclick="openPolitica('${cat.id}','${pol?pol.id:''}')">
-            <span class="tree-pol-code">${cat.codigo_politica}</span>
+            <span style="font-size:9px;color:${typeColor};font-weight:700;min-width:28px">${cat.tipo_documento}</span>
+            <span class="tree-pol-code">${cat.codigo_documento}</span>
             <span class="tree-pol-name">${cat.nombre}</span>
             ${badge(st)}
           </div>`;
         });
-        html += `<button class="tree-add-btn" onclick="openModalCatalogo('${area.id}');event.stopPropagation()">+ Agregar política a esta área</button>
+        html += `<button class="tree-add-btn" onclick="openModalCatalogo('${area.id}');event.stopPropagation()">+ Agregar documento a ${area.numero} · ${area.nombre}</button>
           </div></div>`;
       });
-      html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalArea('${div.id}');event.stopPropagation()">+ Nueva Área en ${div.nombre}</button>
+      html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalArea('${dir.id}');event.stopPropagation()">+ Nueva Área en ${dir.codigo}</button>
         </div></div>`;
     });
-    html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalDivision('${emp.id}');event.stopPropagation()">+ Nueva División en ${emp.nombre}</button>
+    html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalDireccion('${emp.id}');event.stopPropagation()">+ Nueva Dirección en ${emp.nombre}</button>
       </div></div>`;
   });
   html += '</div>';
@@ -841,7 +874,7 @@ async function openPolitica(catalogoId, polId) {
 
   const cat = catalogo.find(c=>c.id===catalogoId);
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
-  document.getElementById('pol-form-code').textContent  = cat ? cat.codigo_politica : '';
+  document.getElementById('pol-form-code').textContent  = cat ? cat.codigo_documento : '';
 
   if (polId) {
     const { data: pol } = await sb.from('pol_politicas').select('*').eq('id', polId).single();
@@ -1004,41 +1037,45 @@ function closePoliticaPanel() {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-async function openModalDivision(empresaId) {
-  const sel = document.getElementById('mdiv-empresa');
+function openModalDireccion(empresaId) {
+  const sel = document.getElementById('mdir-empresa');
   sel.innerHTML = empresas.map(e=>`<option value="${e.id}"${e.id===empresaId?' selected':''}>${e.nombre}</option>`).join('');
-  document.getElementById('mdiv-codigo').value = '';
-  document.getElementById('mdiv-nombre').value = '';
-  document.getElementById('mdiv-orden').value  = '0';
-  document.getElementById('mdiv-error').classList.remove('show');
-  document.getElementById('modal-division').classList.add('open');
+  document.getElementById('mdir-codigo').value = '';
+  document.getElementById('mdir-nombre').value = '';
+  document.getElementById('mdir-orden').value  = '0';
+  document.getElementById('mdir-error').classList.remove('show');
+  document.getElementById('modal-direccion').classList.add('open');
 }
 
-async function openModalArea(divisionId) {
-  await loadCatalogo(); // refresh
-  const sel = document.getElementById('marea-division');
-  sel.innerHTML = divisiones.map(d=>`<option value="${d.id}"${d.id===divisionId?' selected':''}>${d.nombre} (${d.codigo})</option>`).join('');
-  document.getElementById('marea-codigo').value = '';
+function openModalArea(direccionId) {
+  const sel = document.getElementById('marea-direccion');
+  sel.innerHTML = direcciones.map(d=>`<option value="${d.id}"${d.id===direccionId?' selected':''}>[${d.codigo}] ${d.nombre}</option>`).join('');
+  document.getElementById('marea-numero').value = '';
   document.getElementById('marea-nombre').value = '';
   document.getElementById('marea-orden').value  = '0';
   document.getElementById('marea-error').classList.remove('show');
   document.getElementById('modal-area').classList.add('open');
 }
 
-async function openModalCatalogo(areaId) {
+function openModalCatalogo(areaId) {
   document.getElementById('mcat-area-id').value = areaId;
   document.getElementById('mcat-nombre').value  = '';
   document.getElementById('mcat-desc').value    = '';
+  document.getElementById('mcat-tipo').value    = 'PLT';
   document.getElementById('mcat-error').classList.remove('show');
-  // Generate next code
-  const area = areas.find(a=>a.id===areaId);
-  const div  = divisiones.find(d=>d.id===area?.division_id);
-  const emp  = empresas.find(e=>e.id===div?.empresa_id);
-  const existing = catalogo.filter(c=>c.area_id===areaId);
-  const nextNum  = (existing.length+1).toString().padStart(3,'0');
-  const code = emp && div && area ? `${emp.codigo}-${div.codigo}-${area.codigo}-${nextNum}` : `—-${nextNum}`;
-  document.getElementById('mcat-codigo-preview').textContent = code;
+  updateCodigoPreview();
   document.getElementById('modal-catalogo').classList.add('open');
+}
+
+function updateCodigoPreview() {
+  const areaId = document.getElementById('mcat-area-id').value;
+  const tipo   = document.getElementById('mcat-tipo').value || 'PLT';
+  const area   = areas.find(a=>a.id===areaId);
+  const dir    = direcciones.find(d=>d.id===area?.direccion_id);
+  const existing = catalogo.filter(c=>c.area_id===areaId && c.tipo_documento===tipo);
+  const nextNum  = (existing.length+1).toString().padStart(3,'0');
+  const code = dir && area ? `${tipo}-${dir.codigo}-${area.numero}-${nextNum}` : `${tipo}-???-${nextNum}`;
+  document.getElementById('mcat-codigo-preview').textContent = code;
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1047,41 +1084,43 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-async function saveDivision() {
-  const empresa_id = document.getElementById('mdiv-empresa').value;
-  const codigo     = document.getElementById('mdiv-codigo').value.trim().toUpperCase();
-  const nombre     = document.getElementById('mdiv-nombre').value.trim();
-  const orden      = parseInt(document.getElementById('mdiv-orden').value)||0;
-  if (!codigo || !nombre) { showModalError('mdiv-error','Código y Nombre son obligatorios.'); return; }
-  const { error } = await sb.from('pol_divisiones').insert({ empresa_id, codigo, nombre, orden });
-  if (error) { showModalError('mdiv-error', error.message); return; }
-  closeModal('modal-division');
+async function saveDireccion() {
+  const empresa_id = document.getElementById('mdir-empresa').value;
+  const codigo     = document.getElementById('mdir-codigo').value.trim().toUpperCase();
+  const nombre     = document.getElementById('mdir-nombre').value.trim();
+  const tipo       = document.getElementById('mdir-tipo').value;
+  const orden      = parseInt(document.getElementById('mdir-orden').value)||0;
+  if (!codigo || !nombre) { showModalError('mdir-error','Código y Nombre son obligatorios.'); return; }
+  const { error } = await sb.from('pol_direcciones').insert({ empresa_id, codigo, nombre, tipo, orden });
+  if (error) { showModalError('mdir-error', error.message); return; }
+  closeModal('modal-direccion');
   loadCatalogo(); loadAdmin();
 }
 
 async function saveArea() {
-  const division_id = document.getElementById('marea-division').value;
-  const codigo      = document.getElementById('marea-codigo').value.trim().toUpperCase();
-  const nombre      = document.getElementById('marea-nombre').value.trim();
-  const orden       = parseInt(document.getElementById('marea-orden').value)||0;
-  if (!codigo || !nombre) { showModalError('marea-error','Código y Nombre son obligatorios.'); return; }
-  const { error } = await sb.from('pol_areas').insert({ division_id, codigo, nombre, orden });
+  const direccion_id = document.getElementById('marea-direccion').value;
+  const numero       = document.getElementById('marea-numero').value.trim();
+  const nombre       = document.getElementById('marea-nombre').value.trim();
+  const orden        = parseInt(document.getElementById('marea-orden').value)||0;
+  if (!numero || !nombre) { showModalError('marea-error','Número y Nombre son obligatorios.'); return; }
+  const { error } = await sb.from('pol_areas').insert({ direccion_id, numero, nombre, orden });
   if (error) { showModalError('marea-error', error.message); return; }
   closeModal('modal-area');
   loadCatalogo(); loadAdmin();
 }
 
 async function saveCatalogo() {
-  const area_id   = document.getElementById('mcat-area-id').value;
-  const nombre    = document.getElementById('mcat-nombre').value.trim();
-  const descripcion = document.getElementById('mcat-desc').value.trim();
-  const prioridad = document.getElementById('mcat-prioridad').value;
-  const codigo    = document.getElementById('mcat-codigo-preview').textContent;
+  const area_id        = document.getElementById('mcat-area-id').value;
+  const tipo_documento = document.getElementById('mcat-tipo').value;
+  const nombre         = document.getElementById('mcat-nombre').value.trim();
+  const descripcion    = document.getElementById('mcat-desc').value.trim();
+  const prioridad      = document.getElementById('mcat-prioridad').value;
+  const codigo_documento = document.getElementById('mcat-codigo-preview').textContent;
   if (!nombre) { showModalError('mcat-error','El nombre es obligatorio.'); return; }
-  const existing = catalogo.filter(c=>c.area_id===area_id);
+  const existing = catalogo.filter(c=>c.area_id===area_id && c.tipo_documento===tipo_documento);
   const numero   = existing.length + 1;
   const { error } = await sb.from('pol_catalogo').insert({
-    area_id, nombre, descripcion, prioridad, numero, codigo_politica: codigo
+    area_id, tipo_documento, nombre, descripcion, prioridad, numero, codigo_documento
   });
   if (error) { showModalError('mcat-error', error.message); return; }
   closeModal('modal-catalogo');
@@ -1096,42 +1135,59 @@ function showModalError(elId, msg) {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 async function loadAdmin() {
-  const [{ data: emps }, { data: divs }, { data: areasData }] = await Promise.all([
+  const [{ data: emps }, { data: dirsData }, { data: areasData }, { data: deptosData }] = await Promise.all([
     sb.from('pol_empresas').select('*').order('codigo'),
-    sb.from('pol_divisiones').select('*').order('orden'),
-    sb.from('pol_areas').select('*').order('orden')
+    sb.from('pol_direcciones').select('*').order('orden'),
+    sb.from('pol_areas').select('*').order('numero'),
+    sb.from('pol_departamentos').select('*').order('orden')
   ]);
-  empresas = emps||[]; divisiones = divs||[]; areas = areasData||[];
+  empresas = emps||[]; direcciones = dirsData||[]; areas = areasData||[]; departamentos = deptosData||[];
   const empById = Object.fromEntries(empresas.map(e=>[e.id,e]));
-  const divById = Object.fromEntries(divisiones.map(d=>[d.id,d]));
+  const dirById = Object.fromEntries(direcciones.map(d=>[d.id,d]));
+  const areaById = Object.fromEntries(areas.map(a=>[a.id,a]));
+  const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
 
-  document.getElementById('admin-divisiones-body').innerHTML =
-    divisiones.map(d=>`<tr>
+  document.getElementById('admin-direcciones-body').innerHTML =
+    direcciones.map(d=>`<tr>
       <td><span class="code-tag">${empById[d.empresa_id]?.codigo||'?'}</span></td>
       <td><span class="code-tag">${d.codigo}</span></td>
       <td>${d.nombre}</td>
-      <td>${d.orden}</td>
+      <td style="font-size:11px;color:var(--muted)">${tipoLabel[d.tipo]||d.tipo}</td>
       <td><span class="badge ${d.activa?'badge-publicado':'badge-vencido'}">${d.activa?'Activa':'Inactiva'}</span></td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin divisiones</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
   document.getElementById('admin-areas-body').innerHTML =
     areas.map(a=>{
-      const div = divById[a.division_id];
+      const dir = dirById[a.direccion_id];
       return `<tr>
-        <td>${div?`<span class="code-tag">${div.codigo}</span> ${div.nombre}`:a.division_id}</td>
-        <td><span class="code-tag">${a.codigo}</span></td>
+        <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
+        <td><span class="code-tag">${a.numero}</span></td>
         <td>${a.nombre}</td>
         <td>${a.orden}</td>
         <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
+
+  document.getElementById('admin-deptos-body').innerHTML =
+    departamentos.map(d=>{
+      const area = areaById[d.area_id];
+      return `<tr>
+        <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:d.area_id}</td>
+        <td>${d.nombre}</td>
+        <td>${d.orden}</td>
+        <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (async () => {
-  // Cargar empresas globalmente para modales
-  const { data: emps } = await sb.from('pol_empresas').select('*');
+  const [{ data: emps }, { data: dirs }] = await Promise.all([
+    sb.from('pol_empresas').select('*'),
+    sb.from('pol_direcciones').select('*').order('orden')
+  ]);
   empresas = emps || [];
+  direcciones = dirs || [];
   loadDashboard();
 })();
 </script>
