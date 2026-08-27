@@ -186,7 +186,8 @@ create policy "auth_all" on pol_historial     for all to authenticated using (tr
 create policy "auth_all" on pol_comentarios   for all to authenticated using (true) with check (true);
 
 -- ============================================================
--- 5. SEED DATA — Estructura Organizacional v3.2
+-- 5. SEED DATA — Estructura Organizacional v3.3
+-- 5 Direcciones · DGR/DAF/DRH/DOP/DCO · 18 Áreas · 57 Deptos
 -- ============================================================
 
 -- EMPRESAS
@@ -195,15 +196,16 @@ insert into pol_empresas (codigo, nombre) values
   ('EPL', 'Energy Parts LTH')
 on conflict (codigo) do nothing;
 
--- DIRECCIONES (4)
+-- DIRECCIONES (5) — v3.3
 with emp as (select id from pol_empresas where codigo = 'GM')
 insert into pol_direcciones (empresa_id, codigo, nombre, tipo, orden)
 select emp.id, d.codigo, d.nombre, d.tipo::text, d.orden
 from emp, (values
-  ('DG', 'Dirección General',                         'gobierno', 1),
-  ('DA', 'Dirección Administrativa y Capital Humano', 'soporte',  2),
-  ('DO', 'Dirección de Operaciones',                  'primaria', 3),
-  ('DC', 'Dirección Comercial',                       'primaria', 4)
+  ('DGR', 'Dirección General',                                            'gobierno', 1),
+  ('DAF', 'Dirección de Administración y Finanzas',                       'soporte',  2),
+  ('DRH', 'Dirección de Recursos Humanos y Desarrollo Organizacional',    'soporte',  3),
+  ('DOP', 'Dirección de Operaciones',                                     'primaria', 4),
+  ('DCO', 'Dirección Comercial',                                          'primaria', 5)
 ) as d(codigo, nombre, tipo, orden)
 on conflict do nothing;
 
@@ -212,28 +214,29 @@ insert into pol_areas (direccion_id, numero, nombre, orden)
 select dir.id, a.numero, a.nombre, a.orden
 from pol_direcciones dir
 join (values
-  -- DG · Gobierno
-  ('DG','600','Dirección General',                       1),
-  ('DG','601','Contraloría',                             2),
-  ('DG','602','Auditoría Interna',                       3),
-  ('DG','603','Calidad y Mejora Continua',               4),
-  -- DA · Soporte
-  ('DA','604','Administración y Finanzas',               1),
-  ('DA','605','Recursos Humanos',                        2),
-  ('DA','606','Tecnología e Información',                3),
-  ('DA','607','Jurídico y Legal',                        4),
-  ('DA','608','RSE / ESR',                               5),
-  -- DO · Operaciones Primaria
-  ('DO','609','Logística Interna y Almacén',             1),
-  ('DO','610','Cadena de Suministro',                    2),
-  ('DO','611','Operaciones / Puntos de Venta',           3),
-  ('DO','612','Logística Externa y Distribución',        4),
-  -- DC · Comercial Primaria
-  ('DC','613','Planeación Comercial',                    1),
-  ('DC','614','Product Management',                      2),
-  ('DC','615','Marketing y Comunicación Comercial',      3),
-  ('DC','616','Comercial y Ventas',                      4),
-  ('DC','617','Servicio al Cliente',                     5)
+  -- DGR · Gobierno
+  ('DGR','600','Dirección General',                       1),
+  ('DGR','601','Contraloría',                             2),
+  ('DGR','602','Auditoría Interna',                       3),
+  ('DGR','603','Calidad y Mejora Continua',               4),
+  -- DAF · Administración y Finanzas
+  ('DAF','604','Administración y Finanzas',               1),
+  ('DAF','606','Tecnología e Información',                2),
+  ('DAF','607','Jurídico y Legal',                        3),
+  ('DAF','608','RSE / ESR',                               4),
+  -- DRH · Recursos Humanos
+  ('DRH','605','Recursos Humanos',                        1),
+  -- DOP · Operaciones Primaria
+  ('DOP','609','Logística Interna y Almacén',             1),
+  ('DOP','610','Cadena de Suministro',                    2),
+  ('DOP','611','Operaciones / Puntos de Venta',           3),
+  ('DOP','612','Logística Externa y Distribución',        4),
+  -- DCO · Comercial Primaria
+  ('DCO','613','Planeación Comercial',                    1),
+  ('DCO','614','Product Management',                      2),
+  ('DCO','615','Marketing y Comunicación Comercial',      3),
+  ('DCO','616','Comercial y Ventas',                      4),
+  ('DCO','617','Servicio al Cliente',                     5)
 ) as a(dir_codigo, numero, nombre, orden) on dir.codigo = a.dir_codigo
 on conflict do nothing;
 

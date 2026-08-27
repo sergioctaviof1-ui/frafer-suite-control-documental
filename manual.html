@@ -164,7 +164,7 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
     <div class="cover-meta">
       <div class="cover-meta-item">
         <div class="cover-meta-label">Versión</div>
-        <div class="cover-meta-value">1.0</div>
+        <div class="cover-meta-value">1.1</div>
       </div>
       <div class="cover-meta-item">
         <div class="cover-meta-label">Fecha</div>
@@ -239,27 +239,33 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
         </thead>
         <tbody>
           <tr>
-            <td><span class="field-num">DG</span></td>
+            <td><span class="field-num">DGR</span></td>
             <td><span class="field-name">Dirección General</span></td>
-            <td><span class="dept-chip" style="background:#1C2B3A18;color:#1C2B3A;border-color:#1C2B3A30">Gobierno</span></td>
+            <td><span class="dir-tipo tipo-gobierno">Gobierno</span></td>
             <td class="field-desc">600 · 601 · 602 · 603</td>
           </tr>
           <tr>
-            <td><span class="field-num">DA</span></td>
-            <td><span class="field-name">Dirección Administrativa y Capital Humano</span></td>
-            <td><span class="dept-chip">Soporte</span></td>
-            <td class="field-desc">604 · 605 · 606 · 607 · 608</td>
+            <td><span class="field-num">DAF</span></td>
+            <td><span class="field-name">Dirección de Administración y Finanzas</span></td>
+            <td><span class="dir-tipo tipo-soporte">Soporte</span></td>
+            <td class="field-desc">604 · 606 · 607 · 608</td>
           </tr>
           <tr>
-            <td><span class="field-num">DO</span></td>
+            <td><span class="field-num">DRH</span></td>
+            <td><span class="field-name">Dirección de Recursos Humanos y Desarrollo Organizacional</span></td>
+            <td><span class="dir-tipo tipo-soporte">Soporte</span></td>
+            <td class="field-desc">605</td>
+          </tr>
+          <tr>
+            <td><span class="field-num">DOP</span></td>
             <td><span class="field-name">Dirección de Operaciones</span></td>
-            <td><span class="dept-chip" style="background:#FBF0F4;color:#9A6070;border-color:#C0889828">Porter · Primaria</span></td>
+            <td><span class="dir-tipo tipo-primaria">Porter · Primaria</span></td>
             <td class="field-desc">609 · 610 · 611 · 612</td>
           </tr>
           <tr>
-            <td><span class="field-num">DC</span></td>
+            <td><span class="field-num">DCO</span></td>
             <td><span class="field-name">Dirección Comercial</span></td>
-            <td><span class="dept-chip" style="background:#FBF0F4;color:#9A6070;border-color:#C0889828">Porter · Primaria</span></td>
+            <td><span class="dir-tipo tipo-primaria">Porter · Primaria</span></td>
             <td class="field-desc">613 · 614 · 615 · 616 · 617</td>
           </tr>
         </tbody>
@@ -372,7 +378,7 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
     </table>
 
     <div class="nota" style="margin-top:20px">
-      <strong>Ejemplo completo:</strong> &nbsp;<span style="font-family:var(--ff-mono);color:var(--ember-deep)">PLT-DA-604-003-01</span> &nbsp;= Política · Dirección Administrativa · Área 604 Administración y Finanzas · Departamento 003 Administración Fiscal · Actividad 01 Declaraciones fiscales.
+      <strong>Ejemplo completo:</strong> &nbsp;<span style="font-family:var(--ff-mono);color:var(--ember-deep)">PLT-DAF-604-003-01</span> &nbsp;= Política · Dirección de Administración y Finanzas · Área 604 · Departamento 003 Administración Fiscal · Actividad 01 Declaraciones fiscales.
     </div>
   </div>
 
@@ -544,10 +550,10 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
     <div class="section-divider"></div>
     <p class="section-lead">Las actividades son la unidad mínima del sistema. Cada una es definida por el ciclo natural del departamento — su entrada, transformación y salida — y es el origen de cada documento PLT, PCS o PCD.</p>
 
-    <!-- DG -->
+    <!-- DGR -->
     <div class="dir-block">
       <div class="dir-header">
-        <span class="dir-code">DG</span>
+        <span class="dir-code">DGR</span>
         <span class="dir-name">Dirección General</span>
         <span class="dir-tipo tipo-gobierno">Gobierno</span>
       </div>
@@ -588,11 +594,11 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
       </div>
     </div>
 
-    <!-- DA -->
+    <!-- DAF -->
     <div class="dir-block">
       <div class="dir-header">
-        <span class="dir-code">DA</span>
-        <span class="dir-name">Dirección Administrativa y Capital Humano</span>
+        <span class="dir-code">DAF</span>
+        <span class="dir-name">Dirección de Administración y Finanzas</span>
         <span class="dir-tipo tipo-soporte">Soporte</span>
       </div>
       <div class="dir-areas">
@@ -607,19 +613,6 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
               <span class="dept-chip">Administración Financiera</span>
               <span class="dept-chip">Nómina</span>
               <span class="dept-chip">Compras de Servicios y Suministros</span>
-            </div>
-          </div>
-        </div>
-        <div class="area-row">
-          <span class="area-num">605</span>
-          <div>
-            <div class="area-name">Recursos Humanos</div>
-            <div class="area-depts">
-              <span class="dept-chip">Atracción de Talento</span>
-              <span class="dept-chip">Desarrollo Organizacional</span>
-              <span class="dept-chip">Compensaciones y Beneficios</span>
-              <span class="dept-chip">Relaciones Laborales</span>
-              <span class="dept-chip">Seguridad e Higiene (SHE)</span>
             </div>
           </div>
         </div>
@@ -655,10 +648,34 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
       </div>
     </div>
 
-    <!-- DO -->
+    <!-- DRH -->
     <div class="dir-block">
       <div class="dir-header">
-        <span class="dir-code">DO</span>
+        <span class="dir-code">DRH</span>
+        <span class="dir-name">Dirección de Recursos Humanos y Desarrollo Organizacional</span>
+        <span class="dir-tipo tipo-soporte">Soporte</span>
+      </div>
+      <div class="dir-areas">
+        <div class="area-row">
+          <span class="area-num">605</span>
+          <div>
+            <div class="area-name">Recursos Humanos</div>
+            <div class="area-depts">
+              <span class="dept-chip">Atracción de Talento</span>
+              <span class="dept-chip">Desarrollo Organizacional</span>
+              <span class="dept-chip">Compensaciones y Beneficios</span>
+              <span class="dept-chip">Relaciones Laborales</span>
+              <span class="dept-chip">Seguridad e Higiene (SHE)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOP -->
+    <div class="dir-block">
+      <div class="dir-header">
+        <span class="dir-code">DOP</span>
         <span class="dir-name">Dirección de Operaciones</span>
         <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
       </div>
@@ -710,10 +727,10 @@ body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-we
       </div>
     </div>
 
-    <!-- DC -->
+    <!-- DCO -->
     <div class="dir-block">
       <div class="dir-header">
-        <span class="dir-code">DC</span>
+        <span class="dir-code">DCO</span>
         <span class="dir-name">Dirección Comercial</span>
         <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
       </div>
