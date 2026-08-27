@@ -317,10 +317,6 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="mdir-error"></div>
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group">
-        <label>Empresa</label>
-        <select id="mdir-empresa"></select>
-      </div>
-      <div class="form-group">
         <label>Código (siglas)</label>
         <input id="mdir-codigo" placeholder="Ej: DA" maxlength="4" style="text-transform:uppercase">
       </div>
@@ -1356,9 +1352,7 @@ function closePoliticaPanel() {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
-function openModalDireccion(empresaId) {
-  const sel = document.getElementById('mdir-empresa');
-  sel.innerHTML = empresas.map(e=>`<option value="${e.id}"${e.id===empresaId?' selected':''}>${e.nombre}</option>`).join('');
+function openModalDireccion() {
   document.getElementById('mdir-codigo').value = '';
   document.getElementById('mdir-nombre').value = '';
   document.getElementById('mdir-orden').value  = '0';
@@ -1404,13 +1398,12 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 async function saveDireccion() {
-  const empresa_id = document.getElementById('mdir-empresa').value;
-  const codigo     = document.getElementById('mdir-codigo').value.trim().toUpperCase();
-  const nombre     = document.getElementById('mdir-nombre').value.trim();
-  const tipo       = document.getElementById('mdir-tipo').value;
-  const orden      = parseInt(document.getElementById('mdir-orden').value)||0;
+  const codigo = document.getElementById('mdir-codigo').value.trim().toUpperCase();
+  const nombre = document.getElementById('mdir-nombre').value.trim();
+  const tipo   = document.getElementById('mdir-tipo').value;
+  const orden  = parseInt(document.getElementById('mdir-orden').value)||0;
   if (!codigo || !nombre) { showModalError('mdir-error','Código y Nombre son obligatorios.'); return; }
-  const { error } = await sb.from('pol_direcciones').insert({ empresa_id, codigo, nombre, tipo, orden });
+  const { error } = await sb.from('pol_direcciones').insert({ codigo, nombre, tipo, orden });
   if (error) { showModalError('mdir-error', error.message); return; }
   closeModal('modal-direccion');
   loadCatalogo(); loadAdmin();
