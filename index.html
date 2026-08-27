@@ -25,7 +25,7 @@
   --gold:        #A88858;
   --gold-bright: #C0A070;
   --gold-mist:   #FAF3E8;
-  --navy:        #2D4A6B;
+  --navy:        #1C2B3A;
   --green:       #5A8C72;
   --amber:       #A88858;
   --orange:      #B87860;
@@ -53,10 +53,10 @@ input,textarea,select{font-family:inherit}
 /* NAV — Frafer header */
 .topbar{display:flex;align-items:center;gap:20px;padding:0 28px;height:58px;background:var(--navy);position:sticky;top:0;z-index:100;position:relative}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%)}
-.topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase}
-.topbar-sep{display:none}
-.topbar-title{font-family:var(--ff-mono);font-size:8px;font-weight:300;color:var(--ember-glow);letter-spacing:.22em;text-transform:uppercase;opacity:.8;margin-top:3px}
-.topbar-brand-wrap{display:flex;flex-direction:column;justify-content:center}
+.topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
+.topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow),transparent);opacity:.4;margin:4px 0}
+.topbar-title{font-family:var(--ff-mono);font-size:7.5px;font-weight:400;color:var(--ember-glow);letter-spacing:.32em;text-transform:uppercase;opacity:.85;text-align:center;padding-left:.32em}
+.topbar-brand-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center}
 .topbar-nav{display:flex;gap:0;margin-left:auto}
 .nav-btn{padding:0 20px;height:58px;font-family:var(--ff-body);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
 .nav-btn:hover{color:rgba(255,255,255,.75);background:rgba(255,255,255,.04)}
@@ -191,7 +191,7 @@ input,textarea,select{font-family:inherit}
 /* ACCIONES */
 .btn{padding:9px 18px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;transition:all .15s;display:inline-flex;align-items:center;gap:6px;font-family:var(--ff-body)}
 .btn-primary{background:var(--navy);color:var(--parchment)}
-.btn-primary:hover{background:#1E3650}
+.btn-primary:hover{background:#142030}
 .btn-ghost{background:transparent;color:var(--dust);border:1px solid var(--stone)}
 .btn-ghost:hover{border-color:var(--fog);color:var(--ink)}
 .btn-danger{background:#b8505010;color:var(--red);border:1px solid #b8505030}
@@ -250,6 +250,7 @@ input,textarea,select{font-family:inherit}
 <div class="topbar">
   <div class="topbar-brand-wrap">
     <span class="topbar-brand">Frafer Suite</span>
+    <span class="topbar-sep"></span>
     <span class="topbar-title">Control Documental</span>
   </div>
   <nav class="topbar-nav">
