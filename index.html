@@ -178,6 +178,11 @@ input,textarea,select{font-family:inherit}
 .pol-ident-sep{color:var(--stone);font-size:14px;margin-top:12px;line-height:1}
 .pol-tabs-wrap{padding:0 28px}
 .pol-form-sections{padding:0 28px 28px}
+.doc-ctrl-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+.doc-ctrl-table td{padding:8px 12px;border:1px solid var(--stone);vertical-align:middle}
+.dc-lbl{font-family:var(--ff-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);background:var(--linen);width:22%;white-space:nowrap}
+.dc-input{width:100%;border:none;background:transparent;font-size:11px;color:var(--ink);font-family:var(--ff-body);outline:none;padding:0}
+.dc-display{font-size:11px;color:var(--ink);font-family:var(--ff-mono)}
 .form-title{font-family:var(--ff-display);font-size:20px;font-weight:400;color:var(--ink);letter-spacing:.04em}
 .form-code{font-size:11px;font-family:var(--ff-mono);color:var(--gold);margin-top:4px;letter-spacing:.06em}
 .form-section{margin-bottom:28px}
@@ -516,7 +521,13 @@ input,textarea,select{font-family:inherit}
             </div>
           </div>
           <div class="form-section">
-            <div class="form-section-title">Reglas y Lineamientos</div>
+            <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
+              <span>Reglas y Lineamientos</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <label style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin:0"># de Reglas</label>
+                <input id="pol-num-reglas" type="number" min="0" placeholder="0" style="width:64px;padding:4px 8px;font-size:12px;border:1px solid var(--stone);border-radius:6px;background:var(--parchment);color:var(--navy);font-family:var(--ff-mono);text-align:center">
+              </div>
+            </div>
             <div class="form-group full">
               <textarea id="pol-contenido" rows="8" placeholder="Reglas específicas, lineamientos, obligaciones y prohibiciones que establece esta política"></textarea>
             </div>
@@ -543,6 +554,10 @@ input,textarea,select{font-family:inherit}
               <div class="form-group">
                 <label>Elaborado por</label>
                 <input id="pol-resp-elab" placeholder="Nombre del gerente / supervisor">
+              </div>
+              <div class="form-group">
+                <label>Autorizó</label>
+                <input id="pol-autorizado-por" placeholder="Nombre del Director / autoridad competente">
               </div>
               <div class="form-group full">
                 <label>Colaboradores</label>
@@ -588,42 +603,49 @@ input,textarea,select{font-family:inherit}
 
         <!-- TAB: TRACKING -->
         <div class="tab-panel pol-form-sections" id="tab-tracking">
+          <!-- TABLA DE CONTROL DE DOCUMENTO -->
           <div class="form-section">
-            <div class="form-section-title">Actores del Flujo</div>
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Levantado por</label>
-                <input id="pol-levantado-por" placeholder="Nombre">
-              </div>
-              <div class="form-group">
-                <label>Fecha de Levantamiento</label>
-                <input id="pol-levantamiento-at" type="datetime-local" readonly style="opacity:.6">
-              </div>
-              <div class="form-group">
-                <label>Revisado por</label>
-                <input id="pol-revisado-por" placeholder="Nombre">
-              </div>
-              <div class="form-group">
-                <label>Fecha de Revisión</label>
-                <input id="pol-revision-at" type="datetime-local" readonly style="opacity:.6">
-              </div>
-              <div class="form-group">
-                <label>Autorizado por</label>
-                <input id="pol-autorizado-por" placeholder="Nombre">
-              </div>
-              <div class="form-group">
-                <label>Fecha de Autorización</label>
-                <input id="pol-autorizacion-at" type="datetime-local" readonly style="opacity:.6">
-              </div>
-              <div class="form-group">
-                <label>Fecha de Publicación</label>
-                <input id="pol-publicacion-at" type="datetime-local" readonly style="opacity:.6">
-              </div>
-              <div class="form-group">
-                <label>Versión</label>
-                <input id="pol-version" readonly style="opacity:.6">
-              </div>
-            </div>
+            <div class="form-section-title">Control de Documento</div>
+            <table class="doc-ctrl-table">
+              <tbody>
+                <tr>
+                  <td class="dc-lbl">Versión</td>
+                  <td><input id="pol-version" readonly class="dc-input"></td>
+                  <td class="dc-lbl">Estatus</td>
+                  <td><span id="pol-badge-ctrl"></span></td>
+                </tr>
+                <tr>
+                  <td class="dc-lbl">Levantado por</td>
+                  <td><input id="pol-levantado-por" placeholder="Nombre" class="dc-input"></td>
+                  <td class="dc-lbl">Fecha Levantamiento</td>
+                  <td><input id="pol-levantamiento-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td>
+                </tr>
+                <tr>
+                  <td class="dc-lbl">Revisado por</td>
+                  <td><input id="pol-revisado-por" placeholder="Nombre" class="dc-input"></td>
+                  <td class="dc-lbl">Fecha Revisión</td>
+                  <td><input id="pol-revision-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td>
+                </tr>
+                <tr>
+                  <td class="dc-lbl">Autorizó</td>
+                  <td><span id="pol-autorizado-ctrl" class="dc-display">—</span></td>
+                  <td class="dc-lbl">Fecha Autorización</td>
+                  <td><input id="pol-autorizacion-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td>
+                </tr>
+                <tr>
+                  <td class="dc-lbl">Publicación</td>
+                  <td><input id="pol-publicacion-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td>
+                  <td class="dc-lbl">Próxima Revisión</td>
+                  <td><span id="pol-fecha-venc-ctrl" class="dc-display">—</span></td>
+                </tr>
+                <tr>
+                  <td class="dc-lbl"># de Reglas</td>
+                  <td><span id="pol-num-reglas-ctrl" class="dc-display">—</span></td>
+                  <td class="dc-lbl">Vigencia (meses)</td>
+                  <td><span id="pol-vigencia-ctrl" class="dc-display">—</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <div class="form-section">
             <div class="form-section-title">Avanzar en el Flujo</div>
@@ -1186,7 +1208,7 @@ function fillPoliticaForm(pol) {
     if (el) el.value = pol[f] || '';
   });
   const map = {
-    'pol-nombre': 'nombre', 'pol-resp-dir':'responsable_direccion',
+    'pol-resp-dir':'responsable_direccion',
     'pol-resp-elab':'responsable_elaboracion','pol-colab':'colaboradores',
     'pol-vigencia-meses':'vigencia_meses','pol-fecha-inicio':'fecha_inicio_vigencia',
     'pol-fecha-venc':'fecha_vencimiento','pol-version':'version'
@@ -1194,11 +1216,23 @@ function fillPoliticaForm(pol) {
   Object.entries(map).forEach(([elId, key]) => {
     const el = document.getElementById(elId); if (el) el.value = pol[key]||'';
   });
+  // num_reglas
+  const nr = document.getElementById('pol-num-reglas');
+  if (nr) nr.value = pol.num_reglas ?? '';
   // timestamps
   ['levantamiento','borrador','revision','autorizacion','publicacion'].forEach(t => {
     const el = document.getElementById(`pol-${t}-at`);
     if (el && pol[`${t}_at`]) el.value = pol[`${t}_at`].slice(0,16);
   });
+  // Tabla Control de Documento (displays)
+  const fmtDT = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const setDisp = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  setDisp('pol-autorizado-ctrl',  pol.autorizado_por     || '—');
+  setDisp('pol-fecha-venc-ctrl',  fmtDT(pol.fecha_vencimiento));
+  setDisp('pol-num-reglas-ctrl',  pol.num_reglas != null ? `${pol.num_reglas} reglas` : '—');
+  setDisp('pol-vigencia-ctrl',    pol.vigencia_meses     ? `${pol.vigencia_meses} meses` : '—');
+  const bc = document.getElementById('pol-badge-ctrl');
+  if (bc) bc.innerHTML = badge(pol.status);
   document.getElementById('pol-badge').innerHTML = badge(pol.status);
   document.getElementById('status-flow').innerHTML = renderFlow(pol.status);
   renderAdvanceActions(pol);
@@ -1226,6 +1260,7 @@ async function savePolitica() {
     contenido:                document.getElementById('pol-contenido').value,
     sanciones:                document.getElementById('pol-sanciones').value,
     excepciones:              document.getElementById('pol-excepciones').value,
+    num_reglas:               parseInt(document.getElementById('pol-num-reglas').value)||null,
     responsable_direccion:    document.getElementById('pol-resp-dir').value,
     responsable_elaboracion:  document.getElementById('pol-resp-elab').value,
     colaboradores:            document.getElementById('pol-colab').value,
