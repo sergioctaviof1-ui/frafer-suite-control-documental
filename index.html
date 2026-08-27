@@ -374,13 +374,15 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
-<!-- MODAL: Nueva entrada en catálogo -->
+<!-- MODAL: Registrar folio en catálogo -->
 <div class="modal-overlay" id="modal-catalogo">
-  <div class="modal">
-    <h3>Agregar Documento al Catálogo</h3>
+  <div class="modal" style="max-width:560px">
+    <h3>Registrar Folio en Catálogo</h3>
     <div class="alert alert-error" id="mcat-error"></div>
-    <input type="hidden" id="mcat-area-id">
-    <div class="form-group" style="margin-bottom:8px"><label>Código generado</label><div id="mcat-codigo-preview" style="font-family:var(--ff-mono);font-size:16px;color:var(--gold);padding:8px 0;letter-spacing:.1em"></div></div>
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Código generado</label>
+      <div id="mcat-codigo-preview" style="font-family:var(--ff-mono);font-size:20px;color:var(--gold);padding:6px 0;letter-spacing:.1em">PLT — — — —</div>
+    </div>
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group">
         <label>Tipo de Documento</label>
@@ -399,7 +401,23 @@ input,textarea,select{font-family:inherit}
         </select>
       </div>
       <div class="form-group full">
-        <label>Nombre del Documento</label>
+        <label>Dirección</label>
+        <select id="mcat-dir" onchange="onCatDirChange()"><option value="">— Selecciona —</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Área</label>
+        <select id="mcat-area" onchange="onCatAreaChange()"><option value="">— selecciona dirección primero —</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Departamento</label>
+        <select id="mcat-dept" onchange="onCatDeptChange()"><option value="">— selecciona área primero —</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Actividad</label>
+        <select id="mcat-act" onchange="updateCodigoPreview()"><option value="">— selecciona departamento primero —</option></select>
+      </div>
+      <div class="form-group full">
+        <label>Nombre de la Política / Documento</label>
         <input id="mcat-nombre" placeholder="Ej: Política de Vacaciones y Permisos">
       </div>
       <div class="form-group full">
@@ -408,7 +426,7 @@ input,textarea,select{font-family:inherit}
       </div>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveCatalogo()">Agregar al Catálogo</button>
+      <button class="btn btn-primary" onclick="saveCatalogo()">Registrar Folio</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-catalogo')">Cancelar</button>
     </div>
   </div>
@@ -729,6 +747,7 @@ input,textarea,select{font-family:inherit}
       <button class="tab active" onclick="switchTab(this,'atab-direcciones')">Direcciones</button>
       <button class="tab" onclick="switchTab(this,'atab-areas')">Áreas</button>
       <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
+      <button class="tab" onclick="switchTab(this,'atab-catalogo')">Catálogo</button>
     </div>
 
     <div class="tab-panel active" id="atab-direcciones">
@@ -755,6 +774,18 @@ input,textarea,select{font-family:inherit}
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
         <table class="admin-table"><thead><tr><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-deptos-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-catalogo">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openModalCatalogo()">+ Nuevo Folio</button>
+      </div>
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+        <table class="admin-table">
+          <thead><tr><th>Folio</th><th>Nombre de la Política / Documento</th><th>Área</th><th>Actividad</th><th>Tipo</th><th>Prioridad</th></tr></thead>
+          <tbody id="admin-catalogo-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1368,25 +1399,72 @@ function openModalArea(direccionId) {
   document.getElementById('modal-area').classList.add('open');
 }
 
-function openModalCatalogo(areaId) {
-  document.getElementById('mcat-area-id').value = areaId;
-  document.getElementById('mcat-nombre').value  = '';
-  document.getElementById('mcat-desc').value    = '';
-  document.getElementById('mcat-tipo').value    = 'PLT';
+function openModalCatalogo() {
+  document.getElementById('mcat-dir').innerHTML =
+    '<option value="">— Selecciona Dirección —</option>' +
+    direcciones.map(d=>`<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
+  document.getElementById('mcat-area').innerHTML = '<option value="">— selecciona dirección primero —</option>';
+  document.getElementById('mcat-dept').innerHTML = '<option value="">— selecciona área primero —</option>';
+  document.getElementById('mcat-act').innerHTML  = '<option value="">— selecciona departamento primero —</option>';
+  document.getElementById('mcat-nombre').value   = '';
+  document.getElementById('mcat-desc').value     = '';
+  document.getElementById('mcat-tipo').value     = 'PLT';
+  document.getElementById('mcat-codigo-preview').textContent = 'PLT — — — —';
   document.getElementById('mcat-error').classList.remove('show');
-  updateCodigoPreview();
   document.getElementById('modal-catalogo').classList.add('open');
 }
 
+function onCatDirChange() {
+  const dirId = document.getElementById('mcat-dir').value;
+  document.getElementById('mcat-area').innerHTML =
+    '<option value="">— Selecciona Área —</option>' +
+    areas.filter(a=>a.direccion_id===dirId)
+      .map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`).join('');
+  document.getElementById('mcat-dept').innerHTML = '<option value="">— selecciona área primero —</option>';
+  document.getElementById('mcat-act').innerHTML  = '<option value="">— selecciona departamento primero —</option>';
+  updateCodigoPreview();
+}
+
+function onCatAreaChange() {
+  const areaId = document.getElementById('mcat-area').value;
+  document.getElementById('mcat-dept').innerHTML =
+    '<option value="">— Selecciona Departamento —</option>' +
+    departamentos.filter(d=>d.area_id===areaId)
+      .sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}">${String(d.orden).padStart(3,'0')} · ${d.nombre}</option>`).join('');
+  document.getElementById('mcat-act').innerHTML  = '<option value="">— selecciona departamento primero —</option>';
+  updateCodigoPreview();
+}
+
+function onCatDeptChange() {
+  const deptId = document.getElementById('mcat-dept').value;
+  const deptActs = actividades.filter(a=>a.departamento_id===deptId)
+    .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  document.getElementById('mcat-act').innerHTML =
+    '<option value="">— Selecciona Actividad —</option>' +
+    deptActs.map((a,i)=>`<option value="${a.id}">${String(i+1).padStart(2,'0')} · ${a.nombre}</option>`).join('');
+  updateCodigoPreview();
+}
+
 function updateCodigoPreview() {
-  const areaId = document.getElementById('mcat-area-id').value;
-  const tipo   = document.getElementById('mcat-tipo').value || 'PLT';
+  const tipo   = document.getElementById('mcat-tipo')?.value || 'PLT';
+  const areaId = document.getElementById('mcat-area')?.value;
+  const actId  = document.getElementById('mcat-act')?.value;
   const area   = areas.find(a=>a.id===areaId);
   const dir    = direcciones.find(d=>d.id===area?.direccion_id);
-  const existing = catalogo.filter(c=>c.area_id===areaId && c.tipo_documento===tipo);
-  const nextNum  = (existing.length+1).toString().padStart(3,'0');
-  const code = dir && area ? `${tipo}-${dir.codigo}-${area.numero}-${nextNum}` : `${tipo}-???-${nextNum}`;
-  document.getElementById('mcat-codigo-preview').textContent = code;
+  const act    = actividades.find(a=>a.id===actId);
+  const dept   = act ? departamentos.find(d=>d.id===act.departamento_id) : null;
+  if (dir && area && act && dept) {
+    const deptCode = String(dept.orden).padStart(3,'0');
+    const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const actCode  = String(deptActs.indexOf(act)+1).padStart(2,'0');
+    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-${deptCode}-${actCode}`;
+  } else if (dir && area) {
+    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-???-??`;
+  } else {
+    document.getElementById('mcat-codigo-preview').textContent = `${tipo} — — — —`;
+  }
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1420,17 +1498,23 @@ async function saveArea() {
 }
 
 async function saveCatalogo() {
-  const area_id        = document.getElementById('mcat-area-id').value;
-  const tipo_documento = document.getElementById('mcat-tipo').value;
-  const nombre         = document.getElementById('mcat-nombre').value.trim();
-  const descripcion    = document.getElementById('mcat-desc').value.trim();
-  const prioridad      = document.getElementById('mcat-prioridad').value;
+  const tipo_documento   = document.getElementById('mcat-tipo').value;
+  const nombre           = document.getElementById('mcat-nombre').value.trim();
+  const descripcion      = document.getElementById('mcat-desc').value.trim();
+  const prioridad        = document.getElementById('mcat-prioridad').value;
   const codigo_documento = document.getElementById('mcat-codigo-preview').textContent;
-  if (!nombre) { showModalError('mcat-error','El nombre es obligatorio.'); return; }
+  const area_id          = document.getElementById('mcat-area').value;
+  const actividad_id     = document.getElementById('mcat-act').value || null;
+  if (!nombre)       { showModalError('mcat-error','El nombre del documento es obligatorio.'); return; }
+  if (!area_id)      { showModalError('mcat-error','Selecciona el Área.'); return; }
+  if (!actividad_id) { showModalError('mcat-error','Selecciona la Actividad para generar el código completo.'); return; }
+  if (codigo_documento.includes('—')||codigo_documento.includes('?')) {
+    showModalError('mcat-error','Código incompleto — revisa la jerarquía.'); return;
+  }
   const existing = catalogo.filter(c=>c.area_id===area_id && c.tipo_documento===tipo_documento);
   const numero   = existing.length + 1;
   const { error } = await sb.from('pol_catalogo').insert({
-    area_id, tipo_documento, nombre, descripcion, prioridad, numero, codigo_documento
+    area_id, actividad_id, tipo_documento, nombre, descripcion, prioridad, numero, codigo_documento
   });
   if (error) { showModalError('mcat-error', error.message); return; }
   closeModal('modal-catalogo');
@@ -1445,12 +1529,15 @@ function showModalError(elId, msg) {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 async function loadAdmin() {
-  const [{ data: dirsData }, { data: areasData }, { data: deptosData }] = await Promise.all([
+  const [{ data: dirsData }, { data: areasData }, { data: deptosData }, { data: actsData }, { data: catsData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').order('orden'),
     sb.from('pol_areas').select('*').order('numero'),
-    sb.from('pol_departamentos').select('*').order('orden')
+    sb.from('pol_departamentos').select('*').order('orden'),
+    sb.from('pol_actividades').select('*').order('created_at'),
+    sb.from('pol_catalogo').select('*').order('numero')
   ]);
   direcciones = dirsData||[]; areas = areasData||[]; departamentos = deptosData||[];
+  actividades = actsData||[]; catalogo = catsData||[];
   const dirById = Object.fromEntries(direcciones.map(d=>[d.id,d]));
   const areaById = Object.fromEntries(areas.map(a=>[a.id,a]));
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
@@ -1485,6 +1572,21 @@ async function loadAdmin() {
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
       </tr>`;
     }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
+
+  document.getElementById('admin-catalogo-body').innerHTML =
+    catalogo.map(c => {
+      const area = areaById[c.area_id];
+      const act  = actividades.find(a=>a.id===c.actividad_id);
+      const prioColor = {alta:'var(--red)',media:'var(--amber)',baja:'var(--fog)'}[c.prioridad]||'var(--fog)';
+      return `<tr>
+        <td><span class="cat-folio">${c.codigo_documento}</span></td>
+        <td style="font-weight:500">${c.nombre}</td>
+        <td><span class="cat-mono">${area?.numero||'—'}</span>${area?.nombre||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${act?.nombre||'—'}</td>
+        <td><span class="code-tag">${c.tipo_documento}</span></td>
+        <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
