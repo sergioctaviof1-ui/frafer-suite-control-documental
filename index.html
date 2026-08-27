@@ -144,6 +144,24 @@ input,textarea,select{font-family:inherit}
 .tree-pol-row:hover{background:var(--linen)}
 .tree-pol-code{font-size:10px;font-family:var(--ff-mono);color:var(--fog);min-width:116px;letter-spacing:.04em}
 .tree-pol-name{font-size:12px;flex:1;color:var(--ink)}
+.tree-dept-block{padding:2px 0 6px 8px;border-left:2px solid var(--stone);margin:2px 0 6px}
+.tree-dept-header{display:flex;align-items:center;gap:8px;padding:3px 6px}
+.tree-dept-code{font-family:var(--ff-mono);font-size:9px;font-weight:700;color:var(--navy);min-width:32px;letter-spacing:.06em}
+.tree-dept-name{font-size:11px;color:var(--dust);font-weight:500}
+.tree-acts{padding:1px 0 2px 40px;display:flex;flex-direction:column;gap:1px}
+.tree-act-row{display:flex;align-items:center;gap:8px;padding:2px 4px;border-radius:3px}
+.tree-act-code{font-family:var(--ff-mono);font-size:8px;color:var(--fog);min-width:18px}
+.tree-act-name{font-size:10px;color:var(--dust)}
+.badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
+.maestro-table{width:100%;border-collapse:collapse;font-size:11px}
+.maestro-table th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--navy);font-weight:700;border-bottom:2px solid var(--stone);background:var(--linen);white-space:nowrap}
+.maestro-table td{padding:7px 10px;border-bottom:1px solid var(--stone);vertical-align:middle}
+.maestro-table tr:hover td{background:var(--linen)}
+.maestro-code{font-family:var(--ff-mono);font-size:10px;color:var(--navy);font-weight:600;letter-spacing:.06em;white-space:nowrap}
+.maestro-label{font-size:10px;font-weight:500;color:var(--ink)}
+.maestro-sub{font-size:9px;color:var(--fog);font-family:var(--ff-mono)}
+.maestro-filter{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.maestro-filter select,.maestro-filter input{padding:6px 10px;border:1px solid var(--stone);border-radius:6px;font-size:11px;background:var(--parchment);color:var(--ink);font-family:var(--ff-body)}
 .tree-add-btn{font-size:11px;color:var(--ember-deep);padding:6px 10px;border-radius:5px;background:transparent;border:1px dashed var(--stone);width:100%;text-align:left;margin-top:4px;transition:all .15s;font-family:var(--ff-body)}
 .tree-add-btn:hover{border-color:var(--ember);background:var(--ember-mist)}
 .chevron{display:inline-block;transition:transform .2s;color:var(--fog);font-size:10px}
@@ -256,6 +274,7 @@ input,textarea,select{font-family:inherit}
   <nav class="topbar-nav">
     <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
     <button class="nav-btn" onclick="showView('catalogo')">Catálogo</button>
+    <button class="nav-btn" onclick="showView('maestro')">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
   </nav>
@@ -605,6 +624,17 @@ input,textarea,select{font-family:inherit}
     <div id="tree-container"><div class="loading">Cargando catálogo…</div></div>
   </div>
 
+  <!-- VIEW: CATÁLOGO MAESTRO -->
+  <div class="view" id="view-maestro">
+    <div class="page-header">
+      <div>
+        <h1>Catálogo Maestro</h1>
+        <p>Registro completo de políticas · Código largo · Tracking de estatus por actividad</p>
+      </div>
+    </div>
+    <div id="maestro-container"><div class="loading">Cargando catálogo maestro…</div></div>
+  </div>
+
   <!-- VIEW: ADMIN -->
   <div class="view" id="view-admin">
     <div class="page-header">
@@ -671,7 +701,7 @@ const sb = supabase.createClient(SB_URL, SB_ANON, {
 });
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let empresas = [], direcciones = [], areas = [], departamentos = [], catalogo = [], politicaActual = null;
+let empresas = [], direcciones = [], areas = [], departamentos = [], actividades = [], catalogo = [], politicaActual = null;
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function showView(name) {
@@ -683,6 +713,7 @@ function showView(name) {
   });
   if (name === 'dashboard') loadDashboard();
   if (name === 'catalogo')  loadCatalogo();
+  if (name === 'maestro')   loadMaestro();
   if (name === 'admin')     loadAdmin();
 }
 
@@ -700,6 +731,7 @@ function switchTab(btn, panelId) {
 // ── STATUS HELPERS ────────────────────────────────────────────────────────────
 const STATUS_ORDER = ['pendiente','en_levantamiento','borrador','en_revision','autorizado','publicado'];
 const STATUS_LABEL = {
+  sin_iniciar:'Sin Iniciar',
   pendiente:'Pendiente', en_levantamiento:'Levantamiento', borrador:'Borrador',
   en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado', vencido:'Vencido'
 };
@@ -813,16 +845,17 @@ async function loadDashboard() {
 
 // ── CATÁLOGO / ÁRBOL ──────────────────────────────────────────────────────────
 async function loadCatalogo() {
-  const [{ data: emps }, { data: dirsData }, { data: areasData }, { data: deptos }, { data: cats }, { data: pols }] = await Promise.all([
+  const [{ data: emps }, { data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }, { data: pols }] = await Promise.all([
     sb.from('pol_empresas').select('*').eq('activa',true),
     sb.from('pol_direcciones').select('*').eq('activa',true).order('orden'),
     sb.from('pol_areas').select('*').eq('activa',true).order('orden'),
     sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
+    sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
     sb.from('pol_politicas').select('id,catalogo_id,status,version')
   ]);
   empresas = emps||[]; direcciones = dirsData||[]; areas = areasData||[];
-  departamentos = deptos||[]; catalogo = cats||[];
+  departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
 
   const latestPols = {};
   (pols||[]).forEach(p => {
@@ -869,11 +902,28 @@ async function loadCatalogo() {
           </div>
           <div class="tree-politicas">`;
         if (areaDeptos.length) {
-          html += `<div style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 4px 10px;border-bottom:1px solid var(--stone);margin-bottom:6px">`;
-          areaDeptos.forEach(d => {
-            html += `<span class="tree-dept-chip">${d.nombre}</span>`;
+          areaDeptos.forEach(dept => {
+            const deptCode = String(dept.orden).padStart(3,'0');
+            const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
+              .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+            html += `<div class="tree-dept-block">
+              <div class="tree-dept-header">
+                <span class="tree-dept-code">${deptCode}</span>
+                <span class="tree-dept-name">${dept.nombre}</span>
+              </div>`;
+            if (deptActs.length) {
+              html += `<div class="tree-acts">`;
+              deptActs.forEach((act,idx)=>{
+                const actCode = String(idx+1).padStart(2,'0');
+                html += `<div class="tree-act-row">
+                  <span class="tree-act-code">${actCode}</span>
+                  <span class="tree-act-name">${act.nombre}</span>
+                </div>`;
+              });
+              html += `</div>`;
+            }
+            html += `</div>`;
           });
-          html += `</div>`;
         }
         areaCats.forEach(cat => {
           const pol = latestPols[cat.id];
@@ -897,6 +947,128 @@ async function loadCatalogo() {
   });
   html += '</div>';
   document.getElementById('tree-container').innerHTML = html;
+}
+
+// ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
+async function loadMaestro() {
+  const el = document.getElementById('maestro-container');
+  if (!el) return;
+
+  // Capture filter state before overwriting DOM
+  const fDir    = document.getElementById('maestro-filtro-dir')?.value    || '';
+  const fStatus = document.getElementById('maestro-filtro-status')?.value || '';
+  const fSearch = (document.getElementById('maestro-search')?.value       || '').toLowerCase();
+
+  el.innerHTML = '<div class="loading">Cargando catálogo maestro…</div>';
+
+  // Ensure hierarchy + actividades loaded
+  if (!direcciones.length || !actividades.length) await loadCatalogo();
+
+  // Fresh pull of politicas + comments
+  const [{ data: pols }, { data: coms }] = await Promise.all([
+    sb.from('pol_politicas')
+      .select('id,catalogo_id,status,version,fecha_inicio_vigencia,autorizacion_at,updated_at'),
+    sb.from('pol_comentarios')
+      .select('politica_id,comentario,created_at').order('created_at', {ascending:false})
+  ]);
+
+  const latestPols = {};
+  (pols||[]).forEach(p => {
+    if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
+      latestPols[p.catalogo_id] = p;
+  });
+  const lastComment = {};
+  (coms||[]).forEach(c => { if (!lastComment[c.politica_id]) lastComment[c.politica_id] = c.comentario; });
+
+  // Build rows following hierarchy order
+  const rows = [];
+  const sortedDirs = [...direcciones].sort((a,b)=>a.orden-b.orden);
+  sortedDirs.forEach(dir => {
+    areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
+      departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
+        const deptCode = String(dept.orden).padStart(3,'0');
+        actividades.filter(a=>a.departamento_id===dept.id)
+          .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
+          .forEach((act,idx) => {
+            const actCode     = String(idx+1).padStart(2,'0');
+            const codigoLargo = `PLT-${dir.codigo}-${area.numero}-${deptCode}-${actCode}`;
+            const cat         = catalogo.find(c=>c.actividad_id===act.id);
+            const pol         = cat ? latestPols[cat.id] : null;
+            rows.push({
+              codigoLargo, dir, area, dept, deptCode, act, actCode, cat, pol,
+              status:      pol ? pol.status               : null,
+              fechaInicio: pol ? pol.fecha_inicio_vigencia : null,
+              fechaAuth:   pol ? pol.autorizacion_at       : null,
+              updatedAt:   pol ? pol.updated_at            : null,
+              comentario:  pol ? (lastComment[pol.id]||'') : ''
+            });
+          });
+      });
+    });
+  });
+
+  // Apply filters
+  const filtered = rows.filter(r => {
+    if (fDir    && r.dir.codigo !== fDir) return false;
+    if (fStatus && (r.status||'sin_iniciar') !== fStatus) return false;
+    if (fSearch && !r.codigoLargo.toLowerCase().includes(fSearch)
+               && !r.act.nombre.toLowerCase().includes(fSearch)
+               && !r.dept.nombre.toLowerCase().includes(fSearch)) return false;
+    return true;
+  });
+
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+
+  let html = `<div class="maestro-filter">
+    <select id="maestro-filtro-dir" onchange="loadMaestro()">
+      <option value="">Todas las Direcciones</option>
+      ${sortedDirs.map(d=>`<option value="${d.codigo}"${fDir===d.codigo?' selected':''}>${d.codigo} · ${d.nombre}</option>`).join('')}
+    </select>
+    <select id="maestro-filtro-status" onchange="loadMaestro()">
+      <option value="">Todos los Estatus</option>
+      ${Object.entries(STATUS_LABEL).map(([v,l])=>`<option value="${v}"${fStatus===v?' selected':''}>${l}</option>`).join('')}
+    </select>
+    <input id="maestro-search" placeholder="Buscar código, actividad, departamento…" oninput="loadMaestro()" value="${fSearch}" style="flex:1;min-width:200px">
+    <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} registros</span>
+  </div>
+  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden;overflow-x:auto">
+  <table class="maestro-table">
+    <thead><tr>
+      <th>Código Político</th>
+      <th>Dirección</th>
+      <th>Área</th>
+      <th>Departamento</th>
+      <th>Actividad</th>
+      <th>Estatus</th>
+      <th>Inicio</th>
+      <th>Autorización</th>
+      <th>Actualización</th>
+      <th>Comentario</th>
+    </tr></thead>
+    <tbody>`;
+
+  if (!filtered.length) {
+    html += `<tr><td colspan="10" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
+  } else {
+    filtered.forEach(r => {
+      const st = r.status || 'sin_iniciar';
+      html += `<tr>
+        <td><span class="maestro-code">${r.codigoLargo}</span></td>
+        <td><span class="maestro-label">${r.dir.codigo}</span><br><span class="maestro-sub">${r.dir.nombre}</span></td>
+        <td><span class="maestro-label">${r.area.numero}</span><br><span class="maestro-sub">${r.area.nombre}</span></td>
+        <td><span class="maestro-label">${r.deptCode}</span><br><span class="maestro-sub">${r.dept.nombre}</span></td>
+        <td><span class="maestro-label">${r.actCode} · ${r.act.nombre}</span></td>
+        <td>${badge(st)}</td>
+        <td><span class="maestro-sub">${fmtDate(r.fechaInicio)}</span></td>
+        <td><span class="maestro-sub">${fmtDate(r.fechaAuth)}</span></td>
+        <td><span class="maestro-sub">${fmtDate(r.updatedAt)}</span></td>
+        <td style="max-width:180px;font-size:10px;color:var(--dust)">${r.comentario||'—'}</td>
+      </tr>`;
+    });
+  }
+
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
 }
 
 function toggleNode(header) {
