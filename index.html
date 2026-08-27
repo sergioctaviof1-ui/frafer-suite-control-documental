@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grupo Morsa · Control Documental</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:       #0f1117;
+  --surface:  #181c27;
+  --surface2: #1e2435;
+  --border:   #2a3048;
+  --gold:     #c9a96e;
+  --salmon:   #c97a6e;
+  --text:     #e8e6e1;
+  --muted:    #8892a4;
+  --green:    #4caf7d;
+  --amber:    #f0a500;
+  --orange:   #e07a3a;
+  --blue:     #4a9eff;
+  --red:      #e05a5a;
+  --gray:     #5a6480;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;font-family:inherit}
+input,textarea,select{font-family:inherit}
+
+/* NAV */
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.topbar-brand{font-size:11px;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;font-weight:600}
+.topbar-sep{color:var(--border)}
+.topbar-title{font-size:13px;color:var(--muted)}
+.topbar-nav{display:flex;gap:4px;margin-left:auto}
+.nav-btn{padding:6px 14px;border-radius:6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:transparent;transition:all .15s}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.active{background:var(--surface2);color:var(--gold);border-bottom:2px solid var(--gold)}
+.topbar-user{font-size:11px;color:var(--muted);margin-left:8px}
+
+/* LAYOUT */
+.main{flex:1;padding:28px 32px;max-width:1200px;width:100%;margin:0 auto}
+.view{display:none}
+.view.active{display:block}
+
+/* TÍTULOS */
+.page-header{margin-bottom:24px}
+.page-header h1{font-size:22px;font-weight:600;color:var(--text);margin-bottom:4px}
+.page-header p{font-size:13px;color:var(--muted)}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px}
+.stat-card .num{font-size:28px;font-weight:700;color:var(--text);line-height:1}
+.stat-card .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.stat-card.gold .num{color:var(--gold)}
+.stat-card.green .num{color:var(--green)}
+.stat-card.amber .num{color:var(--amber)}
+.stat-card.red   .num{color:var(--red)}
+
+/* SEMÁFORO TABLE */
+.semaforo-table{width:100%;border-collapse:collapse;font-size:13px}
+.semaforo-table th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border)}
+.semaforo-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.semaforo-table tr:last-child td{border-bottom:none}
+.semaforo-table tr:hover td{background:var(--surface2)}
+.empresa-row td{background:var(--surface2);font-weight:600;color:var(--gold);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.div-label{font-weight:500;color:var(--text)}
+.progress-bar{height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s}
+
+/* STATUS BADGES */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;white-space:nowrap}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.badge-pendiente{color:var(--gray);background:#5a648018}.badge-pendiente::before{background:var(--gray)}
+.badge-en_levantamiento{color:var(--blue);background:#4a9eff18}.badge-en_levantamiento::before{background:var(--blue)}
+.badge-borrador{color:var(--amber);background:#f0a50018}.badge-borrador::before{background:var(--amber)}
+.badge-en_revision{color:var(--orange);background:#e07a3a18}.badge-en_revision::before{background:var(--orange)}
+.badge-autorizado{color:#6fcf97;background:#6fcf9718}.badge-autorizado::before{background:#6fcf97}
+.badge-publicado{color:var(--green);background:#4caf7d22}.badge-publicado::before{background:var(--green)}
+.badge-vencido{color:var(--red);background:#e05a5a18}.badge-vencido::before{background:var(--red)}
+
+/* CATÁLOGO — ÁRBOL */
+.tree{display:flex;flex-direction:column;gap:4px}
+.tree-empresa{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.tree-empresa-header{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.tree-empresa-header:hover{background:var(--surface2)}
+.tree-empresa-code{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;background:#c9a96e18;padding:2px 8px;border-radius:4px}
+.tree-empresa-name{font-size:14px;font-weight:600}
+.tree-empresa-body{padding:0 12px 12px}
+.tree-division{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.tree-division-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--surface2);user-select:none}
+.tree-division-header:hover{background:#2a3048}
+.tree-div-code{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:40px}
+.tree-div-name{font-size:13px;font-weight:500}
+.tree-div-count{margin-left:auto;font-size:11px;color:var(--muted)}
+.tree-areas{padding:8px}
+.tree-area{margin-bottom:4px}
+.tree-area-header{padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;border-radius:6px}
+.tree-area-header:hover{background:var(--surface2)}
+.tree-area-code{font-size:9px;color:var(--muted);min-width:50px;font-family:monospace;letter-spacing:.06em}
+.tree-area-name{font-size:12px;color:var(--text)}
+.tree-area-count{margin-left:auto;font-size:11px;color:var(--muted)}
+.tree-politicas{padding:4px 8px 4px 16px;display:flex;flex-direction:column;gap:2px}
+.tree-pol-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;cursor:pointer;transition:background .12s}
+.tree-pol-row:hover{background:var(--surface2)}
+.tree-pol-code{font-size:10px;font-family:monospace;color:var(--muted);min-width:110px}
+.tree-pol-name{font-size:12px;flex:1}
+.tree-add-btn{font-size:11px;color:var(--blue);padding:6px 10px;border-radius:5px;background:transparent;border:1px dashed var(--border);width:100%;text-align:left;margin-top:4px;transition:all .15s}
+.tree-add-btn:hover{border-color:var(--blue);background:#4a9eff0a}
+.chevron{display:inline-block;transition:transform .2s;color:var(--muted);font-size:10px}
+.collapsed .chevron{transform:rotate(-90deg)}
+
+/* FORM */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px}
+.form-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px}
+.form-title{font-size:16px;font-weight:600}
+.form-code{font-size:11px;font-family:monospace;color:var(--gold);margin-top:4px}
+.form-section{margin-bottom:28px}
+.form-section-title{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.form-group input,.form-group textarea,.form-group select{
+  background:var(--bg);border:1px solid var(--border);border-radius:7px;
+  padding:9px 12px;color:var(--text);font-size:13px;outline:none;
+  transition:border-color .15s;resize:vertical}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--gold)}
+.form-group select option{background:var(--bg)}
+.form-group textarea{min-height:90px}
+
+/* STATUS FLOW */
+.status-flow{display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding:4px 0}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;opacity:.4;transition:opacity .2s}
+.flow-step.done,.flow-step.current{opacity:1}
+.flow-step.current .flow-dot{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--gold)}
+.flow-dot{width:12px;height:12px;border-radius:50%;background:var(--border);flex-shrink:0;z-index:1}
+.flow-line{flex:1;height:2px;background:var(--border);min-width:24px}
+.flow-step.done .flow-dot{background:var(--green)}
+.flow-step.current .flow-dot{background:var(--gold)}
+.flow-label{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;line-height:1.3}
+.flow-row{display:flex;align-items:center;width:100%}
+
+/* HISTORIAL */
+.historial-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.hist-item{display:flex;align-items:flex-start;gap:12px;font-size:12px}
+.hist-dot{width:8px;height:8px;border-radius:50%;background:var(--border);margin-top:3px;flex-shrink:0}
+.hist-time{color:var(--muted);white-space:nowrap}
+.hist-text{color:var(--text)}
+
+/* ACCIONES */
+.btn{padding:9px 18px;border-radius:7px;font-size:12px;font-weight:600;letter-spacing:.04em;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--gold);color:#0f1117}
+.btn-primary:hover{background:#d9b97e}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-danger{background:#e05a5a18;color:var(--red);border:1px solid #e05a5a30}
+.btn-danger:hover{background:#e05a5a28}
+.btn-advance{background:#4a9eff18;color:var(--blue);border:1px solid #4a9eff30}
+.btn-advance:hover{background:#4a9eff28}
+.btn-sm{padding:5px 12px;font-size:11px}
+.actions-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:20px}
+
+/* TABLA ADMIN */
+.admin-table{width:100%;border-collapse:collapse;font-size:13px}
+.admin-table th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border)}
+.admin-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.admin-table tr:last-child td{border-bottom:none}
+.admin-table tr:hover td{background:var(--surface2)}
+.code-tag{font-size:10px;font-family:monospace;background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:4px;color:var(--gold)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:#00000080;z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:20px}
+
+/* ALERT */
+.alert{padding:10px 14px;border-radius:7px;font-size:12px;margin-bottom:16px;display:none}
+.alert.show{display:block}
+.alert-error{background:#e05a5a18;border:1px solid #e05a5a40;color:#f28b8b}
+.alert-success{background:#4caf7d18;border:1px solid #4caf7d40;color:#7dd4a8}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab{padding:7px 16px;border-radius:7px;font-size:12px;color:var(--muted);background:transparent;border:none;cursor:pointer;transition:all .15s}
+.tab.active{background:var(--surface2);color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty svg{opacity:.3;margin-bottom:12px}
+.empty p{font-size:13px}
+
+/* VIGENCIA ALERTA */
+.vigencia-ok{color:var(--green)}
+.vigencia-warn{color:var(--amber)}
+.vigencia-danger{color:var(--red)}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+
+@media(max-width:720px){.form-grid,.form-grid.cols3{grid-template-columns:1fr}.stats-row{grid-template-columns:1fr 1fr}.main{padding:16px}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="topbar-brand">Frafer</span>
+  <span class="topbar-sep">·</span>
+  <span class="topbar-title">Control Documental — Grupo Morsa</span>
+  <nav class="topbar-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('catalogo')">Catálogo</button>
+    <button class="nav-btn" onclick="showView('admin')">Admin</button>
+  </nav>
+  <span class="topbar-user" id="topbar-user"></span>
+</div>
+
+<!-- MODAL: Nueva división -->
+<div class="modal-overlay" id="modal-division">
+  <div class="modal">
+    <h3>Nueva División</h3>
+    <div class="alert alert-error" id="mdiv-error"></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group">
+        <label>Empresa</label>
+        <select id="mdiv-empresa"></select>
+      </div>
+      <div class="form-group">
+        <label>Código</label>
+        <input id="mdiv-codigo" placeholder="Ej: RH" maxlength="10" style="text-transform:uppercase">
+      </div>
+      <div class="form-group full">
+        <label>Nombre</label>
+        <input id="mdiv-nombre" placeholder="Ej: Recursos Humanos">
+      </div>
+      <div class="form-group">
+        <label>Orden</label>
+        <input id="mdiv-orden" type="number" value="0">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveDivision()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-division')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva área -->
+<div class="modal-overlay" id="modal-area">
+  <div class="modal">
+    <h3>Nueva Área</h3>
+    <div class="alert alert-error" id="marea-error"></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group full">
+        <label>División</label>
+        <select id="marea-division"></select>
+      </div>
+      <div class="form-group">
+        <label>Código</label>
+        <input id="marea-codigo" placeholder="Ej: COMP" maxlength="10" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>Orden</label>
+        <input id="marea-orden" type="number" value="0">
+      </div>
+      <div class="form-group full">
+        <label>Nombre</label>
+        <input id="marea-nombre" placeholder="Ej: Compensaciones">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveArea()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-area')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva política en catálogo -->
+<div class="modal-overlay" id="modal-catalogo">
+  <div class="modal">
+    <h3>Agregar Política al Catálogo</h3>
+    <div class="alert alert-error" id="mcat-error"></div>
+    <input type="hidden" id="mcat-area-id">
+    <div class="form-group" style="margin-bottom:8px"><label>Código generado</label><div id="mcat-codigo-preview" style="font-family:monospace;font-size:14px;color:var(--gold);padding:8px 0"></div></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group full">
+        <label>Nombre de la Política</label>
+        <input id="mcat-nombre" placeholder="Ej: Política de Vacaciones">
+      </div>
+      <div class="form-group full">
+        <label>Descripción (opcional)</label>
+        <textarea id="mcat-desc" rows="2" placeholder="Propósito general de la política"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Prioridad</label>
+        <select id="mcat-prioridad">
+          <option value="alta">Alta</option>
+          <option value="media" selected>Media</option>
+          <option value="baja">Baja</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveCatalogo()">Agregar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-catalogo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- VIEW: DASHBOARD -->
+  <div class="view active" id="view-dashboard">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>Estado del Sistema de Control Documental · Grupo Morsa + Energy Parts LTH</p>
+    </div>
+    <div class="stats-row" id="dash-stats">
+      <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">Total Políticas</div></div>
+      <div class="stat-card green"><div class="num" id="stat-pub">—</div><div class="lbl">Publicadas</div></div>
+      <div class="stat-card amber"><div class="num" id="stat-proceso">—</div><div class="lbl">En Proceso</div></div>
+      <div class="stat-card"><div class="num" id="stat-pend">—</div><div class="lbl">Pendientes</div></div>
+      <div class="stat-card red"><div class="num" id="stat-venc">—</div><div class="lbl">Vencidas / Alerta</div></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <table class="semaforo-table" id="semaforo-table">
+        <thead>
+          <tr>
+            <th>División / Área</th>
+            <th>Publicadas</th>
+            <th>En Proceso</th>
+            <th>Pendientes</th>
+            <th>Total</th>
+            <th>Avance</th>
+          </tr>
+        </thead>
+        <tbody id="semaforo-body"><tr><td colspan="6" class="loading">Cargando datos…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VIEW: CATÁLOGO -->
+  <div class="view" id="view-catalogo">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div>
+        <h1>Catálogo de Políticas</h1>
+        <p>Árbol organizacional · División → Área → Casillero de Políticas</p>
+      </div>
+    </div>
+    <!-- POLÍTICA FORM (embebida, se muestra al seleccionar) -->
+    <div id="politica-panel" style="display:none;margin-bottom:24px">
+      <div class="form-card">
+        <div class="form-header">
+          <div>
+            <div class="form-title" id="pol-form-title">Política</div>
+            <div class="form-code" id="pol-form-code"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="pol-badge"></span>
+            <button class="btn btn-ghost btn-sm" onclick="closePoliticaPanel()">✕ Cerrar</button>
+          </div>
+        </div>
+
+        <!-- FLUJO DE STATUS -->
+        <div style="margin-bottom:24px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Ciclo de Vida</div>
+          <div class="flow-row" id="status-flow"></div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab(this,'tab-contenido')">Contenido</button>
+          <button class="tab" onclick="switchTab(this,'tab-tracking')">Tracking</button>
+          <button class="tab" onclick="switchTab(this,'tab-historial')">Historial</button>
+          <button class="tab" onclick="switchTab(this,'tab-comentarios')">Comentarios</button>
+        </div>
+
+        <!-- TAB: CONTENIDO -->
+        <div class="tab-panel active" id="tab-contenido">
+          <div class="form-section">
+            <div class="form-section-title">Identificación</div>
+            <div class="form-grid cols3">
+              <div class="form-group full">
+                <label>Nombre de la Política</label>
+                <input id="pol-nombre" type="text">
+              </div>
+              <div class="form-group full">
+                <label>Objeto</label>
+                <textarea id="pol-objeto" rows="2" placeholder="Propósito y objetivo de la política"></textarea>
+              </div>
+              <div class="form-group full">
+                <label>Alcance</label>
+                <textarea id="pol-alcance" rows="2" placeholder="A quién aplica y en qué áreas o sucursales"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Responsables</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Dirección Responsable</label>
+                <input id="pol-resp-dir" placeholder="Ej: Dirección de RRHH">
+              </div>
+              <div class="form-group">
+                <label>Elaborado por</label>
+                <input id="pol-resp-elab" placeholder="Nombre del gerente / supervisor">
+              </div>
+              <div class="form-group full">
+                <label>Colaboradores</label>
+                <input id="pol-colab" placeholder="Otras áreas o personas involucradas">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Contenido de la Política</div>
+            <div class="form-group full">
+              <label>Contenido</label>
+              <textarea id="pol-contenido" rows="8" placeholder="Desarrollo completo de la política: reglas, lineamientos, procedimiento general, excepciones..."></textarea>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Comunicación y Capacitación</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Canal de Comunicación</label>
+                <input id="pol-canal-comunicacion" placeholder="Ej: Intranet, correo, reunión divisional">
+              </div>
+              <div class="form-group">
+                <label>Esquema de Capacitación</label>
+                <input id="pol-esquema-capacitacion" placeholder="Ej: Taller anual, inducción">
+              </div>
+              <div class="form-group full">
+                <label>Directrices y Valores Asociados</label>
+                <input id="pol-directrices-valores" placeholder="Ej: Integridad, Responsabilidad Social, ESR">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Vigencia</div>
+            <div class="form-grid cols3">
+              <div class="form-group">
+                <label>Vigencia (meses)</label>
+                <input id="pol-vigencia-meses" type="number" min="1" max="60" placeholder="12">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Inicio</label>
+                <input id="pol-fecha-inicio" type="date">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Vencimiento</label>
+                <input id="pol-fecha-venc" type="date" readonly style="opacity:.6">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: TRACKING -->
+        <div class="tab-panel" id="tab-tracking">
+          <div class="form-section">
+            <div class="form-section-title">Actores del Flujo</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Levantado por</label>
+                <input id="pol-levantado-por" placeholder="Nombre">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Levantamiento</label>
+                <input id="pol-levantamiento-at" type="datetime-local" readonly style="opacity:.6">
+              </div>
+              <div class="form-group">
+                <label>Revisado por</label>
+                <input id="pol-revisado-por" placeholder="Nombre">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Revisión</label>
+                <input id="pol-revision-at" type="datetime-local" readonly style="opacity:.6">
+              </div>
+              <div class="form-group">
+                <label>Autorizado por</label>
+                <input id="pol-autorizado-por" placeholder="Nombre">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Autorización</label>
+                <input id="pol-autorizacion-at" type="datetime-local" readonly style="opacity:.6">
+              </div>
+              <div class="form-group">
+                <label>Fecha de Publicación</label>
+                <input id="pol-publicacion-at" type="datetime-local" readonly style="opacity:.6">
+              </div>
+              <div class="form-group">
+                <label>Versión</label>
+                <input id="pol-version" readonly style="opacity:.6">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Avanzar en el Flujo</div>
+            <div id="advance-actions" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+          </div>
+        </div>
+
+        <!-- TAB: HISTORIAL -->
+        <div class="tab-panel" id="tab-historial">
+          <div class="historial-list" id="historial-list"><div class="loading">Cargando…</div></div>
+        </div>
+
+        <!-- TAB: COMENTARIOS -->
+        <div class="tab-panel" id="tab-comentarios">
+          <div id="comentarios-list" style="margin-bottom:16px"></div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label>Nuevo Comentario</label>
+            <textarea id="nuevo-comentario" rows="3" placeholder="Observación, corrección o nota…"></textarea>
+          </div>
+          <div class="form-grid cols3" style="margin-bottom:8px">
+            <div class="form-group">
+              <label>Autor</label>
+              <input id="comentario-autor" placeholder="Tu nombre">
+            </div>
+            <div class="form-group">
+              <label>Etapa</label>
+              <select id="comentario-etapa">
+                <option value="levantamiento">Levantamiento</option>
+                <option value="revision">Revisión</option>
+                <option value="autorizacion">Autorización</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="saveComentario()">Agregar Comentario</button>
+        </div>
+
+        <div class="actions-row" id="pol-actions">
+          <button class="btn btn-primary" onclick="savePolitica()">Guardar Cambios</button>
+          <button class="btn btn-ghost" onclick="closePoliticaPanel()">Cancelar</button>
+        </div>
+        <div class="alert alert-success" id="pol-success"></div>
+        <div class="alert alert-error" id="pol-error"></div>
+      </div>
+    </div>
+
+    <!-- ÁRBOL -->
+    <div id="tree-container"><div class="loading">Cargando catálogo…</div></div>
+  </div>
+
+  <!-- VIEW: ADMIN -->
+  <div class="view" id="view-admin">
+    <div class="page-header">
+      <h1>Administración</h1>
+      <p>Gestión de Divisiones y Áreas del Grupo</p>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this,'atab-divisiones')">Divisiones</button>
+      <button class="tab" onclick="switchTab(this,'atab-areas')">Áreas</button>
+    </div>
+
+    <div class="tab-panel active" id="atab-divisiones">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openModalDivision()">+ Nueva División</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="admin-table"><thead><tr><th>Empresa</th><th>Código</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
+        <tbody id="admin-divisiones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-areas">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="admin-table"><thead><tr><th>División</th><th>Código</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
+        <tbody id="admin-areas-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+const SB_URL  = 'https://ftfjmkcnneoweklgnlos.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0Zmpta2NubmVvd2VrbGdubG9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3ODQ4MTUsImV4cCI6MjA5ODM2MDgxNX0.cWJG0eXvcG5Ktl-F01AX4Ghwf6mrVdGu6ppqyoHNnPQ';
+
+let _jwt = sessionStorage.getItem('frafer_jwt') || localStorage.getItem('frafer_jwt') || null;
+
+const sb = supabase.createClient(SB_URL, SB_ANON, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  global: {
+    fetch(url, init = {}) {
+      if (_jwt) {
+        const h = new Headers(init.headers || {});
+        h.set('Authorization', `Bearer ${_jwt}`);
+        h.set('apikey', SB_ANON);
+        init = { ...init, headers: h };
+      }
+      return fetch(url, init);
+    }
+  }
+});
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let empresas = [], divisiones = [], areas = [], catalogo = [], politicaActual = null;
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().includes(name.substring(0,4))) b.classList.add('active');
+  });
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'catalogo')  loadCatalogo();
+  if (name === 'admin')     loadAdmin();
+}
+
+function switchTab(btn, panelId) {
+  const parent = btn.closest('.tabs').parentElement;
+  parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  parent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+  if (panelId === 'tab-historial' && politicaActual) loadHistorial(politicaActual.id);
+  if (panelId === 'tab-comentarios' && politicaActual) loadComentarios(politicaActual.id);
+}
+
+// ── STATUS HELPERS ────────────────────────────────────────────────────────────
+const STATUS_ORDER = ['pendiente','en_levantamiento','borrador','en_revision','autorizado','publicado'];
+const STATUS_LABEL = {
+  pendiente:'Pendiente', en_levantamiento:'Levantamiento', borrador:'Borrador',
+  en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado', vencido:'Vencido'
+};
+const STATUS_NEXT = {
+  pendiente:'en_levantamiento', en_levantamiento:'borrador',
+  borrador:'en_revision', en_revision:'autorizado', autorizado:'publicado'
+};
+const STATUS_NEXT_LABEL = {
+  pendiente:'Iniciar Levantamiento', en_levantamiento:'Marcar como Borrador',
+  borrador:'Enviar a Revisión', en_revision:'Autorizar', autorizado:'Publicar'
+};
+
+function badge(status) {
+  return `<span class="badge badge-${status}">${STATUS_LABEL[status]||status}</span>`;
+}
+
+function renderFlow(currentStatus) {
+  const idx = STATUS_ORDER.indexOf(currentStatus);
+  let html = '';
+  STATUS_ORDER.forEach((s, i) => {
+    const done = i < idx;
+    const cur  = i === idx;
+    if (i > 0) html += `<div class="flow-line" style="${done?'background:var(--green)':''}"></div>`;
+    html += `<div class="flow-step${done?' done':''}${cur?' current':''}">
+      <div class="flow-dot"></div>
+      <div class="flow-label">${STATUS_LABEL[s]}</div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderAdvanceActions(pol) {
+  const next = STATUS_NEXT[pol.status];
+  let html = '';
+  if (next) {
+    html += `<button class="btn btn-advance" onclick="advanceStatus('${pol.id}','${next}')">
+      → ${STATUS_NEXT_LABEL[pol.status]}
+    </button>`;
+  }
+  if (pol.status === 'publicado' || pol.status === 'vencido') {
+    html += `<button class="btn btn-ghost btn-sm" onclick="advanceStatus('${pol.id}','en_levantamiento')">↺ Nueva Versión</button>`;
+  }
+  document.getElementById('advance-actions').innerHTML = html || '<span style="color:var(--muted);font-size:12px">No hay transiciones disponibles desde este estado.</span>';
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const [{ data: pols }, { data: cats }, { data: divs }, { data: emps }] = await Promise.all([
+    sb.from('pol_politicas').select('id,status,catalogo_id,fecha_vencimiento'),
+    sb.from('pol_catalogo').select('id,area_id,codigo_politica'),
+    sb.from('pol_divisiones').select('id,nombre,empresa_id,codigo'),
+    sb.from('pol_empresas').select('id,nombre,codigo')
+  ]);
+
+  const total  = pols?.length || 0;
+  const pub    = pols?.filter(p=>p.status==='publicado').length || 0;
+  const proc   = pols?.filter(p=>['en_levantamiento','borrador','en_revision','autorizado'].includes(p.status)).length || 0;
+  const pend   = pols?.filter(p=>p.status==='pendiente').length || 0;
+  const today  = new Date(); today.setHours(0,0,0,0);
+  const d60    = new Date(today); d60.setDate(d60.getDate()+60);
+  const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<=d60).length || 0;
+  const venc   = pols?.filter(p=>p.status==='vencido').length || 0;
+
+  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-pub').textContent    = pub;
+  document.getElementById('stat-proceso').textContent= proc;
+  document.getElementById('stat-pend').textContent   = pend;
+  document.getElementById('stat-venc').textContent   = (venc+alertas) || '—';
+
+  // Semáforo por División
+  if (!emps || !divs) return;
+  const catById = Object.fromEntries((cats||[]).map(c=>[c.id,c]));
+  const polsByDiv = {};
+
+  (pols||[]).forEach(p => {
+    const cat = catById[p.catalogo_id]; if (!cat) return;
+    // necesito area→division mapping: lo hacemos con divs
+  });
+
+  // Rebuilding with area data
+  const { data: areasData } = await sb.from('pol_areas').select('id,division_id');
+  const areaToDiv = Object.fromEntries((areasData||[]).map(a=>[a.id,a.division_id]));
+
+  const divStats = {};
+  (pols||[]).forEach(p => {
+    const cat = catById[p.catalogo_id]; if (!cat) return;
+    const divId = areaToDiv[cat.area_id]; if (!divId) return;
+    if (!divStats[divId]) divStats[divId] = {pub:0,proc:0,pend:0,venc:0};
+    if (p.status==='publicado') divStats[divId].pub++;
+    else if (p.status==='pendiente') divStats[divId].pend++;
+    else if (p.status==='vencido') divStats[divId].venc++;
+    else divStats[divId].proc++;
+  });
+
+  let tbody = '';
+  (emps||[]).forEach(emp => {
+    const empDivs = divs.filter(d=>d.empresa_id===emp.id);
+    if (!empDivs.length) return;
+    tbody += `<tr class="empresa-row"><td colspan="6">${emp.codigo} · ${emp.nombre}</td></tr>`;
+    empDivs.forEach(div => {
+      const s = divStats[div.id] || {pub:0,proc:0,pend:0,venc:0};
+      const total = s.pub+s.proc+s.pend+s.venc;
+      const pct = total ? Math.round((s.pub/total)*100) : 0;
+      tbody += `<tr>
+        <td><span class="div-label">${div.nombre}</span></td>
+        <td style="color:var(--green)">${s.pub}</td>
+        <td style="color:var(--amber)">${s.proc}</td>
+        <td style="color:var(--muted)">${s.pend}</td>
+        <td>${total}</td>
+        <td style="min-width:120px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pct}%</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </td>
+      </tr>`;
+    });
+  });
+  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos. Configura divisiones y agrega políticas al catálogo.</td></tr>';
+}
+
+// ── CATÁLOGO / ÁRBOL ──────────────────────────────────────────────────────────
+async function loadCatalogo() {
+  const [{ data: emps }, { data: divs }, { data: areasData }, { data: cats }, { data: pols }] = await Promise.all([
+    sb.from('pol_empresas').select('*').eq('activa',true),
+    sb.from('pol_divisiones').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_areas').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
+    sb.from('pol_politicas').select('id,catalogo_id,status,version')
+  ]);
+  empresas = emps||[]; divisiones = divs||[]; areas = areasData||[]; catalogo = cats||[];
+  const latestPols = {};
+  (pols||[]).forEach(p => {
+    if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
+      latestPols[p.catalogo_id] = p;
+  });
+
+  let html = '<div class="tree">';
+  empresas.forEach(emp => {
+    const empDivs = divisiones.filter(d=>d.empresa_id===emp.id);
+    html += `<div class="tree-empresa">
+      <div class="tree-empresa-header" onclick="toggleNode(this)">
+        <span class="chevron">▼</span>
+        <span class="tree-empresa-code">${emp.codigo}</span>
+        <span class="tree-empresa-name">${emp.nombre}</span>
+      </div>
+      <div class="tree-empresa-body">`;
+    if (!empDivs.length) {
+      html += `<div style="padding:12px;font-size:12px;color:var(--muted)">Sin divisiones. Agrégalas en Admin.</div>`;
+    }
+    empDivs.forEach(div => {
+      const divAreas = areas.filter(a=>a.division_id===div.id);
+      const divPols  = divAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
+      html += `<div class="tree-division">
+        <div class="tree-division-header" onclick="toggleNode(this)">
+          <span class="chevron">▼</span>
+          <span class="tree-div-code">${div.codigo}</span>
+          <span class="tree-div-name">${div.nombre}</span>
+          <span class="tree-div-count">${divPols.length} pol.</span>
+        </div>
+        <div class="tree-areas">`;
+      divAreas.forEach(area => {
+        const areaPols = catalogo.filter(c=>c.area_id===area.id);
+        html += `<div class="tree-area">
+          <div class="tree-area-header" onclick="toggleNode(this)">
+            <span class="chevron">▼</span>
+            <span class="tree-area-code">${area.codigo}</span>
+            <span class="tree-area-name">${area.nombre}</span>
+            <span class="tree-area-count">${areaPols.length} pol.</span>
+          </div>
+          <div class="tree-politicas">`;
+        areaPols.forEach(cat => {
+          const pol = latestPols[cat.id];
+          const st  = pol ? pol.status : 'pendiente';
+          html += `<div class="tree-pol-row" onclick="openPolitica('${cat.id}','${pol?pol.id:''}')">
+            <span class="tree-pol-code">${cat.codigo_politica}</span>
+            <span class="tree-pol-name">${cat.nombre}</span>
+            ${badge(st)}
+          </div>`;
+        });
+        html += `<button class="tree-add-btn" onclick="openModalCatalogo('${area.id}');event.stopPropagation()">+ Agregar política a esta área</button>
+          </div></div>`;
+      });
+      html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalArea('${div.id}');event.stopPropagation()">+ Nueva Área en ${div.nombre}</button>
+        </div></div>`;
+    });
+    html += `<button class="tree-add-btn" style="margin:4px 0 8px 0" onclick="openModalDivision('${emp.id}');event.stopPropagation()">+ Nueva División en ${emp.nombre}</button>
+      </div></div>`;
+  });
+  html += '</div>';
+  document.getElementById('tree-container').innerHTML = html;
+}
+
+function toggleNode(header) {
+  header.parentElement.classList.toggle('collapsed');
+  const chevron = header.querySelector('.chevron');
+  if (chevron) chevron.style.transform = header.parentElement.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+  // hide/show body
+  const body = header.nextElementSibling;
+  if (body) body.style.display = header.parentElement.classList.contains('collapsed') ? 'none' : '';
+}
+
+// ── POLÍTICA FORM ─────────────────────────────────────────────────────────────
+async function openPolitica(catalogoId, polId) {
+  document.getElementById('politica-panel').style.display = 'block';
+  document.getElementById('politica-panel').scrollIntoView({behavior:'smooth',block:'start'});
+
+  const cat = catalogo.find(c=>c.id===catalogoId);
+  document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
+  document.getElementById('pol-form-code').textContent  = cat ? cat.codigo_politica : '';
+
+  if (polId) {
+    const { data: pol } = await sb.from('pol_politicas').select('*').eq('id', polId).single();
+    if (pol) {
+      politicaActual = pol;
+      fillPoliticaForm(pol);
+    }
+  } else {
+    // Crear nueva
+    const { data: pol, error } = await sb.from('pol_politicas').insert({
+      catalogo_id: catalogoId,
+      status: 'pendiente',
+      version: 1
+    }).select().single();
+    if (!error && pol) {
+      politicaActual = pol;
+      fillPoliticaForm(pol);
+    }
+  }
+  // re-render tree to reflect state
+}
+
+function fillPoliticaForm(pol) {
+  const fields = ['objeto','alcance','contenido','canal_comunicacion','esquema_capacitacion',
+    'directrices_valores','levantado_por','revisado_por','autorizado_por'];
+  fields.forEach(f => {
+    const el = document.getElementById('pol-' + f.replace(/_/g,'-'));
+    if (el) el.value = pol[f] || '';
+  });
+  const map = {
+    'pol-nombre': 'nombre', 'pol-resp-dir':'responsable_direccion',
+    'pol-resp-elab':'responsable_elaboracion','pol-colab':'colaboradores',
+    'pol-vigencia-meses':'vigencia_meses','pol-fecha-inicio':'fecha_inicio_vigencia',
+    'pol-fecha-venc':'fecha_vencimiento','pol-version':'version'
+  };
+  Object.entries(map).forEach(([elId, key]) => {
+    const el = document.getElementById(elId); if (el) el.value = pol[key]||'';
+  });
+  // timestamps
+  ['levantamiento','borrador','revision','autorizacion','publicacion'].forEach(t => {
+    const el = document.getElementById(`pol-${t}-at`);
+    if (el && pol[`${t}_at`]) el.value = pol[`${t}_at`].slice(0,16);
+  });
+  document.getElementById('pol-badge').innerHTML = badge(pol.status);
+  document.getElementById('status-flow').innerHTML = renderFlow(pol.status);
+  renderAdvanceActions(pol);
+  // auto-calc vencimiento
+  document.getElementById('pol-vigencia-meses')?.addEventListener('input', calcVencimiento);
+  document.getElementById('pol-fecha-inicio')?.addEventListener('input', calcVencimiento);
+}
+
+function calcVencimiento() {
+  const meses = parseInt(document.getElementById('pol-vigencia-meses').value);
+  const inicio = document.getElementById('pol-fecha-inicio').value;
+  if (meses && inicio) {
+    const d = new Date(inicio);
+    d.setMonth(d.getMonth() + meses);
+    document.getElementById('pol-fecha-venc').value = d.toISOString().split('T')[0];
+  }
+}
+
+async function savePolitica() {
+  if (!politicaActual) return;
+  const payload = {
+    objeto:                   document.getElementById('pol-objeto').value,
+    alcance:                  document.getElementById('pol-alcance').value,
+    responsable_direccion:    document.getElementById('pol-resp-dir').value,
+    responsable_elaboracion:  document.getElementById('pol-resp-elab').value,
+    colaboradores:            document.getElementById('pol-colab').value,
+    contenido:                document.getElementById('pol-contenido').value,
+    canal_comunicacion:       document.getElementById('pol-canal-comunicacion').value,
+    esquema_capacitacion:     document.getElementById('pol-esquema-capacitacion').value,
+    directrices_valores:      document.getElementById('pol-directrices-valores').value,
+    vigencia_meses:           parseInt(document.getElementById('pol-vigencia-meses').value)||null,
+    fecha_inicio_vigencia:    document.getElementById('pol-fecha-inicio').value||null,
+    fecha_vencimiento:        document.getElementById('pol-fecha-venc').value||null,
+    levantado_por:            document.getElementById('pol-levantado-por').value,
+    revisado_por:             document.getElementById('pol-revisado-por').value,
+    autorizado_por:           document.getElementById('pol-autorizado-por').value,
+  };
+  const { error } = await sb.from('pol_politicas').update(payload).eq('id', politicaActual.id);
+  const sEl = document.getElementById('pol-success');
+  const eEl = document.getElementById('pol-error');
+  if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
+  else { sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500); }
+}
+
+async function advanceStatus(polId, newStatus) {
+  const now = new Date().toISOString();
+  const tsField = {
+    en_levantamiento:'levantamiento_at', borrador:'borrador_at',
+    en_revision:'revision_at', autorizado:'autorizacion_at', publicado:'publicacion_at'
+  }[newStatus];
+  const update = { status: newStatus };
+  if (tsField) update[tsField] = now;
+  if (newStatus === 'en_levantamiento' && politicaActual.status === 'autorizado') {
+    // nueva versión
+    const { data: pol } = await sb.from('pol_politicas').insert({
+      catalogo_id: politicaActual.catalogo_id,
+      status: 'en_levantamiento',
+      version: (politicaActual.version||1)+1,
+      levantamiento_at: now
+    }).select().single();
+    if (pol) { politicaActual = pol; fillPoliticaForm(pol); }
+    return;
+  }
+  const { error } = await sb.from('pol_politicas').update(update).eq('id', polId);
+  if (!error) {
+    politicaActual = { ...politicaActual, ...update };
+    fillPoliticaForm(politicaActual);
+    loadCatalogo();
+  }
+}
+
+async function loadHistorial(polId) {
+  const { data } = await sb.from('pol_historial').select('*').eq('politica_id', polId).order('created_at');
+  const list = document.getElementById('historial-list');
+  if (!data?.length) { list.innerHTML = '<div style="color:var(--muted);font-size:12px">Sin historial aún.</div>'; return; }
+  list.innerHTML = data.map(h => `
+    <div class="hist-item">
+      <div class="hist-dot" style="background:var(--gold)"></div>
+      <div>
+        <div class="hist-time">${new Date(h.created_at).toLocaleString('es-MX')}</div>
+        <div class="hist-text">${badge(h.status_anterior||'inicio')} → ${badge(h.status_nuevo)}${h.actor?` · <em>${h.actor}</em>`:''}</div>
+        ${h.notas?`<div style="color:var(--muted);font-size:11px;margin-top:2px">${h.notas}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function loadComentarios(polId) {
+  const { data } = await sb.from('pol_comentarios').select('*').eq('politica_id', polId).order('created_at');
+  const list = document.getElementById('comentarios-list');
+  if (!data?.length) { list.innerHTML = '<div style="color:var(--muted);font-size:12px;margin-bottom:16px">Sin comentarios.</div>'; return; }
+  list.innerHTML = data.map(c => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <strong style="font-size:12px">${c.autor}</strong>
+        <span style="font-size:10px;color:var(--muted)">${new Date(c.created_at).toLocaleString('es-MX')}</span>
+        <span class="badge badge-${c.etapa||'general'}" style="font-size:9px">${c.etapa||'general'}</span>
+        ${c.resuelto?'<span style="font-size:10px;color:var(--green)">✓ Resuelto</span>':''}
+      </div>
+      <div style="font-size:13px">${c.comentario}</div>
+    </div>`).join('');
+}
+
+async function saveComentario() {
+  if (!politicaActual) return;
+  const comentario = document.getElementById('nuevo-comentario').value.trim();
+  const autor = document.getElementById('comentario-autor').value.trim();
+  const etapa = document.getElementById('comentario-etapa').value;
+  if (!comentario || !autor) return;
+  await sb.from('pol_comentarios').insert({ politica_id: politicaActual.id, autor, comentario, etapa });
+  document.getElementById('nuevo-comentario').value = '';
+  loadComentarios(politicaActual.id);
+}
+
+function closePoliticaPanel() {
+  document.getElementById('politica-panel').style.display = 'none';
+  politicaActual = null;
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+async function openModalDivision(empresaId) {
+  const sel = document.getElementById('mdiv-empresa');
+  sel.innerHTML = empresas.map(e=>`<option value="${e.id}"${e.id===empresaId?' selected':''}>${e.nombre}</option>`).join('');
+  document.getElementById('mdiv-codigo').value = '';
+  document.getElementById('mdiv-nombre').value = '';
+  document.getElementById('mdiv-orden').value  = '0';
+  document.getElementById('mdiv-error').classList.remove('show');
+  document.getElementById('modal-division').classList.add('open');
+}
+
+async function openModalArea(divisionId) {
+  await loadCatalogo(); // refresh
+  const sel = document.getElementById('marea-division');
+  sel.innerHTML = divisiones.map(d=>`<option value="${d.id}"${d.id===divisionId?' selected':''}>${d.nombre} (${d.codigo})</option>`).join('');
+  document.getElementById('marea-codigo').value = '';
+  document.getElementById('marea-nombre').value = '';
+  document.getElementById('marea-orden').value  = '0';
+  document.getElementById('marea-error').classList.remove('show');
+  document.getElementById('modal-area').classList.add('open');
+}
+
+async function openModalCatalogo(areaId) {
+  document.getElementById('mcat-area-id').value = areaId;
+  document.getElementById('mcat-nombre').value  = '';
+  document.getElementById('mcat-desc').value    = '';
+  document.getElementById('mcat-error').classList.remove('show');
+  // Generate next code
+  const area = areas.find(a=>a.id===areaId);
+  const div  = divisiones.find(d=>d.id===area?.division_id);
+  const emp  = empresas.find(e=>e.id===div?.empresa_id);
+  const existing = catalogo.filter(c=>c.area_id===areaId);
+  const nextNum  = (existing.length+1).toString().padStart(3,'0');
+  const code = emp && div && area ? `${emp.codigo}-${div.codigo}-${area.codigo}-${nextNum}` : `—-${nextNum}`;
+  document.getElementById('mcat-codigo-preview').textContent = code;
+  document.getElementById('modal-catalogo').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+async function saveDivision() {
+  const empresa_id = document.getElementById('mdiv-empresa').value;
+  const codigo     = document.getElementById('mdiv-codigo').value.trim().toUpperCase();
+  const nombre     = document.getElementById('mdiv-nombre').value.trim();
+  const orden      = parseInt(document.getElementById('mdiv-orden').value)||0;
+  if (!codigo || !nombre) { showModalError('mdiv-error','Código y Nombre son obligatorios.'); return; }
+  const { error } = await sb.from('pol_divisiones').insert({ empresa_id, codigo, nombre, orden });
+  if (error) { showModalError('mdiv-error', error.message); return; }
+  closeModal('modal-division');
+  loadCatalogo(); loadAdmin();
+}
+
+async function saveArea() {
+  const division_id = document.getElementById('marea-division').value;
+  const codigo      = document.getElementById('marea-codigo').value.trim().toUpperCase();
+  const nombre      = document.getElementById('marea-nombre').value.trim();
+  const orden       = parseInt(document.getElementById('marea-orden').value)||0;
+  if (!codigo || !nombre) { showModalError('marea-error','Código y Nombre son obligatorios.'); return; }
+  const { error } = await sb.from('pol_areas').insert({ division_id, codigo, nombre, orden });
+  if (error) { showModalError('marea-error', error.message); return; }
+  closeModal('modal-area');
+  loadCatalogo(); loadAdmin();
+}
+
+async function saveCatalogo() {
+  const area_id   = document.getElementById('mcat-area-id').value;
+  const nombre    = document.getElementById('mcat-nombre').value.trim();
+  const descripcion = document.getElementById('mcat-desc').value.trim();
+  const prioridad = document.getElementById('mcat-prioridad').value;
+  const codigo    = document.getElementById('mcat-codigo-preview').textContent;
+  if (!nombre) { showModalError('mcat-error','El nombre es obligatorio.'); return; }
+  const existing = catalogo.filter(c=>c.area_id===area_id);
+  const numero   = existing.length + 1;
+  const { error } = await sb.from('pol_catalogo').insert({
+    area_id, nombre, descripcion, prioridad, numero, codigo_politica: codigo
+  });
+  if (error) { showModalError('mcat-error', error.message); return; }
+  closeModal('modal-catalogo');
+  loadCatalogo();
+}
+
+function showModalError(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+async function loadAdmin() {
+  const [{ data: emps }, { data: divs }, { data: areasData }] = await Promise.all([
+    sb.from('pol_empresas').select('*').order('codigo'),
+    sb.from('pol_divisiones').select('*').order('orden'),
+    sb.from('pol_areas').select('*').order('orden')
+  ]);
+  empresas = emps||[]; divisiones = divs||[]; areas = areasData||[];
+  const empById = Object.fromEntries(empresas.map(e=>[e.id,e]));
+  const divById = Object.fromEntries(divisiones.map(d=>[d.id,d]));
+
+  document.getElementById('admin-divisiones-body').innerHTML =
+    divisiones.map(d=>`<tr>
+      <td><span class="code-tag">${empById[d.empresa_id]?.codigo||'?'}</span></td>
+      <td><span class="code-tag">${d.codigo}</span></td>
+      <td>${d.nombre}</td>
+      <td>${d.orden}</td>
+      <td><span class="badge ${d.activa?'badge-publicado':'badge-vencido'}">${d.activa?'Activa':'Inactiva'}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin divisiones</td></tr>';
+
+  document.getElementById('admin-areas-body').innerHTML =
+    areas.map(a=>{
+      const div = divById[a.division_id];
+      return `<tr>
+        <td>${div?`<span class="code-tag">${div.codigo}</span> ${div.nombre}`:a.division_id}</td>
+        <td><span class="code-tag">${a.codigo}</span></td>
+        <td>${a.nombre}</td>
+        <td>${a.orden}</td>
+        <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(async () => {
+  // Cargar empresas globalmente para modales
+  const { data: emps } = await sb.from('pol_empresas').select('*');
+  empresas = emps || [];
+  loadDashboard();
+})();
+</script>
+</body>
+</html>
