@@ -51,8 +51,7 @@ button{cursor:pointer;border:none;font-family:inherit}
 input,textarea,select{font-family:inherit}
 
 /* NAV — Frafer header */
-.topbar{display:flex;align-items:center;gap:20px;padding:0 28px;height:58px;background:var(--navy);position:sticky;top:0;z-index:100}
-.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%)}
+.topbar{display:flex;align-items:center;gap:20px;padding:0 28px;height:58px;background:var(--navy);position:sticky;top:0;z-index:100;border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%) 1}
 .topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
 .topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow),transparent);opacity:.4;margin:4px 0}
 .topbar-title{font-family:var(--ff-mono);font-size:9px;font-weight:400;color:var(--ember-glow);letter-spacing:0;text-transform:uppercase;opacity:.85;white-space:nowrap;display:inline-block}
