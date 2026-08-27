@@ -55,7 +55,7 @@ input,textarea,select{font-family:inherit}
 .topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%)}
 .topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
 .topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow),transparent);opacity:.4;margin:4px 0}
-.topbar-title{font-family:var(--ff-mono);font-size:9px;font-weight:400;color:var(--ember-glow);letter-spacing:.28em;text-transform:uppercase;opacity:.85;text-align:center;padding-left:.28em}
+.topbar-title{font-family:var(--ff-mono);font-size:9px;font-weight:400;color:var(--ember-glow);letter-spacing:0;text-transform:uppercase;opacity:.85;white-space:nowrap;display:inline-block}
 .topbar-brand-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center}
 .topbar-nav{display:flex;gap:0;margin-left:auto}
 .nav-btn{padding:0 20px;height:58px;font-family:var(--ff-body);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
@@ -1499,6 +1499,22 @@ async function loadAdmin() {
   empresas = emps || [];
   direcciones = dirs || [];
   loadDashboard();
+
+  // Align subtitle width to brand title by computing exact letter-spacing
+  function alignBrandWidth() {
+    const brand = document.querySelector('.topbar-brand');
+    const sub   = document.querySelector('.topbar-title');
+    if (!brand || !sub) return;
+    const target = brand.getBoundingClientRect().width;
+    let lo = 0, hi = 4, ls = 0;
+    for (let i = 0; i < 40; i++) {
+      ls = (lo + hi) / 2;
+      sub.style.letterSpacing = ls + 'em';
+      if (sub.getBoundingClientRect().width < target) lo = ls; else hi = ls;
+    }
+  }
+  alignBrandWidth();
+  window.addEventListener('resize', alignBrandWidth);
 })();
 </script>
 </body>
