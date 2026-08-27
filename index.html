@@ -85,7 +85,14 @@ input,textarea,select{font-family:inherit}
 
 /* SEMÁFORO TABLE */
 .semaforo-table{width:100%;border-collapse:collapse;font-size:12px;font-family:var(--ff-body)}
-.semaforo-table th{text-align:left;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);padding:10px 14px;border-bottom:1px solid var(--stone);font-family:var(--ff-mono)}
+.semaforo-table thead{background:var(--linen)}
+.semaforo-table th{text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:11px 14px;border-bottom:2px solid var(--stone);font-family:var(--ff-mono);font-weight:600}
+.semaforo-table th.th-area    {color:var(--navy)}
+.semaforo-table th.th-pub     {color:var(--green)}
+.semaforo-table th.th-proceso {color:var(--orange)}
+.semaforo-table th.th-pend    {color:var(--dust)}
+.semaforo-table th.th-total   {color:var(--gold)}
+.semaforo-table th.th-avance  {color:var(--ember-deep)}
 .semaforo-table td{padding:11px 14px;border-bottom:1px solid var(--stone)}
 .semaforo-table tr:last-child td{border-bottom:none}
 .semaforo-table tr:hover td{background:var(--linen)}
@@ -377,16 +384,16 @@ input,textarea,select{font-family:inherit}
       <div class="stat-card"><div class="num" id="stat-pend">—</div><div class="lbl">Pendientes</div></div>
       <div class="stat-card red"><div class="num" id="stat-venc">—</div><div class="lbl">Vencidas / Alerta</div></div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+    <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
       <table class="semaforo-table" id="semaforo-table">
         <thead>
           <tr>
-            <th>División / Área</th>
-            <th>Publicadas</th>
-            <th>En Proceso</th>
-            <th>Pendientes</th>
-            <th>Total</th>
-            <th>Avance</th>
+            <th class="th-area">Dirección / Área</th>
+            <th class="th-pub">Publicadas</th>
+            <th class="th-proceso">En Proceso</th>
+            <th class="th-pend">Pendientes</th>
+            <th class="th-total">Total</th>
+            <th class="th-avance">Avance</th>
           </tr>
         </thead>
         <tbody id="semaforo-body"><tr><td colspan="6" class="loading">Cargando datos…</td></tr></tbody>
@@ -612,7 +619,7 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
         <table class="admin-table"><thead><tr><th>Empresa</th><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
         <tbody id="admin-direcciones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
@@ -622,14 +629,14 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
         <table class="admin-table"><thead><tr><th>Dirección</th><th>Núm.</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-areas-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
     <div class="tab-panel" id="atab-depto">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
         <table class="admin-table"><thead><tr><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-deptos-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
       </div>
