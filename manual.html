@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Arquitectura · Frafer Suite Control Documental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:        #2A2826;
+  --parchment:  #F0E8DC;
+  --linen:      #E8DDD2;
+  --stone:      #C8BFB5;
+  --fog:        #A8A098;
+  --dust:       #7A7268;
+  --ember:      #C08898;
+  --ember-deep: #9A6070;
+  --ember-mist: #FBF0F4;
+  --gold:       #A88858;
+  --gold-mist:  #FAF3E8;
+  --navy:       #1C2B3A;
+  --ff-display: 'Cormorant Garamond','Cormorant',Georgia,serif;
+  --ff-body:    'Familjen Grotesk','Segoe UI',sans-serif;
+  --ff-mono:    'DM Mono','Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff-body);background:var(--parchment);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;padding:0 40px;height:58px;background:var(--navy);position:sticky;top:0;z-index:100;position:relative}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%)}
+.topbar-brand-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.topbar-brand{font-family:var(--ff-display);font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
+.topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow,#E0B8C8),transparent);opacity:.4;margin:4px 0}
+.topbar-title{font-family:var(--ff-mono);font-size:7.5px;font-weight:400;color:#E0B8C8;letter-spacing:.32em;text-transform:uppercase;opacity:.85;text-align:center;padding-left:.32em}
+.topbar-back{margin-left:auto;font-family:var(--ff-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);text-decoration:none;transition:color .15s}
+.topbar-back:hover{color:rgba(255,255,255,.8)}
+
+/* LAYOUT */
+.wrap{max-width:860px;margin:0 auto;padding:52px 40px 80px}
+
+/* PORTADA */
+.cover{text-align:center;padding:60px 0 52px;border-bottom:1px solid var(--stone);margin-bottom:52px}
+.cover-eyebrow{font-family:var(--ff-mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember-deep);margin-bottom:20px}
+.cover-title{font-family:var(--ff-display);font-size:48px;font-weight:300;color:var(--ink);line-height:1.1;margin-bottom:12px}
+.cover-sub{font-family:var(--ff-display);font-size:22px;font-weight:300;color:var(--dust);font-style:italic}
+.cover-meta{margin-top:28px;display:flex;justify-content:center;gap:32px}
+.cover-meta-item{text-align:center}
+.cover-meta-label{font-family:var(--ff-mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--fog);margin-bottom:4px}
+.cover-meta-value{font-family:var(--ff-mono);font-size:11px;color:var(--dust)}
+
+/* ÍNDICE */
+.toc{background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;padding:28px 32px;margin-bottom:52px}
+.toc-title{font-family:var(--ff-mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--fog);margin-bottom:16px}
+.toc-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.toc-list li{display:flex;align-items:baseline;gap:8px}
+.toc-num{font-family:var(--ff-mono);font-size:10px;color:var(--ember-deep);min-width:20px}
+.toc-link{font-size:13px;color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--stone);padding-bottom:1px;transition:color .15s}
+.toc-link:hover{color:var(--ember-deep)}
+
+/* SECCIONES */
+.section{margin-bottom:52px}
+.section-num{font-family:var(--ff-mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--ember-deep);margin-bottom:8px}
+.section-title{font-family:var(--ff-display);font-size:32px;font-weight:400;color:var(--ink);margin-bottom:6px;letter-spacing:.04em}
+.section-lead{font-size:13px;color:var(--dust);margin-bottom:28px;line-height:1.6;max-width:620px}
+.section-divider{height:1px;background:linear-gradient(90deg,var(--ember),var(--gold),transparent);margin-bottom:28px;opacity:.35}
+
+/* SUBSECCIÓN */
+.sub{margin-bottom:32px}
+.sub-title{font-family:var(--ff-display);font-size:18px;font-weight:500;color:var(--ink);margin-bottom:12px;letter-spacing:.03em}
+
+/* JERARQUÍA */
+.hierarchy{font-family:var(--ff-mono);font-size:12px;line-height:2;background:#FDF9F5;border:1px solid var(--stone);border-radius:8px;padding:20px 24px;margin-bottom:20px}
+.h-level-0{color:var(--navy);font-weight:500}
+.h-level-1{color:var(--gold);padding-left:20px}
+.h-level-2{color:var(--dust);padding-left:40px}
+.h-level-3{color:var(--ember-deep);padding-left:60px}
+.h-level-4{color:var(--fog);padding-left:80px}
+
+/* CÓDIGO */
+.code-anatomy{display:flex;align-items:flex-start;gap:0;margin:20px 0;flex-wrap:wrap}
+.code-block{display:flex;flex-direction:column;align-items:center}
+.code-seg{font-family:var(--ff-mono);font-size:22px;font-weight:400;padding:12px 16px;border-top:3px solid var(--stone);color:var(--ink)}
+.code-seg.t{border-color:var(--ember);color:var(--ember-deep)}
+.code-seg.d{border-color:var(--navy);color:var(--navy)}
+.code-seg.a{border-color:var(--gold);color:var(--gold)}
+.code-seg.p{border-color:var(--dust);color:var(--dust)}
+.code-seg.v{border-color:var(--ember-deep);color:var(--ember-deep)}
+.code-sep{font-family:var(--ff-mono);font-size:22px;color:var(--stone);padding:12px 4px;padding-top:15px}
+.code-lbl{font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);margin-top:4px;text-align:center}
+
+/* TABLA */
+.doc-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px}
+.doc-table th{text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy);padding:10px 14px;border-bottom:2px solid var(--stone);background:var(--linen)}
+.doc-table td{padding:11px 14px;border-bottom:1px solid var(--stone);vertical-align:top;line-height:1.5}
+.doc-table tr:last-child td{border-bottom:none}
+.doc-table tr:hover td{background:#FDF9F5}
+.field-num{font-family:var(--ff-mono);font-size:10px;color:var(--ember-deep);font-weight:500}
+.field-name{font-weight:600;color:var(--ink)}
+.field-desc{color:var(--dust);font-size:12px}
+.field-req{font-family:var(--ff-mono);font-size:9px;padding:2px 7px;border-radius:10px}
+.req-si{background:var(--ember-mist);color:var(--ember-deep);border:1px solid #C0889828}
+.req-op{background:var(--gold-mist);color:var(--gold);border:1px solid #A8885828}
+
+/* CICLO DE VIDA */
+.lifecycle{display:flex;flex-direction:column;gap:0;margin:20px 0}
+.lc-step{display:flex;gap:20px;padding:16px 0;position:relative}
+.lc-step:not(:last-child)::after{content:'';position:absolute;left:19px;top:44px;bottom:-16px;width:2px;background:var(--stone)}
+.lc-dot{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--ff-mono);font-size:11px;font-weight:500;flex-shrink:0;border:2px solid var(--stone);background:#FDF9F5;color:var(--dust);z-index:1}
+.lc-step.active .lc-dot{background:var(--ember-mist);border-color:var(--ember);color:var(--ember-deep)}
+.lc-body{flex:1;padding-top:6px}
+.lc-name{font-weight:600;font-size:13px;color:var(--ink);margin-bottom:3px}
+.lc-desc{font-size:12px;color:var(--dust);line-height:1.5}
+.lc-who{font-family:var(--ff-mono);font-size:9px;color:var(--fog);margin-top:4px;letter-spacing:.06em}
+.lc-status{font-family:var(--ff-mono);font-size:8px;padding:1px 8px;border-radius:10px;display:inline-block;margin-top:4px}
+
+/* ACTIVIDADES — resumen por dirección */
+.dir-block{background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.dir-header{padding:14px 18px;display:flex;align-items:center;gap:12px;background:var(--linen);border-bottom:1px solid var(--stone)}
+.dir-code{font-family:var(--ff-mono);font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--navy)}
+.dir-name{font-family:var(--ff-display);font-size:16px;font-weight:400;color:var(--ink)}
+.dir-tipo{font-family:var(--ff-mono);font-size:8px;padding:1px 8px;border-radius:10px;margin-left:auto}
+.tipo-gobierno{background:#1C2B3A18;color:var(--navy);border:1px solid #1C2B3A30}
+.tipo-soporte{background:var(--linen);color:var(--dust);border:1px solid var(--stone)}
+.tipo-primaria{background:var(--ember-mist);color:var(--ember-deep);border:1px solid #C0889828}
+.dir-areas{padding:12px 18px;display:flex;flex-direction:column;gap:10px}
+.area-row{display:grid;grid-template-columns:60px 1fr;gap:8px;font-size:12px}
+.area-num{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600}
+.area-name{color:var(--ink);font-weight:500;margin-bottom:3px}
+.area-depts{display:flex;flex-wrap:wrap;gap:4px}
+.dept-chip{font-family:var(--ff-mono);font-size:9px;padding:1px 7px;border-radius:10px;background:var(--linen);border:1px solid var(--stone);color:var(--dust)}
+
+/* NOTA */
+.nota{background:var(--gold-mist);border:1px solid #A8885830;border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:14px 18px;font-size:12px;color:var(--dust);line-height:1.6;margin:20px 0}
+.nota strong{color:var(--ink);font-weight:600}
+
+/* FOOTER */
+.footer{text-align:center;padding:40px;border-top:1px solid var(--stone);margin-top:60px}
+.footer-brand{font-family:var(--ff-display);font-size:20px;font-weight:300;letter-spacing:.18em;text-transform:uppercase;color:var(--dust);margin-bottom:6px}
+.footer-meta{font-family:var(--ff-mono);font-size:9px;color:var(--fog);letter-spacing:.1em}
+
+@media(max-width:680px){.wrap{padding:32px 20px 60px}.cover-title{font-size:32px}.code-anatomy{justify-content:center}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand-wrap">
+    <span class="topbar-brand">Frafer Suite</span>
+    <span class="topbar-sep"></span>
+    <span class="topbar-title">Control Documental</span>
+  </div>
+  <a href="index.html" class="topbar-back">← Regresar a la plataforma</a>
+</div>
+
+<div class="wrap">
+
+  <!-- PORTADA -->
+  <div class="cover">
+    <div class="cover-eyebrow">Frafer Suite · Control Documental</div>
+    <h1 class="cover-title">Manual de Arquitectura</h1>
+    <p class="cover-sub">Guía de referencia del sistema de gestión documental</p>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Versión</div>
+        <div class="cover-meta-value">1.0</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Fecha</div>
+        <div class="cover-meta-value">Agosto 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Cliente</div>
+        <div class="cover-meta-value">Grupo Morsa</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="cover-meta-label">Elaboró</div>
+        <div class="cover-meta-value">Frafer Consulting</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÍNDICE -->
+  <div class="toc">
+    <div class="toc-title">Contenido</div>
+    <ul class="toc-list">
+      <li><span class="toc-num">01</span><a href="#s1" class="toc-link">Propósito del sistema</a></li>
+      <li><span class="toc-num">02</span><a href="#s2" class="toc-link">Jerarquía organizacional</a></li>
+      <li><span class="toc-num">03</span><a href="#s3" class="toc-link">Tipos de documento</a></li>
+      <li><span class="toc-num">04</span><a href="#s4" class="toc-link">Sistema de codificación</a></li>
+      <li><span class="toc-num">05</span><a href="#s5" class="toc-link">Estructura del documento</a></li>
+      <li><span class="toc-num">06</span><a href="#s6" class="toc-link">Ciclo de vida del documento</a></li>
+      <li><span class="toc-num">07</span><a href="#s7" class="toc-link">Catálogo de actividades por departamento</a></li>
+    </ul>
+  </div>
+
+  <!-- 01 PROPÓSITO -->
+  <div class="section" id="s1">
+    <div class="section-num">01</div>
+    <h2 class="section-title">Propósito del sistema</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">Frafer Suite Control Documental es la plataforma de gobierno documental de Grupo Morsa. Su propósito es registrar, gestionar y mantener vigentes las políticas, procesos y procedimientos que rigen la operación de la organización — asegurando trazabilidad, responsabilidad y cumplimiento en cada etapa del ciclo de vida de cada documento.</p>
+
+    <div class="nota">
+      <strong>Principio rector:</strong> Cada actividad que genera valor o da soporte a la operación debe estar regida por al menos una política documentada, autorizada y comunicada.
+    </div>
+  </div>
+
+  <!-- 02 JERARQUÍA -->
+  <div class="section" id="s2">
+    <div class="section-num">02</div>
+    <h2 class="section-title">Jerarquía organizacional</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">El sistema organiza los documentos siguiendo la estructura organizacional real de Grupo Morsa en cinco niveles.</p>
+
+    <div class="hierarchy">
+      <div class="h-level-0">EMPRESA</div>
+      <div class="h-level-1">└── DIRECCIÓN &nbsp;&nbsp;&nbsp;(Gobierno / Soporte / Primaria — Porter)</div>
+      <div class="h-level-2">└── ÁREA &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Unidad funcional, código 600–617)</div>
+      <div class="h-level-3">└── DEPARTAMENTO &nbsp;(Unidad organizacional real)</div>
+      <div class="h-level-4">└── ACTIVIDAD &nbsp;&nbsp;&nbsp;(La que genera valor o soporte → origen del documento)</div>
+    </div>
+
+    <div class="nota">
+      <strong>Regla clave:</strong> Los departamentos son unidades organizacionales reales donde viven personas con un responsable. Las actividades son lo que esas personas hacen — son la unidad mínima que requiere un documento que la rija.
+    </div>
+
+    <div class="sub">
+      <h3 class="sub-title">Las 4 Direcciones de Grupo Morsa</h3>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Dirección</th>
+            <th>Tipo</th>
+            <th>Áreas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="field-num">DG</span></td>
+            <td><span class="field-name">Dirección General</span></td>
+            <td><span class="dept-chip" style="background:#1C2B3A18;color:#1C2B3A;border-color:#1C2B3A30">Gobierno</span></td>
+            <td class="field-desc">600 · 601 · 602 · 603</td>
+          </tr>
+          <tr>
+            <td><span class="field-num">DA</span></td>
+            <td><span class="field-name">Dirección Administrativa y Capital Humano</span></td>
+            <td><span class="dept-chip">Soporte</span></td>
+            <td class="field-desc">604 · 605 · 606 · 607 · 608</td>
+          </tr>
+          <tr>
+            <td><span class="field-num">DO</span></td>
+            <td><span class="field-name">Dirección de Operaciones</span></td>
+            <td><span class="dept-chip" style="background:#FBF0F4;color:#9A6070;border-color:#C0889828">Porter · Primaria</span></td>
+            <td class="field-desc">609 · 610 · 611 · 612</td>
+          </tr>
+          <tr>
+            <td><span class="field-num">DC</span></td>
+            <td><span class="field-name">Dirección Comercial</span></td>
+            <td><span class="dept-chip" style="background:#FBF0F4;color:#9A6070;border-color:#C0889828">Porter · Primaria</span></td>
+            <td class="field-desc">613 · 614 · 615 · 616 · 617</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 03 TIPOS DE DOCUMENTO -->
+  <div class="section" id="s3">
+    <div class="section-num">03</div>
+    <h2 class="section-title">Tipos de documento</h2>
+    <div class="section-divider"></div>
+    <table class="doc-table">
+      <thead>
+        <tr><th>Tipo</th><th>Nombre</th><th>Qué define</th><th>Nivel</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="field-num">PLT</span></td>
+          <td><span class="field-name">Política</span></td>
+          <td class="field-desc">Qué debe hacerse, bajo qué condiciones, quién es responsable, qué está permitido y qué no. Define reglas, lineamientos, sanciones y excepciones.</td>
+          <td class="field-desc">Actividad</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">PCS</span></td>
+          <td><span class="field-name">Proceso</span></td>
+          <td class="field-desc">Cómo se ejecuta la actividad de principio a fin. Describe el flujo, las entradas, las transformaciones y las salidas.</td>
+          <td class="field-desc">Actividad</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">PCD</span></td>
+          <td><span class="field-name">Procedimiento</span></td>
+          <td class="field-desc">El paso a paso detallado de una tarea específica dentro del proceso. Instrucciones operativas para el ejecutor.</td>
+          <td class="field-desc">Actividad / Ítem</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 04 CODIFICACIÓN -->
+  <div class="section" id="s4">
+    <div class="section-num">04</div>
+    <h2 class="section-title">Sistema de codificación</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">Cada documento recibe un código único de 5 componentes que ubica el documento en la jerarquía organizacional y lo identifica de forma inequívoca.</p>
+
+    <div class="code-anatomy">
+      <div class="code-block">
+        <div class="code-seg t">PLT</div>
+        <div class="code-lbl">Tipo</div>
+      </div>
+      <div class="code-sep">-</div>
+      <div class="code-block">
+        <div class="code-seg d">DG</div>
+        <div class="code-lbl">Dirección</div>
+      </div>
+      <div class="code-sep">-</div>
+      <div class="code-block">
+        <div class="code-seg a">600</div>
+        <div class="code-lbl">Área</div>
+      </div>
+      <div class="code-sep">-</div>
+      <div class="code-block">
+        <div class="code-seg p">001</div>
+        <div class="code-lbl">Departamento</div>
+      </div>
+      <div class="code-sep">-</div>
+      <div class="code-block">
+        <div class="code-seg v">01</div>
+        <div class="code-lbl">Actividad</div>
+      </div>
+    </div>
+
+    <table class="doc-table" style="margin-top:20px">
+      <thead>
+        <tr><th>Posición</th><th>Qué representa</th><th>Formato</th><th>Ejemplo</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="field-num">1</span></td>
+          <td><span class="field-name">Tipo de documento</span></td>
+          <td class="field-desc">3 letras</td>
+          <td class="field-desc">PLT / PCS / PCD</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">2</span></td>
+          <td><span class="field-name">Dirección</span></td>
+          <td class="field-desc">2 letras</td>
+          <td class="field-desc">DG / DA / DO / DC</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">3</span></td>
+          <td><span class="field-name">Área</span></td>
+          <td class="field-desc">3 dígitos</td>
+          <td class="field-desc">600 … 617</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">4</span></td>
+          <td><span class="field-name">Departamento</span></td>
+          <td class="field-desc">3 dígitos (correlativo por área)</td>
+          <td class="field-desc">001, 002, 003…</td>
+        </tr>
+        <tr>
+          <td><span class="field-num">5</span></td>
+          <td><span class="field-name">Actividad</span></td>
+          <td class="field-desc">2 dígitos (correlativo por departamento)</td>
+          <td class="field-desc">01, 02, 03…</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="nota" style="margin-top:20px">
+      <strong>Ejemplo completo:</strong> &nbsp;<span style="font-family:var(--ff-mono);color:var(--ember-deep)">PLT-DA-604-003-01</span> &nbsp;= Política · Dirección Administrativa · Área 604 Administración y Finanzas · Departamento 003 Administración Fiscal · Actividad 01 Declaraciones fiscales.
+    </div>
+  </div>
+
+  <!-- 05 ESTRUCTURA DEL DOCUMENTO -->
+  <div class="section" id="s5">
+    <div class="section-num">05</div>
+    <h2 class="section-title">Estructura del documento</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">Cada documento en el sistema captura los siguientes campos. Los campos obligatorios deben completarse para que el documento pueda avanzar a revisión.</p>
+
+    <table class="doc-table">
+      <thead>
+        <tr><th>#</th><th>Campo</th><th>Descripción</th><th>Req.</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="field-num">01</span></td>
+          <td><span class="field-name">Código</span></td>
+          <td class="field-desc">Identificador único generado automáticamente por el sistema (Tipo-Dir-Área-Depto-Actividad)</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">02</span></td>
+          <td><span class="field-name">Nombre</span></td>
+          <td class="field-desc">Título descriptivo del documento</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">03</span></td>
+          <td><span class="field-name">Versión</span></td>
+          <td class="field-desc">Número de versión correlativo (1, 2, 3…). Se incrementa en cada revisión autorizada.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">04</span></td>
+          <td><span class="field-name">Objeto / Objetivo</span></td>
+          <td class="field-desc">Para qué existe este documento. Propósito claro y concreto.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">05</span></td>
+          <td><span class="field-name">Alcance</span></td>
+          <td class="field-desc">A quién aplica, qué cubre y qué queda fuera del ámbito del documento.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">06</span></td>
+          <td><span class="field-name">Definiciones</span></td>
+          <td class="field-desc">Términos clave utilizados en el documento y su significado en contexto.</td>
+          <td><span class="field-req req-op">Opcional</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">07</span></td>
+          <td><span class="field-name">Reglas y Lineamientos</span></td>
+          <td class="field-desc">El cuerpo de la política. Establece qué debe hacerse, qué está permitido y qué está prohibido.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">08</span></td>
+          <td><span class="field-name">Responsables</span></td>
+          <td class="field-desc">Quién debe cumplir la política y quién es responsable de su supervisión y cumplimiento.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">09</span></td>
+          <td><span class="field-name">Excepciones</span></td>
+          <td class="field-desc">Casos específicos en los que la política no aplica o requiere tratamiento diferenciado.</td>
+          <td><span class="field-req req-op">Opcional</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">10</span></td>
+          <td><span class="field-name">Sanciones</span></td>
+          <td class="field-desc">Consecuencias formales del incumplimiento de la política.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">11</span></td>
+          <td><span class="field-name">Documentos relacionados</span></td>
+          <td class="field-desc">Códigos de PLT, PCS o PCD vinculados a este documento.</td>
+          <td><span class="field-req req-op">Opcional</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">12</span></td>
+          <td><span class="field-name">Vigencia</span></td>
+          <td class="field-desc">Período de validez del documento expresado en meses.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+        <tr>
+          <td><span class="field-num">13</span></td>
+          <td><span class="field-name">Fecha de revisión</span></td>
+          <td class="field-desc">Fecha en que el documento debe ser revisado y actualizado.</td>
+          <td><span class="field-req req-si">Obligatorio</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 06 CICLO DE VIDA -->
+  <div class="section" id="s6">
+    <div class="section-num">06</div>
+    <h2 class="section-title">Ciclo de vida del documento</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">Todo documento pasa por siete etapas desde su identificación hasta su vencimiento. El sistema registra fecha, responsable y notas en cada transición de estatus.</p>
+
+    <div class="lifecycle">
+      <div class="lc-step active">
+        <div class="lc-dot">01</div>
+        <div class="lc-body">
+          <div class="lc-name">Levantamiento</div>
+          <div class="lc-desc">Se identifica la necesidad del documento: actividad a regir, alcance preliminar, área responsable y partes involucradas. Es el punto de arranque del proyecto documental.</div>
+          <div class="lc-who">Consultor Frafer + Responsable del Área</div>
+        </div>
+      </div>
+      <div class="lc-step active">
+        <div class="lc-dot">02</div>
+        <div class="lc-body">
+          <div class="lc-name">Elaboración / Borrador</div>
+          <div class="lc-desc">Se redacta el contenido completo del documento: objeto, alcance, reglas, responsables, excepciones, sanciones y vigencia. Se captura en la plataforma campo por campo.</div>
+          <div class="lc-who">Responsable del Área</div>
+        </div>
+      </div>
+      <div class="lc-step active">
+        <div class="lc-dot">03</div>
+        <div class="lc-body">
+          <div class="lc-name">Revisión</div>
+          <div class="lc-desc">El documento es validado por un par o por la Dirección correspondiente. Se verifica coherencia, aplicabilidad, cumplimiento normativo y consistencia con otros documentos.</div>
+          <div class="lc-who">Par designado / Dirección</div>
+        </div>
+      </div>
+      <div class="lc-step active">
+        <div class="lc-dot">04</div>
+        <div class="lc-body">
+          <div class="lc-name">Autorización</div>
+          <div class="lc-desc">El Director del área o la Dirección General firma y aprueba formalmente el documento. El sistema registra quién autorizó y la fecha exacta.</div>
+          <div class="lc-who">Director de Área / Dirección General</div>
+        </div>
+      </div>
+      <div class="lc-step active">
+        <div class="lc-dot">05</div>
+        <div class="lc-body">
+          <div class="lc-name">Comunicación</div>
+          <div class="lc-desc">El documento se difunde formalmente al personal al que aplica. Se define el canal de comunicación y el esquema de capacitación si corresponde.</div>
+          <div class="lc-who">Capital Humano + Responsable del Área</div>
+        </div>
+      </div>
+      <div class="lc-step active">
+        <div class="lc-dot">06</div>
+        <div class="lc-body">
+          <div class="lc-name">Vigencia / Publicado</div>
+          <div class="lc-desc">El documento está activo, en operación y disponible para consulta. El sistema monitorea su fecha de vencimiento y genera alertas preventivas.</div>
+          <div class="lc-who">Toda la organización</div>
+        </div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot">07</div>
+        <div class="lc-body">
+          <div class="lc-name">Vencimiento / Renovación</div>
+          <div class="lc-desc">Al vencer la vigencia, el documento entra en proceso de revisión y actualización. Se genera una nueva versión que recorre el ciclo completo. El historial de versiones anteriores queda preservado.</div>
+          <div class="lc-who">Responsable del Área + Consultor Frafer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 CATÁLOGO DE ACTIVIDADES -->
+  <div class="section" id="s7">
+    <div class="section-num">07</div>
+    <h2 class="section-title">Catálogo de actividades por departamento</h2>
+    <div class="section-divider"></div>
+    <p class="section-lead">Las actividades son la unidad mínima del sistema. Cada una es definida por el ciclo natural del departamento — su entrada, transformación y salida — y es el origen de cada documento PLT, PCS o PCD.</p>
+
+    <!-- DG -->
+    <div class="dir-block">
+      <div class="dir-header">
+        <span class="dir-code">DG</span>
+        <span class="dir-name">Dirección General</span>
+        <span class="dir-tipo tipo-gobierno">Gobierno</span>
+      </div>
+      <div class="dir-areas">
+        <div class="area-row">
+          <span class="area-num">600</span>
+          <div>
+            <div class="area-name">Dirección General</div>
+            <div class="area-depts">
+              <span class="dept-chip">Oficina del Director General</span>
+              <span class="dept-chip">Comité Directivo</span>
+              <span class="dept-chip">Planeación Estratégica</span>
+              <span class="dept-chip">Comunicación Institucional</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">601</span>
+          <div>
+            <div class="area-name">Contraloría</div>
+            <div class="area-depts"><span class="dept-chip">Contraloría</span></div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">602</span>
+          <div>
+            <div class="area-name">Auditoría Interna</div>
+            <div class="area-depts"><span class="dept-chip">Auditoría Interna</span></div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">603</span>
+          <div>
+            <div class="area-name">Calidad y Mejora Continua</div>
+            <div class="area-depts"><span class="dept-chip">Calidad</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DA -->
+    <div class="dir-block">
+      <div class="dir-header">
+        <span class="dir-code">DA</span>
+        <span class="dir-name">Dirección Administrativa y Capital Humano</span>
+        <span class="dir-tipo tipo-soporte">Soporte</span>
+      </div>
+      <div class="dir-areas">
+        <div class="area-row">
+          <span class="area-num">604</span>
+          <div>
+            <div class="area-name">Administración y Finanzas</div>
+            <div class="area-depts">
+              <span class="dept-chip">Contabilidad</span>
+              <span class="dept-chip">Tesorería</span>
+              <span class="dept-chip">Administración Fiscal</span>
+              <span class="dept-chip">Administración Financiera</span>
+              <span class="dept-chip">Nómina</span>
+              <span class="dept-chip">Compras de Servicios y Suministros</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">605</span>
+          <div>
+            <div class="area-name">Recursos Humanos</div>
+            <div class="area-depts">
+              <span class="dept-chip">Atracción de Talento</span>
+              <span class="dept-chip">Desarrollo Organizacional</span>
+              <span class="dept-chip">Compensaciones y Beneficios</span>
+              <span class="dept-chip">Relaciones Laborales</span>
+              <span class="dept-chip">Seguridad e Higiene (SHE)</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">606</span>
+          <div>
+            <div class="area-name">Tecnología e Información</div>
+            <div class="area-depts">
+              <span class="dept-chip">Infraestructura y Redes</span>
+              <span class="dept-chip">Sistemas / ERP</span>
+              <span class="dept-chip">Soporte Técnico</span>
+              <span class="dept-chip">Seguridad de la Información</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">607</span>
+          <div>
+            <div class="area-name">Jurídico y Legal</div>
+            <div class="area-depts">
+              <span class="dept-chip">Corporativo</span>
+              <span class="dept-chip">Contencioso</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">608</span>
+          <div>
+            <div class="area-name">RSE / ESR</div>
+            <div class="area-depts"><span class="dept-chip">Responsabilidad Social</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DO -->
+    <div class="dir-block">
+      <div class="dir-header">
+        <span class="dir-code">DO</span>
+        <span class="dir-name">Dirección de Operaciones</span>
+        <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
+      </div>
+      <div class="dir-areas">
+        <div class="area-row">
+          <span class="area-num">609</span>
+          <div>
+            <div class="area-name">Logística Interna y Almacén</div>
+            <div class="area-depts">
+              <span class="dept-chip">Almacén Central</span>
+              <span class="dept-chip">Recepción y Control de Mercancía</span>
+              <span class="dept-chip">Control de Inventarios</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">610</span>
+          <div>
+            <div class="area-name">Cadena de Suministro</div>
+            <div class="area-depts">
+              <span class="dept-chip">Administración de Compras</span>
+              <span class="dept-chip">Importaciones</span>
+              <span class="dept-chip">Gestión de Proveeduría</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">611</span>
+          <div>
+            <div class="area-name">Operaciones / Puntos de Venta</div>
+            <div class="area-depts">
+              <span class="dept-chip">Grupo Morsa — Sucursales</span>
+              <span class="dept-chip">Energy Parts LTH — Tiendas</span>
+              <span class="dept-chip">Canal Mayorista</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">612</span>
+          <div>
+            <div class="area-name">Logística Externa y Distribución</div>
+            <div class="area-depts">
+              <span class="dept-chip">Flota y Distribución</span>
+              <span class="dept-chip">Abastecimiento a Sucursales</span>
+              <span class="dept-chip">Entrega a Cliente</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DC -->
+    <div class="dir-block">
+      <div class="dir-header">
+        <span class="dir-code">DC</span>
+        <span class="dir-name">Dirección Comercial</span>
+        <span class="dir-tipo tipo-primaria">Porter · Primaria</span>
+      </div>
+      <div class="dir-areas">
+        <div class="area-row">
+          <span class="area-num">613</span>
+          <div>
+            <div class="area-name">Planeación Comercial</div>
+            <div class="area-depts">
+              <span class="dept-chip">Planeación de la Demanda</span>
+              <span class="dept-chip">Cálculo de Compra</span>
+              <span class="dept-chip">Análisis Comercial e Inteligencia</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">614</span>
+          <div>
+            <div class="area-name">Product Management</div>
+            <div class="area-depts">
+              <span class="dept-chip">Gestión de Categorías</span>
+              <span class="dept-chip">Pricing y Revenue Management</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">615</span>
+          <div>
+            <div class="area-name">Marketing y Comunicación Comercial</div>
+            <div class="area-depts">
+              <span class="dept-chip">Marketing Digital</span>
+              <span class="dept-chip">Marca y Comunicación</span>
+              <span class="dept-chip">Promociones y Trade Marketing</span>
+              <span class="dept-chip">Inteligencia de Mercado</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">616</span>
+          <div>
+            <div class="area-name">Comercial y Ventas</div>
+            <div class="area-depts">
+              <span class="dept-chip">Ventas Mayoristas</span>
+              <span class="dept-chip">Ventas Sucursales</span>
+              <span class="dept-chip">Crédito y Cobranza</span>
+            </div>
+          </div>
+        </div>
+        <div class="area-row">
+          <span class="area-num">617</span>
+          <div>
+            <div class="area-name">Servicio al Cliente</div>
+            <div class="area-depts">
+              <span class="dept-chip">Atención al Cliente</span>
+              <span class="dept-chip">Garantías y Reclamaciones</span>
+              <span class="dept-chip">Postventa</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nota">
+      <strong>Siguiente paso:</strong> Por cada departamento se levanta el ciclo de sus actividades (entrada → transformación → salida) y se genera el catálogo de documentos PLT/PCS/PCD que las rigen.
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-brand">Frafer Suite</div>
+    <div class="footer-meta">Control Documental · Versión 1.0 · Agosto 2026 · Frafer Consulting</div>
+  </div>
+
+</div>
+</body>
+</html>
