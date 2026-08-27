@@ -111,7 +111,23 @@ input,textarea,select{font-family:inherit}
 .badge-publicado{color:var(--green);background:#4a8c6a10;border:1px solid #4a8c6a30}.badge-publicado::before{background:var(--green)}
 .badge-vencido{color:var(--red);background:#b8505010;border:1px solid #b8505030}.badge-vencido::before{background:var(--red)}
 
-/* CATÁLOGO — ÁRBOL */
+/* CATÁLOGO — TABLA FLAT */
+.cat-summary{display:flex;gap:32px;padding:4px 0 20px;flex-wrap:wrap;border-bottom:1px solid var(--stone);margin-bottom:16px}
+.cat-stat{display:flex;flex-direction:column;gap:3px}
+.cat-stat-val{font-family:var(--ff-mono);font-size:26px;font-weight:700;color:var(--navy);line-height:1}
+.cat-stat-lbl{font-size:9px;color:var(--fog);letter-spacing:.08em;text-transform:uppercase}
+.cat-filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.cat-filter-select,.cat-search{font-size:11px;border:1px solid var(--stone);border-radius:6px;padding:6px 10px;background:var(--linen);color:var(--ink);font-family:var(--ff-body);outline:none}
+.cat-search{flex:1;min-width:180px;background:#fff}
+.cat-table{width:100%;border-collapse:collapse;font-size:11px}
+.cat-table th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--navy);font-weight:700;border-bottom:2px solid var(--stone);background:var(--linen);white-space:nowrap}
+.cat-table td{padding:7px 12px;border-bottom:1px solid var(--stone);vertical-align:middle}
+.cat-table tbody tr:hover td{background:var(--linen)}
+.cat-mono{font-family:var(--ff-mono);font-size:9px;color:var(--navy);font-weight:700;letter-spacing:.06em;white-space:nowrap;margin-right:6px}
+.cat-folio{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.04em}
+.cat-dim{color:var(--fog);font-size:10px}
+
+/* CATÁLOGO — ÁRBOL (legacy, no usado) */
 .tree{display:flex;flex-direction:column;gap:4px}
 .tree-empresa{background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;overflow:hidden;margin-bottom:12px}
 .tree-empresa-header{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
@@ -915,8 +931,9 @@ async function loadDashboard() {
   document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos. Corre el schema y seed en Supabase primero.</td></tr>';
 }
 
-// ── CATÁLOGO / ÁRBOL ──────────────────────────────────────────────────────────
+// ── CATÁLOGO — TABLA FLAT FILTRABLE ───────────────────────────────────────────
 async function loadCatalogo() {
+  document.getElementById('tree-container').innerHTML = '<div class="loading">Cargando catálogo…</div>';
   const [{ data: emps }, { data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }, { data: pols }] = await Promise.all([
     sb.from('pol_empresas').select('*').eq('activa',true),
     sb.from('pol_direcciones').select('*').eq('activa',true).order('orden'),
@@ -935,68 +952,80 @@ async function loadCatalogo() {
       latestPols[p.catalogo_id] = p;
   });
 
-
-  let html = '<div class="tree">';
-  direcciones.forEach(dir => {
-      const dirAreas = areas.filter(a=>a.direccion_id===dir.id);
-      const dirCats  = dirAreas.flatMap(a=>catalogo.filter(c=>c.area_id===a.id));
-      const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Porter · Primaria'}[dir.tipo]||dir.tipo;
-      html += `<div class="tree-division">
-        <div class="tree-division-header" onclick="toggleNode(this)">
-          <span class="chevron">▼</span>
-          <span class="tree-div-code">${dir.codigo}</span>
-          <span class="tree-div-name">${dir.nombre}</span>
-          <span class="tree-div-tipo ${dir.tipo||'soporte'}">${tipoLabel}</span>
-          <span class="tree-div-count">${dirCats.length} doc.</span>
-        </div>
-        <div class="tree-areas">`;
-      dirAreas.forEach(area => {
-        const areaCats  = catalogo.filter(c=>c.area_id===area.id);
-        const areaDeptos = departamentos.filter(d=>d.area_id===area.id);
-        html += `<div class="tree-area">
-          <div class="tree-area-header" onclick="toggleNode(this)">
-            <span class="chevron">▼</span>
-            <span class="tree-area-code">${area.numero}</span>
-            <span class="tree-area-name">${area.nombre}</span>
-            <span class="tree-area-count">${areaCats.length} doc.</span>
-          </div>
-          <div class="tree-politicas">`;
-        if (areaDeptos.length) {
-          areaDeptos.forEach(dept => {
-            const deptCode = String(dept.orden).padStart(3,'0');
-            const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
-              .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-            html += `<div class="tree-dept-block">
-              <div class="tree-dept-header">
-                <span class="tree-dept-code">${deptCode}</span>
-                <span class="tree-dept-name">${dept.nombre}</span>
-              </div>`;
-            if (deptActs.length) {
-              html += `<div class="tree-acts">`;
-              deptActs.forEach((act,idx)=>{
-                const actCode = String(idx+1).padStart(2,'0');
-                const actCat  = catalogo.find(c=>c.actividad_id===act.id);
-                const actPol  = actCat ? latestPols[actCat.id] : null;
-                const folioBadge = actCat
-                  ? `<span class="tree-act-folio">${actCat.codigo_documento}</span>${badge(actPol?.status||'pendiente')}`
-                  : '';
-                html += `<div class="tree-act-row">
-                  <span class="tree-act-code">${actCode}</span>
-                  <span class="tree-act-name">${act.nombre}</span>
-                  ${folioBadge}
-                </div>`;
-              });
-              html += `</div>`;
-            }
-            html += `</div>`;
-          });
-        }
-        html += `</div></div>`;
-      });
-      html += `</div></div>`;
+  // Construir filas planas: una fila por actividad
+  const rows = [];
+  actividades.forEach(act => {
+    const dept = departamentos.find(d=>d.id===act.departamento_id); if (!dept) return;
+    const area = areas.find(a=>a.id===dept.area_id);               if (!area) return;
+    const dir  = direcciones.find(d=>d.id===area.direccion_id);    if (!dir)  return;
+    const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const actCode  = String(deptActs.indexOf(act)+1).padStart(2,'0');
+    const deptCode = String(dept.orden).padStart(3,'0');
+    const cat = catalogo.find(c=>c.actividad_id===act.id);
+    const pol = cat ? latestPols[cat.id] : null;
+    rows.push({ dir, area, dept, deptCode, act, actCode, cat, pol });
   });
-  html += '</div>';
-  document.getElementById('tree-container').innerHTML = html;
+
+  const total      = rows.length;
+  const conFolio   = rows.filter(r=>r.cat).length;
+  const sinFolio   = total - conFolio;
+  const publicadas = rows.filter(r=>r.pol?.status==='publicado').length;
+
+  const dirOpts  = direcciones.map(d=>`<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
+  const areaOpts = areas.map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`).join('');
+
+  document.getElementById('tree-container').innerHTML = `
+    <div class="cat-summary">
+      <div class="cat-stat"><span class="cat-stat-val">${total}</span><span class="cat-stat-lbl">Actividades</span></div>
+      <div class="cat-stat"><span class="cat-stat-val">${conFolio}</span><span class="cat-stat-lbl">Con folio</span></div>
+      <div class="cat-stat"><span class="cat-stat-val">${sinFolio}</span><span class="cat-stat-lbl">Sin folio</span></div>
+      <div class="cat-stat"><span class="cat-stat-val">${publicadas}</span><span class="cat-stat-lbl">Publicadas</span></div>
+    </div>
+    <div class="cat-filter-bar">
+      <select id="cat-fdir" class="cat-filter-select" onchange="renderCatTable()">
+        <option value="">Todas las Direcciones</option>${dirOpts}
+      </select>
+      <select id="cat-farea" class="cat-filter-select" onchange="renderCatTable()">
+        <option value="">Todas las Áreas</option>${areaOpts}
+      </select>
+      <input id="cat-search" class="cat-search" placeholder="Buscar dirección, área, departamento o actividad…" oninput="renderCatTable()">
+      <span id="cat-count" style="font-size:11px;color:var(--fog);white-space:nowrap"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cat-table">
+        <thead><tr>
+          <th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th>
+        </tr></thead>
+        <tbody id="cat-tbody"></tbody>
+      </table>
+    </div>`;
+
+  window.renderCatTable = function() {
+    const fDir    = document.getElementById('cat-fdir')?.value    || '';
+    const fArea   = document.getElementById('cat-farea')?.value   || '';
+    const fSearch = (document.getElementById('cat-search')?.value || '').toLowerCase();
+    const filtered = rows.filter(r => {
+      if (fDir  && r.dir.id  !== fDir)  return false;
+      if (fArea && r.area.id !== fArea) return false;
+      if (fSearch) {
+        const hay = [r.dir.nombre, r.area.nombre, r.dept.nombre, r.act.nombre, r.cat?.codigo_documento||''].join(' ').toLowerCase();
+        if (!hay.includes(fSearch)) return false;
+      }
+      return true;
+    });
+    const tbody = filtered.map(r => `<tr>
+      <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
+      <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
+      <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
+      <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
+      <td>${r.cat ? `<span class="cat-folio">${r.cat.codigo_documento}</span>` : '<span class="cat-dim">—</span>'}</td>
+      <td>${r.pol ? badge(r.pol.status) : '<span class="cat-dim">Sin iniciar</span>'}</td>
+    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
+    document.getElementById('cat-tbody').innerHTML = tbody;
+    document.getElementById('cat-count').textContent = `${filtered.length} de ${total}`;
+  };
+  renderCatTable();
 }
 
 // ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
