@@ -840,7 +840,7 @@ input,textarea,select{font-family:inherit}
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table">
-          <thead><tr><th>Dirección</th><th>Área</th><th>Departamento</th><th>#</th><th>Actividad</th><th>Tipo</th></tr></thead>
+          <thead><tr><th style="width:40px">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Código</th><th>Actividad</th><th>Tipo</th></tr></thead>
           <tbody id="admin-acts-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
         </table>
       </div>
@@ -1699,6 +1699,7 @@ async function loadAdmin() {
   // Construir tabla de actividades con jerarquía completa
   const sortedDirsA = [...direcciones].sort((a,b)=>a.orden-b.orden);
   let actsRows = [];
+  let actNum = 1;
   sortedDirsA.forEach(dir => {
     areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
       departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
@@ -1706,6 +1707,7 @@ async function loadAdmin() {
           .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
           .forEach((act, idx) => {
             actsRows.push(`<tr>
+              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;width:40px">${actNum++}</td>
               <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
               <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
               <td style="font-size:11px">${dept.nombre}</td>
