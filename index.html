@@ -371,6 +371,62 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Nuevo Departamento -->
+<div class="modal-overlay" id="modal-depto">
+  <div class="modal">
+    <h3>Nuevo Departamento</h3>
+    <div class="alert alert-error" id="mdepto-error"></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group full">
+        <label>Área</label>
+        <select id="mdepto-area"></select>
+      </div>
+      <div class="form-group full">
+        <label>Nombre del Departamento</label>
+        <input id="mdepto-nombre" placeholder="Ej: Compras Internacionales">
+      </div>
+      <div class="form-group">
+        <label>Orden dentro del Área</label>
+        <input id="mdepto-orden" type="number" value="1" min="1">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveDepto()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-depto')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva Actividad -->
+<div class="modal-overlay" id="modal-actividad">
+  <div class="modal">
+    <h3>Nueva Actividad</h3>
+    <div class="alert alert-error" id="mact-error"></div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group full">
+        <label>Departamento</label>
+        <select id="mact-dept" onchange="onActDeptChange()"></select>
+      </div>
+      <div class="form-group full">
+        <label>Nombre de la Actividad</label>
+        <input id="mact-nombre" placeholder="Ej: Evaluación de proveedores estratégicos">
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <select id="mact-tipo">
+          <option value="actividad">Actividad</option>
+          <option value="transaccion">Transacción</option>
+          <option value="decision">Decisión</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveActividad()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-actividad')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Registrar folio en catálogo -->
 <div class="modal-overlay" id="modal-catalogo">
   <div class="modal" style="max-width:560px">
@@ -738,12 +794,13 @@ input,textarea,select{font-family:inherit}
   <div class="view" id="view-admin">
     <div class="page-header">
       <h1>Administración</h1>
-      <p>Gestión de Direcciones, Áreas y Departamentos</p>
+      <p>Gestión de Direcciones, Áreas, Departamentos y Actividades</p>
     </div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab(this,'atab-direcciones')">Direcciones</button>
       <button class="tab" onclick="switchTab(this,'atab-areas')">Áreas</button>
       <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
+      <button class="tab" onclick="switchTab(this,'atab-actividades')">Actividades</button>
       <button class="tab" onclick="switchTab(this,'atab-catalogo')">Catálogo</button>
     </div>
 
@@ -768,9 +825,24 @@ input,textarea,select{font-family:inherit}
     </div>
 
     <div class="tab-panel" id="atab-depto">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openModalDepto()">+ Nuevo Departamento</button>
+      </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
-        <tbody id="admin-deptos-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Dirección</th><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
+        <tbody id="admin-deptos-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-actividades">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openModalActividad()">+ Nueva Actividad</button>
+      </div>
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
+        <table class="admin-table">
+          <thead><tr><th>Dirección</th><th>Área</th><th>Departamento</th><th>#</th><th>Actividad</th><th>Tipo</th></tr></thead>
+          <tbody id="admin-acts-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -1494,6 +1566,56 @@ async function saveArea() {
   loadCatalogo(); loadAdmin();
 }
 
+function openModalDepto() {
+  document.getElementById('mdepto-area').innerHTML =
+    areas.map(a => {
+      const dir = direcciones.find(d=>d.id===a.direccion_id);
+      return `<option value="${a.id}">${dir?.codigo||''} · ${a.numero} · ${a.nombre}</option>`;
+    }).join('');
+  document.getElementById('mdepto-nombre').value = '';
+  document.getElementById('mdepto-orden').value  = '1';
+  document.getElementById('mdepto-error').classList.remove('show');
+  document.getElementById('modal-depto').classList.add('open');
+}
+
+async function saveDepto() {
+  const area_id = document.getElementById('mdepto-area').value;
+  const nombre  = document.getElementById('mdepto-nombre').value.trim();
+  const orden   = parseInt(document.getElementById('mdepto-orden').value)||1;
+  if (!area_id || !nombre) { showModalError('mdepto-error','Área y Nombre son obligatorios.'); return; }
+  const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, orden });
+  if (error) { showModalError('mdepto-error', error.message); return; }
+  closeModal('modal-depto');
+  loadCatalogo(); loadAdmin();
+}
+
+function openModalActividad() {
+  document.getElementById('mact-dept').innerHTML =
+    departamentos.map(d => {
+      const area = areas.find(a=>a.id===d.area_id);
+      const dir  = area ? direcciones.find(x=>x.id===area.direccion_id) : null;
+      return `<option value="${d.id}">${dir?.codigo||''} · ${area?.numero||''} · ${d.nombre}</option>`;
+    }).join('');
+  document.getElementById('mact-nombre').value = '';
+  document.getElementById('mact-error').classList.remove('show');
+  document.getElementById('modal-actividad').classList.add('open');
+}
+
+function onActDeptChange() { /* dept selected — placeholder for future area_id linking */ }
+
+async function saveActividad() {
+  const departamento_id = document.getElementById('mact-dept').value;
+  const nombre          = document.getElementById('mact-nombre').value.trim();
+  const tipo            = document.getElementById('mact-tipo').value;
+  if (!departamento_id || !nombre) { showModalError('mact-error','Departamento y Nombre son obligatorios.'); return; }
+  const dept   = departamentos.find(d=>d.id===departamento_id);
+  const area_id = dept?.area_id || null;
+  const { error } = await sb.from('pol_actividades').insert({ departamento_id, area_id, nombre, tipo });
+  if (error) { showModalError('mact-error', error.message); return; }
+  closeModal('modal-actividad');
+  loadCatalogo(); loadAdmin();
+}
+
 async function saveCatalogo() {
   const tipo_documento   = document.getElementById('mcat-tipo').value;
   const nombre           = document.getElementById('mcat-nombre').value.trim();
@@ -1559,16 +1681,44 @@ async function loadAdmin() {
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
 
+  const deptById = Object.fromEntries(departamentos.map(d=>[d.id,d]));
+
   document.getElementById('admin-deptos-body').innerHTML =
     departamentos.map(d=>{
       const area = areaById[d.area_id];
+      const dir  = area ? dirById[area.direccion_id] : null;
       return `<tr>
-        <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:d.area_id}</td>
+        <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
+        <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
         <td>${d.nombre}</td>
-        <td>${d.orden}</td>
+        <td style="font-family:var(--ff-mono);font-size:11px">${String(d.orden).padStart(3,'0')}</td>
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
+
+  // Construir tabla de actividades con jerarquía completa
+  const sortedDirsA = [...direcciones].sort((a,b)=>a.orden-b.orden);
+  let actsRows = [];
+  sortedDirsA.forEach(dir => {
+    areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
+      departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
+        actividades.filter(a=>a.departamento_id===dept.id)
+          .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
+          .forEach((act, idx) => {
+            actsRows.push(`<tr>
+              <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
+              <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
+              <td style="font-size:11px">${dept.nombre}</td>
+              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);white-space:nowrap">${String(dept.orden).padStart(3,'0')}-${String(idx+1).padStart(2,'0')}</td>
+              <td>${act.nombre}</td>
+              <td style="font-size:10px;color:var(--dust)">${act.tipo||'actividad'}</td>
+            </tr>`);
+          });
+      });
+    });
+  });
+  document.getElementById('admin-acts-body').innerHTML =
+    actsRows.join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Sin actividades — corre el seed_actividades.sql en Supabase</td></tr>';
 
   document.getElementById('admin-catalogo-body').innerHTML =
     catalogo.map(c => {
