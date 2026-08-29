@@ -59,7 +59,8 @@ input,textarea,select{font-family:inherit}
 .topbar-nav{display:flex;gap:0;margin-left:auto}
 .nav-btn{padding:0 20px;height:58px;font-family:var(--ff-body);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
 .nav-btn:hover{color:rgba(255,255,255,.75);background:rgba(255,255,255,.04)}
-.nav-btn.active{color:var(--ember-glow);border-bottom-color:var(--ember)}
+.nav-btn.active{color:var(--ember-glow);border-bottom-color:var(--ember);background:transparent}
+.nav-btn.active:hover{background:transparent}
 .topbar-user{font-size:10px;color:rgba(255,255,255,.4);margin-left:8px;font-family:var(--ff-mono)}
 
 /* LAYOUT */
@@ -92,7 +93,7 @@ input,textarea,select{font-family:inherit}
 .semaforo-table th.th-pend,
 .semaforo-table th.th-total,
 .semaforo-table th.th-avance  {color:var(--ember-glow)}
-.semaforo-table td{padding:11px 14px;border-bottom:1px solid var(--stone);position:relative;z-index:0}
+.semaforo-table td{padding:11px 14px;border-bottom:1px solid var(--stone);position:relative;z-index:0;background:#FDF9F5}
 .semaforo-table tr:last-child td{border-bottom:none}
 .semaforo-table tr:hover td{background:var(--linen)}
 .empresa-row td{background:var(--linen);font-weight:700;color:var(--gold);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:var(--ff-mono)}
@@ -122,7 +123,7 @@ input,textarea,select{font-family:inherit}
 .cat-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
 .cat-table th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember-glow);font-weight:700;border-bottom:2px solid var(--ember-deep);background:var(--navy);white-space:nowrap;position:sticky;top:58px;z-index:30}
 .cat-table td{position:relative;z-index:0}
-.cat-table td{padding:7px 12px;border-bottom:1px solid var(--stone);vertical-align:middle}
+.cat-table td{padding:7px 12px;border-bottom:1px solid var(--stone);vertical-align:middle;background:#FDF9F5}
 .cat-table tbody tr:hover td{background:var(--linen)}
 .cat-mono{font-family:var(--ff-mono);font-size:9px;color:var(--navy);font-weight:700;letter-spacing:.06em;white-space:nowrap;margin-right:6px}
 .cat-folio{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.04em}
@@ -173,7 +174,7 @@ input,textarea,select{font-family:inherit}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
 .maestro-table th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember-glow);font-weight:700;border-bottom:2px solid var(--ember-deep);background:var(--navy);white-space:nowrap;position:sticky;top:58px;z-index:30}
 .maestro-table td{position:relative;z-index:0}
-.maestro-table td{padding:7px 10px;border-bottom:1px solid var(--stone);vertical-align:middle}
+.maestro-table td{padding:7px 10px;border-bottom:1px solid var(--stone);vertical-align:middle;background:#FDF9F5}
 .maestro-table tr:hover td{background:var(--linen)}
 .maestro-code{font-family:var(--ff-mono);font-size:10px;color:var(--navy);font-weight:600;letter-spacing:.06em;white-space:nowrap}
 .maestro-label{font-size:10px;font-weight:500;color:var(--ink)}
