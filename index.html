@@ -83,19 +83,19 @@ input,textarea,select{font-family:inherit}
 .stat-card.amber .num{color:var(--amber)}.stat-card.amber{border-top-color:var(--amber)}
 .stat-card.red   .num{color:var(--red)}.stat-card.red{border-top-color:var(--red)}
 
+/* ── TABLAS — LÍNEA DE DISEÑO ÚNICA ─────────────────────────────
+   Navy bg · ember-glow text · ember-deep border · ff-mono 9px .10em
+   Aplica a semaforo-table, cat-table, maestro-table, admin-table    */
+.semaforo-table th,.cat-table th,.maestro-table th,.admin-table th{background:var(--navy);color:var(--ember-glow);border-bottom:2px solid var(--ember-deep);font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;text-transform:uppercase;font-weight:600;text-align:left;white-space:nowrap;position:sticky;top:58px;z-index:30}
+.semaforo-table td,.cat-table td,.maestro-table td,.admin-table td{background:#FDF9F5;position:relative;z-index:0;border-bottom:1px solid var(--stone)}
+.semaforo-table tr:last-child td,.cat-table tr:last-child td,.maestro-table tr:last-child td,.admin-table tr:last-child td{border-bottom:none}
+.semaforo-table tr:hover td,.cat-table tbody tr:hover td,.maestro-table tr:hover td,.admin-table tr:hover td{background:var(--linen)}
+
 /* SEMÁFORO TABLE */
 .semaforo-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;font-family:var(--ff-body)}
 .semaforo-table thead{background:var(--navy);position:relative;z-index:31}
-.semaforo-table th{text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:11px 14px;border-bottom:2px solid var(--ember-deep);font-family:var(--ff-mono);font-weight:600;position:sticky;top:58px;z-index:30;background:var(--navy);color:var(--ember-glow)}
-.semaforo-table th.th-area,
-.semaforo-table th.th-pub,
-.semaforo-table th.th-proceso,
-.semaforo-table th.th-pend,
-.semaforo-table th.th-total,
-.semaforo-table th.th-avance  {color:var(--ember-glow)}
-.semaforo-table td{padding:11px 14px;border-bottom:1px solid var(--stone);position:relative;z-index:0;background:#FDF9F5}
-.semaforo-table tr:last-child td{border-bottom:none}
-.semaforo-table tr:hover td{background:var(--linen)}
+.semaforo-table th{padding:11px 14px}
+.semaforo-table td{padding:11px 14px;vertical-align:middle}
 .empresa-row td{background:var(--linen);font-weight:700;color:var(--gold);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:var(--ff-mono)}
 .div-label{font-weight:500;color:var(--ink)}
 .progress-bar{height:4px;border-radius:2px;background:var(--stone);margin-top:4px;overflow:hidden}
@@ -121,10 +121,8 @@ input,textarea,select{font-family:inherit}
 .cat-filter-select,.cat-search{font-size:11px;border:1px solid var(--stone);border-radius:6px;padding:6px 10px;background:var(--linen);color:var(--ink);font-family:var(--ff-body);outline:none}
 .cat-search{flex:1;min-width:180px;background:#fff}
 .cat-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
-.cat-table th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember-glow);font-weight:700;border-bottom:2px solid var(--ember-deep);background:var(--navy);white-space:nowrap;position:sticky;top:58px;z-index:30}
-.cat-table td{position:relative;z-index:0}
-.cat-table td{padding:7px 12px;border-bottom:1px solid var(--stone);vertical-align:middle;background:#FDF9F5}
-.cat-table tbody tr:hover td{background:var(--linen)}
+.cat-table th{padding:8px 12px}
+.cat-table td{padding:7px 12px;vertical-align:middle}
 .cat-mono{font-family:var(--ff-mono);font-size:9px;color:var(--navy);font-weight:700;letter-spacing:.06em;white-space:nowrap;margin-right:6px}
 .cat-folio{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.04em}
 .cat-dim{color:var(--fog);font-size:10px}
@@ -172,10 +170,8 @@ input,textarea,select{font-family:inherit}
 .tree-act-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.04em;margin-left:auto;padding-right:6px}
 .badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
-.maestro-table th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember-glow);font-weight:700;border-bottom:2px solid var(--ember-deep);background:var(--navy);white-space:nowrap;position:sticky;top:58px;z-index:30}
-.maestro-table td{position:relative;z-index:0}
-.maestro-table td{padding:7px 10px;border-bottom:1px solid var(--stone);vertical-align:middle;background:#FDF9F5}
-.maestro-table tr:hover td{background:var(--linen)}
+.maestro-table th{padding:8px 10px}
+.maestro-table td{padding:7px 10px;vertical-align:middle}
 .maestro-code{font-family:var(--ff-mono);font-size:10px;color:var(--navy);font-weight:600;letter-spacing:.06em;white-space:nowrap}
 .maestro-label{font-size:10px;font-weight:500;color:var(--ink)}
 .maestro-sub{font-size:9px;color:var(--fog);font-family:var(--ff-mono)}
@@ -253,10 +249,8 @@ input,textarea,select{font-family:inherit}
 
 /* TABLA ADMIN */
 .admin-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
-.admin-table th{text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember-glow);padding:8px 12px;border-bottom:2px solid var(--ember-deep);font-family:var(--ff-mono);position:sticky;top:58px;z-index:30;background:var(--navy)}
-.admin-table td{padding:10px 12px;border-bottom:1px solid var(--stone);color:var(--ink);position:relative;z-index:0}
-.admin-table tr:last-child td{border-bottom:none}
-.admin-table tr:hover td{background:var(--linen)}
+.admin-table th{padding:8px 12px}
+.admin-table td{padding:10px 12px;color:var(--ink)}
 .code-tag{font-size:9px;font-family:var(--ff-mono);background:var(--gold-mist);border:1px solid #A8885828;padding:2px 8px;border-radius:3px;color:var(--gold);letter-spacing:.06em}
 
 /* MODAL */
