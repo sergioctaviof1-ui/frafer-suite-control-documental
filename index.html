@@ -84,7 +84,7 @@ input,textarea,select{font-family:inherit}
 
 /* SEMÁFORO TABLE */
 .semaforo-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;font-family:var(--ff-body)}
-.semaforo-table thead{background:var(--linen)}
+.semaforo-table thead{background:var(--linen);position:relative;z-index:31}
 .semaforo-table th{text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:11px 14px;border-bottom:2px solid var(--stone);font-family:var(--ff-mono);font-weight:600;position:sticky;top:58px;z-index:30;background:var(--linen)}
 .semaforo-table th.th-area,
 .semaforo-table th.th-pub,
@@ -441,7 +441,7 @@ input,textarea,select{font-family:inherit}
   <div class="view active" id="view-dashboard">
     <div class="page-header">
       <h1>Dashboard</h1>
-      <p>Estado general del catálogo documental · Grupo Morsa</p>
+      <p>Estado general del catálogo documental</p>
     </div>
     <div class="stats-row" id="dash-stats">
       <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">Total Políticas</div></div>
