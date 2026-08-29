@@ -450,7 +450,7 @@ input,textarea,select{font-family:inherit}
       <div class="stat-card"><div class="num" id="stat-pend">—</div><div class="lbl">Pendientes</div></div>
       <div class="stat-card red"><div class="num" id="stat-venc">—</div><div class="lbl">Vencidas / Alerta</div></div>
     </div>
-    <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+    <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
       <table class="semaforo-table" id="semaforo-table">
         <thead>
           <tr>
@@ -756,7 +756,7 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
-      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
         <tbody id="admin-direcciones-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
       </div>
@@ -766,14 +766,14 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
-      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table"><thead><tr><th>Dirección</th><th>Núm.</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-areas-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
     <div class="tab-panel" id="atab-depto">
-      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table"><thead><tr><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
         <tbody id="admin-deptos-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
       </div>
@@ -783,7 +783,7 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalCatalogo()">+ Nuevo Folio</button>
       </div>
-      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table">
           <thead><tr><th>Folio</th><th>Nombre de la Política / Documento</th><th>Área</th><th>Actividad</th><th>Tipo</th><th>Prioridad</th></tr></thead>
           <tbody id="admin-catalogo-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
@@ -1130,7 +1130,7 @@ async function loadMaestro() {
     <input id="maestro-search" placeholder="Buscar código, actividad, departamento…" oninput="loadMaestro()" value="${fSearch}" style="flex:1;min-width:200px">
     <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} registros</span>
   </div>
-  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
   <table class="maestro-table">
     <thead><tr>
       <th>Código Político</th>
