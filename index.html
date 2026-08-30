@@ -599,6 +599,14 @@ input,textarea,select{font-family:inherit}
 
         <!-- TAB: CONTENIDO -->
         <div class="tab-panel active pol-form-sections" id="tab-contenido">
+          <div class="form-section" style="background:var(--linen);border:1px solid var(--stone);border-radius:10px;padding:16px 20px;margin-bottom:4px">
+            <div class="form-section-title" style="margin-bottom:10px">Nombre de la Política</div>
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+              <span id="pol-nombre-folio" style="font-family:var(--ff-mono);font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.08em;white-space:nowrap"></span>
+              <span style="color:var(--stone);font-size:13px">—</span>
+              <span id="pol-nombre-texto" style="font-size:15px;font-weight:600;color:var(--navy);line-height:1.3"></span>
+            </div>
+          </div>
           <div class="form-section">
             <div class="form-section-title">Propósito</div>
             <div class="form-grid cols3">
@@ -1324,6 +1332,20 @@ async function openPolitica(catalogoId, polId) {
   const cat = catalogo.find(c=>c.id===catalogoId);
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
   document.getElementById('pol-form-code').textContent  = cat ? cat.codigo_documento : '';
+  // Campo identidad en el cuerpo del formulario
+  const nf = document.getElementById('pol-nombre-folio');
+  const nt = document.getElementById('pol-nombre-texto');
+  if (nf) nf.textContent = cat ? cat.codigo_documento : '';
+  if (nt) nt.textContent = cat ? cat.nombre : '';
+  // Asegurar que la primera tab esté activa
+  const tabContenido = document.getElementById('tab-contenido');
+  if (tabContenido) {
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.pol-tabs-wrap .tab').forEach(t=>t.classList.remove('active'));
+    tabContenido.classList.add('active');
+    const firstTab = document.querySelector('.pol-tabs-wrap .tab');
+    if (firstTab) firstTab.classList.add('active');
+  }
 
   // Poblar strip de identificación jerárquica
   if (cat) {
