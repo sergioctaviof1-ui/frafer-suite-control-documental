@@ -531,10 +531,10 @@ input,textarea,select{font-family:inherit}
         <thead>
           <tr>
             <th class="th-area">Dirección / Área</th>
+            <th class="th-total">En Catálogo</th>
             <th class="th-pub">Publicadas</th>
             <th class="th-proceso">En Proceso</th>
             <th class="th-pend">Pendientes</th>
-            <th class="th-total">En Catálogo</th>
             <th class="th-total">Documentadas</th>
             <th class="th-avance">Avance</th>
           </tr>
@@ -1076,10 +1076,10 @@ function renderDashboard() {
     const pct = s.cat ? Math.round((s.pub/s.cat)*100) : 0;
     tbody += `<tr>
       <td><span class="div-label">[${dir.codigo}] ${dir.nombre}</span><br><span style="font-size:10px;color:var(--muted)">${tipoLabel[dir.tipo]||dir.tipo}</span></td>
+      <td style="font-weight:700;color:var(--navy)">${s.cat}</td>
       <td style="color:var(--green)">${s.pub}</td>
       <td style="color:var(--amber)">${s.proc}</td>
       <td style="color:var(--muted)">${s.pend}</td>
-      <td style="color:var(--dust)">${s.cat}</td>
       <td>${doc}</td>
       <td style="min-width:120px">
         <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pct}%</div>
