@@ -619,7 +619,7 @@ input,textarea,select{font-family:inherit}
         <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
           <div style="display:flex;align-items:baseline;gap:8px">
             <span class="doc-pol-folio" id="pol-form-code" style="display:none"></span>
-            <span class="doc-pol-nombre" id="pol-form-title" style="display:none"></span>
+            <span class="doc-pol-nombre" id="pol-form-title"></span>
           </div>
           <input class="doc-pol-input" id="doc-pol-input" type="text"
             placeholder="Buscar política por folio o nombre…"
@@ -1388,6 +1388,15 @@ function toggleNode(header) {
 async function openPolitica(catalogoId, polId) {
   showView('documentar');
   window.scrollTo({top:0,behavior:'smooth'});
+
+  // Mostrar folio+nombre en header, ocultar buscador, mostrar botón Cerrar
+  const fcEl  = document.getElementById('pol-form-code');
+  const ftEl  = document.getElementById('pol-form-title');
+  const inpEl = document.getElementById('doc-pol-input');
+  const btnC  = document.getElementById('btn-cerrar-pol');
+  if (ftEl) ftEl.style.display = '';
+  if (inpEl) { inpEl.style.display = 'none'; inpEl.value = ''; }
+  if (btnC) btnC.style.display = '';
 
   const cat = catalogo.find(c=>c.id===catalogoId);
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
