@@ -134,11 +134,11 @@ input,textarea,select{font-family:inherit}
 .doc-header-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap}
 .doc-header-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-header-actions{display:flex;gap:8px;flex-shrink:0}
-.doc-lifecycle{padding:16px 28px 10px;background:var(--linen);border-bottom:1px solid var(--stone)}
+.doc-lifecycle{padding:14px 40px 12px;background:var(--linen);border-bottom:1px solid var(--stone)}
 .doc-lifecycle-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:10px}
-.doc-tabs-bar{display:flex;gap:0;padding:0 28px;background:var(--parchment);border-bottom:1px solid var(--stone)}
+.doc-tabs-bar{display:flex;gap:0;padding:0 40px;background:var(--parchment);border-bottom:1px solid var(--stone)}
 .doc-tabs-bar .tab{border-radius:0}
-.doc-body{padding:0 28px 48px;max-width:900px}
+.doc-body{padding:28px 40px 64px;max-width:940px;margin:0 auto;width:100%}
 .dash-tipo-toggle{display:flex;gap:0;border:1px solid var(--stone);border-radius:8px;overflow:hidden;align-self:center}
 .dash-tipo-btn{padding:7px 16px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;font-family:var(--ff-mono);background:transparent;border:none;color:var(--stone);cursor:pointer;border-right:1px solid var(--stone);transition:all .15s}
 .dash-tipo-btn:last-child{border-right:none}
@@ -243,10 +243,11 @@ input,textarea,select{font-family:inherit}
 .form-group.full{grid-column:1/-1}
 .form-group label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono)}
 .form-group input,.form-group textarea,.form-group select{
-  background:var(--parchment);border:1px solid var(--stone);border-radius:7px;
+  background:#fff;border:1px solid #c8c2bb;border-radius:7px;
   padding:9px 12px;color:var(--ink);font-size:13px;outline:none;
-  transition:border-color .15s;resize:vertical;font-family:var(--ff-body)}
-.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--gold);background:#fff}
+  transition:border-color .15s,box-shadow .15s;resize:vertical;font-family:var(--ff-body);
+  box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(168,136,88,.15)}
 .form-group select option{background:#fff}
 .form-group textarea{min-height:90px}
 
