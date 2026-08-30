@@ -370,12 +370,14 @@ input,textarea,select{font-family:inherit}
       <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--fog);margin-top:2px">Control Documental</div>
     </div>
     <div class="alert alert-error" id="login-error" style="margin-bottom:12px"></div>
+    <div class="alert" id="login-info" style="margin-bottom:12px;display:none;background:#EAF4EE;border:1px solid #5A9E72;color:#2D6B47;padding:10px 14px;border-radius:8px;font-size:12px"></div>
     <label class="form-label">Correo</label>
-    <input class="form-input" id="login-email" type="email" placeholder="usuario@grupormorsa.com" style="margin-bottom:10px" autocomplete="username">
+    <input class="form-input" id="login-email" type="email" placeholder="correo@empresa.com" style="margin-bottom:10px" autocomplete="username">
     <label class="form-label">Contraseña</label>
     <input class="form-input" id="login-pwd" type="password" placeholder="••••••••" style="margin-bottom:18px" autocomplete="current-password"
       onkeydown="if(event.key==='Enter') loginUser()">
-    <button class="btn btn-primary" style="width:100%" onclick="loginUser()">Ingresar</button>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:10px" onclick="loginUser()">Ingresar</button>
+    <button class="btn" style="width:100%;background:transparent;border:1px solid var(--stone);color:var(--fog);font-size:12px" onclick="registerUser()">Crear cuenta nueva</button>
   </div>
 </div>
 
@@ -2254,16 +2256,40 @@ function renderEstructura() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-async function loginUser() {
+function _loginFields() {
   const email = document.getElementById('login-email').value.trim();
   const pwd   = document.getElementById('login-pwd').value;
   const errEl = document.getElementById('login-error');
-  errEl.textContent = '';
+  const infoEl = document.getElementById('login-info');
+  errEl.textContent = ''; errEl.classList.remove('show');
+  infoEl.style.display = 'none';
+  return { email, pwd, errEl, infoEl };
+}
+
+async function loginUser() {
+  const { email, pwd, errEl } = _loginFields();
   if (!email || !pwd) { errEl.textContent = 'Correo y contraseña son obligatorios.'; errEl.classList.add('show'); return; }
   const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
   if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
   document.getElementById('modal-login').style.display = 'none';
   initApp();
+}
+
+async function registerUser() {
+  const { email, pwd, errEl, infoEl } = _loginFields();
+  if (!email || !pwd) { errEl.textContent = 'Correo y contraseña son obligatorios.'; errEl.classList.add('show'); return; }
+  if (pwd.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; errEl.classList.add('show'); return; }
+  const { error } = await sb.auth.signUp({ email, password: pwd });
+  if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
+  // Intentar iniciar sesión inmediatamente (si confirmación de email está desactivada)
+  const { error: loginErr } = await sb.auth.signInWithPassword({ email, password: pwd });
+  if (!loginErr) {
+    document.getElementById('modal-login').style.display = 'none';
+    initApp();
+  } else {
+    infoEl.textContent = 'Cuenta creada. Revisa tu correo para confirmar y luego ingresa.';
+    infoEl.style.display = 'block';
+  }
 }
 
 async function initApp() {
