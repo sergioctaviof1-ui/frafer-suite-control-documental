@@ -362,6 +362,23 @@ input,textarea,select{font-family:inherit}
   <span class="topbar-user" id="topbar-user"></span>
 </div>
 
+<!-- MODAL: Login -->
+<div class="modal-overlay" id="modal-login" style="display:none;z-index:9999;background:rgba(20,18,15,.85)">
+  <div class="modal" style="max-width:380px;width:100%">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-family:var(--ff-serif);font-size:22px;font-weight:700;letter-spacing:.04em;color:var(--ink)">FRAFER SUITE</div>
+      <div style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--fog);margin-top:2px">Control Documental</div>
+    </div>
+    <div class="alert alert-error" id="login-error" style="margin-bottom:12px"></div>
+    <label class="form-label">Correo</label>
+    <input class="form-input" id="login-email" type="email" placeholder="usuario@grupormorsa.com" style="margin-bottom:10px" autocomplete="username">
+    <label class="form-label">Contraseña</label>
+    <input class="form-input" id="login-pwd" type="password" placeholder="••••••••" style="margin-bottom:18px" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') loginUser()">
+    <button class="btn btn-primary" style="width:100%" onclick="loginUser()">Ingresar</button>
+  </div>
+</div>
+
 <!-- MODAL: Nueva dirección -->
 <div class="modal-overlay" id="modal-direccion">
   <div class="modal">
@@ -669,10 +686,13 @@ input,textarea,select{font-family:inherit}
             <span>Reglas y Lineamientos</span>
             <div style="display:flex;align-items:center;gap:8px">
               <label style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin:0"># de Reglas</label>
-              <input id="pol-num-reglas" type="number" min="0" placeholder="0" style="width:64px;padding:4px 8px;font-size:12px;border:1px solid var(--stone);border-radius:6px;background:var(--parchment);color:var(--navy);font-family:var(--ff-mono);text-align:center">
+              <div style="display:flex;align-items:center;gap:4px">
+                <input id="pol-num-reglas" type="number" min="0" placeholder="0" style="width:56px;padding:4px 8px;font-size:12px;border:1px solid var(--stone);border-radius:6px;background:var(--parchment);color:var(--navy);font-family:var(--ff-mono);text-align:center">
+                <button onclick="autoCountReglas()" title="Contar reglas del texto" style="padding:3px 7px;font-size:11px;border:1px solid var(--stone);border-radius:5px;background:var(--linen);color:var(--fog);cursor:pointer;line-height:1">↻</button>
+              </div>
             </div>
           </div>
-          <div class="form-group full"><textarea id="pol-contenido" rows="10" placeholder="Reglas específicas, lineamientos, obligaciones y prohibiciones"></textarea></div>
+          <div class="form-group full"><textarea id="pol-contenido" rows="10" placeholder="Reglas específicas, lineamientos, obligaciones y prohibiciones" oninput="autoCountReglas()"></textarea></div>
         </div>
         <div class="form-section">
           <div class="form-section-title">Sanciones</div>
@@ -840,21 +860,8 @@ const SB_URL  = 'https://lygpotmaneqgewjcetzw.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5Z3BvdG1hbmVxZ2V3amNldHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTA3MjYsImV4cCI6MjEwMzQyNjcyNn0.0nIHvEuH6AKRymb_IjlxS_zfYTw8aXhGxUTxYUorNbM';
 
 
-let _jwt = sessionStorage.getItem('frafer_jwt') || localStorage.getItem('frafer_jwt') || null;
-
 const sb = supabase.createClient(SB_URL, SB_ANON, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  global: {
-    fetch(url, init = {}) {
-      if (_jwt) {
-        const h = new Headers(init.headers || {});
-        h.set('Authorization', `Bearer ${_jwt}`);
-        h.set('apikey', SB_ANON);
-        init = { ...init, headers: h };
-      }
-      return fetch(url, init);
-    }
-  }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
 });
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -1500,6 +1507,16 @@ function calcVencimiento() {
     d.setMonth(d.getMonth() + meses);
     document.getElementById('pol-fecha-venc').value = d.toISOString().split('T')[0];
   }
+}
+
+function autoCountReglas() {
+  const text = document.getElementById('pol-contenido')?.value || '';
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const numbered = lines.filter(l => /^(\d+[\.\)])\s/.test(l));
+  const bulleted  = lines.filter(l => /^[-•*–·]\s/.test(l));
+  const count = numbered.length || bulleted.length || lines.length;
+  const el = document.getElementById('pol-num-reglas');
+  if (el && count > 0) el.value = count;
 }
 
 async function savePolitica() {
@@ -2237,10 +2254,31 @@ function renderEstructura() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-(async () => {
+async function loginUser() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd   = document.getElementById('login-pwd').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!email || !pwd) { errEl.textContent = 'Correo y contraseña son obligatorios.'; errEl.classList.add('show'); return; }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pwd });
+  if (error) { errEl.textContent = error.message; errEl.classList.add('show'); return; }
+  document.getElementById('modal-login').style.display = 'none';
+  initApp();
+}
+
+async function initApp() {
   const { data: dirs } = await sb.from('pol_direcciones').select('*').order('orden');
   direcciones = dirs || [];
   loadDashboard();
+}
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    document.getElementById('modal-login').style.display = 'flex';
+  } else {
+    initApp();
+  }
 
   // Align subtitle width to brand title by computing exact letter-spacing
   function alignBrandWidth() {
