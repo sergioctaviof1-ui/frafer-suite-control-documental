@@ -1046,6 +1046,19 @@ function renderDashboard() {
 }
 
 // ── CATÁLOGO — TABLA FLAT FILTRABLE ───────────────────────────────────────────
+async function loadEstructuraBase() {
+  if (catalogo.length && direcciones.length) return; // ya cargado
+  const [{ data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }] = await Promise.all([
+    sb.from('pol_direcciones').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_areas').select('*').eq('activa',true).order('orden'),
+    sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
+    sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
+    sb.from('pol_catalogo').select('*').eq('activo',true).order('numero')
+  ]);
+  direcciones = dirsData||[]; areas = areasData||[];
+  departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
+}
+
 async function loadCatalogo() {
   document.getElementById('tree-container').innerHTML = '<div class="loading">Cargando catálogo…</div>';
   const [{ data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }, { data: pols }] = await Promise.all([
@@ -1599,11 +1612,11 @@ async function saveComentario() {
   loadComentarios(politicaActual.id);
 }
 
-function navDocumentar() {
+async function navDocumentar() {
   showView('documentar');
   if (!politicaActual) {
-    // Abrir el buscador automáticamente si no hay política seleccionada
-    setTimeout(() => focusPolSearch(), 150);
+    await loadEstructuraBase();
+    setTimeout(() => focusPolSearch(), 100);
   }
 }
 
