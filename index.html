@@ -1601,7 +1601,7 @@ function onCatAreaChange() {
     '<option value="">— Selecciona Departamento —</option>' +
     departamentos.filter(d=>d.area_id===areaId)
       .sort((a,b)=>a.orden-b.orden)
-      .map(d=>`<option value="${d.id}">${String(d.orden).padStart(3,'0')} · ${d.nombre}</option>`).join('');
+      .map(d=>`<option value="${d.id}">${d.codigo||d.orden} · ${d.nombre}</option>`).join('');
   document.getElementById('mcat-act').innerHTML  = '<option value="">— selecciona departamento primero —</option>';
   updateCodigoPreview();
 }
@@ -1612,7 +1612,7 @@ function onCatDeptChange() {
     .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   document.getElementById('mcat-act').innerHTML =
     '<option value="">— Selecciona Actividad —</option>' +
-    deptActs.map((a,i)=>`<option value="${a.id}">${String(i+1).padStart(2,'0')} · ${a.nombre}</option>`).join('');
+    deptActs.map(a=>`<option value="${a.id}">${a.codigo||'—'} · ${a.nombre}</option>`).join('');
   updateCodigoPreview();
 }
 
@@ -1625,13 +1625,11 @@ function updateCodigoPreview() {
   const act    = actividades.find(a=>a.id===actId);
   const dept   = act ? departamentos.find(d=>d.id===act.departamento_id) : null;
   if (dir && area && act && dept) {
-    const deptCode = String(dept.orden).padStart(3,'0');
-    const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
-      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-    const actCode  = String(deptActs.indexOf(act)+1).padStart(2,'0');
-    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-${deptCode}-${actCode}`;
+    const deptSeq = dept.codigo ? dept.codigo.split('-').pop() : '??';
+    const actSeq  = act.codigo  ? act.codigo.split('-').pop()  : '??';
+    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
   } else if (dir && area) {
-    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-???-??`;
+    document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-??-??`;
   } else {
     document.getElementById('mcat-codigo-preview').textContent = `${tipo} — — — —`;
   }
