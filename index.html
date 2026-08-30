@@ -169,6 +169,10 @@ input,textarea,select{font-family:inherit}
 .tree-act-name{font-size:10px;color:var(--dust);flex:1}
 .tree-act-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.04em;margin-left:auto;padding-right:6px}
 .badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
+.badge-identificado{color:var(--dust);background:#edeae5;border:1px solid #c8c2bb}.badge-identificado::before{background:var(--stone)}
+.maestro-doc-cell{display:flex;flex-direction:column;gap:3px;padding:2px 0}
+.maestro-doc-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.06em;white-space:nowrap}
+.maestro-doc-empty{color:var(--fog);font-size:10px}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
 .maestro-table th{padding:8px 10px}
 .maestro-table td{padding:7px 10px;vertical-align:middle}
@@ -907,7 +911,7 @@ function switchTab(btn, panelId) {
 // ── STATUS HELPERS ────────────────────────────────────────────────────────────
 const STATUS_ORDER = ['pendiente','en_levantamiento','borrador','en_revision','autorizado','publicado'];
 const STATUS_LABEL = {
-  sin_iniciar:'Sin Iniciar',
+  identificado:'Identificado', sin_iniciar:'Sin Iniciar',
   pendiente:'Pendiente', en_levantamiento:'Levantamiento', borrador:'Borrador',
   en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado', vencido:'Vencido'
 };
@@ -1115,140 +1119,143 @@ async function loadCatalogo() {
   renderCatTable();
 }
 
+// ── GENERACIÓN AUTOMÁTICA DE FOLIOS ──────────────────────────────────────────
+async function generateMissingFolios() {
+  if (!actividades.length || !direcciones.length) return 0;
+  const { data: existing } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento');
+  const existingSet = new Set((existing||[]).map(e=>`${e.actividad_id}:${e.tipo_documento}`));
+
+  const actsByArea = {};
+  actividades.filter(a=>a.activa && a.codigo).forEach(act => {
+    const dept = departamentos.find(d=>d.id===act.departamento_id);
+    if (!dept?.area_id) return;
+    if (!actsByArea[dept.area_id]) actsByArea[dept.area_id] = [];
+    actsByArea[dept.area_id].push(act);
+  });
+
+  const toInsert = [];
+  Object.entries(actsByArea).forEach(([areaId, acts]) => {
+    const area = areas.find(a=>a.id===areaId);
+    const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
+    if (!dir || !area) return;
+    const sorted = [...acts].sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''));
+    sorted.forEach((act, idx) => {
+      const numero = idx + 1;
+      ['PLT','PCS','PCD'].forEach(tipo => {
+        if (existingSet.has(`${act.id}:${tipo}`)) return;
+        const prefix = tipo==='PLT' ? 'Política' : tipo==='PCS' ? 'Proceso' : 'Procedimiento';
+        toInsert.push({
+          area_id: areaId, actividad_id: act.id,
+          tipo_documento: tipo, numero,
+          codigo_documento: `${tipo}-${dir.codigo}-${act.codigo}`,
+          nombre: `${prefix} de ${act.nombre}`,
+          prioridad: 'media'
+        });
+      });
+    });
+  });
+
+  if (!toInsert.length) return 0;
+  const { error } = await sb.from('pol_catalogo').insert(toInsert);
+  if (error) console.error('generateMissingFolios:', error.message);
+  return toInsert.length;
+}
+
 // ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
 async function loadMaestro() {
   const el = document.getElementById('maestro-container');
   if (!el) return;
 
-  // Capture filter state before overwriting DOM
-  const fDir    = document.getElementById('maestro-filtro-dir')?.value    || '';
-  const fStatus = document.getElementById('maestro-filtro-status')?.value || '';
-  const fSearch = (document.getElementById('maestro-search')?.value       || '').toLowerCase();
+  const fDir    = document.getElementById('maestro-filtro-dir')?.value  || '';
+  const fSearch = (document.getElementById('maestro-search')?.value     || '').toLowerCase();
 
-  el.innerHTML = '<div class="loading">Cargando catálogo maestro…</div>';
+  el.innerHTML = '<div class="loading">Generando catálogo maestro…</div>';
 
-  // Ensure hierarchy + actividades loaded
   if (!direcciones.length || !actividades.length) await loadCatalogo();
 
-  // Fresh pull de politicas, comentarios y campos extendidos del catálogo
-  const [{ data: pols }, { data: coms }, { data: catsFull }] = await Promise.all([
-    sb.from('pol_politicas')
-      .select('id,catalogo_id,status,version,fecha_inicio_vigencia,autorizacion_at,updated_at'),
-    sb.from('pol_comentarios')
-      .select('politica_id,comentario,created_at').order('created_at', {ascending:false}),
-    sb.from('pol_catalogo')
-      .select('id,actividad_id,url_documento,fecha_inicio,fecha_entrega')
+  // Auto-generar folios faltantes
+  await generateMissingFolios();
+
+  // Pull fresco de catalogo + politicas
+  const [{ data: catsAll }, { data: pols }] = await Promise.all([
+    sb.from('pol_catalogo').select('id,actividad_id,tipo_documento,codigo_documento,nombre,activo').eq('activo',true),
+    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at')
   ]);
-  const catExtraById = Object.fromEntries((catsFull||[]).map(c=>[c.id,c]));
 
   const latestPols = {};
   (pols||[]).forEach(p => {
     if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
       latestPols[p.catalogo_id] = p;
   });
-  const lastComment = {};
-  (coms||[]).forEach(c => { if (!lastComment[c.politica_id]) lastComment[c.politica_id] = c.comentario; });
 
-  // Build rows following hierarchy order
+  // Indexar catalogo por (actividad_id, tipo_documento)
+  const catByActTipo = {};
+  (catsAll||[]).forEach(c => {
+    if (!catByActTipo[c.actividad_id]) catByActTipo[c.actividad_id] = {};
+    catByActTipo[c.actividad_id][c.tipo_documento] = { ...c, pol: latestPols[c.id] || null };
+  });
+
+  // Construir filas — una por actividad
   const rows = [];
   const sortedDirs = [...direcciones].sort((a,b)=>a.orden-b.orden);
   sortedDirs.forEach(dir => {
     areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
       departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
-        actividades.filter(a=>a.departamento_id===dept.id)
-          .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
-          .forEach((act) => {
-            const deptSeq     = dept.codigo ? dept.codigo.split('-').pop() : String(dept.orden).padStart(2,'0');
-            const actSeq      = act.codigo  ? act.codigo.split('-').pop()  : '—';
-            const codigoLargo = `PLT-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
-            const cat         = catalogo.find(c=>c.actividad_id===act.id);
-            const pol         = cat ? latestPols[cat.id] : null;
-            const catExtra    = cat ? (catExtraById[cat.id]||{}) : {};
-            rows.push({
-              codigoLargo, dir, area, dept, act, cat, pol,
-              status:         pol ? pol.status                : null,
-              fechaInicio:    pol ? pol.fecha_inicio_vigencia  : null,
-              fechaAuth:      pol ? pol.autorizacion_at        : null,
-              updatedAt:      pol ? pol.updated_at             : null,
-              comentario:     pol ? (lastComment[pol.id]||'')  : '',
-              urlDoc:         catExtra.url_documento  || '',
-              fechaInicioDoc: catExtra.fecha_inicio   || '',
-              fechaEntregaDoc:catExtra.fecha_entrega  || ''
-            });
+        actividades.filter(a=>a.departamento_id===dept.id && a.activa)
+          .sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''))
+          .forEach(act => {
+            rows.push({ dir, area, dept, act, docs: catByActTipo[act.id]||{} });
           });
       });
     });
   });
 
-  // Apply filters
   const filtered = rows.filter(r => {
-    if (fDir    && r.dir.codigo !== fDir) return false;
-    if (fStatus && (r.status||'sin_iniciar') !== fStatus) return false;
-    if (fSearch && !r.codigoLargo.toLowerCase().includes(fSearch)
-               && !r.act.nombre.toLowerCase().includes(fSearch)
-               && !r.dept.nombre.toLowerCase().includes(fSearch)) return false;
+    if (fDir && r.dir.codigo !== fDir) return false;
+    if (fSearch && ![r.act.nombre, r.dept.nombre, r.area.nombre, r.dir.codigo].join(' ').toLowerCase().includes(fSearch)) return false;
     return true;
   });
 
-  const fmtDate = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+  const dirOpts = sortedDirs.map(d=>`<option value="${d.codigo}"${fDir===d.codigo?' selected':''}>${d.codigo} · ${d.nombre}</option>`).join('');
 
-  let html = `<div class="maestro-filter">
+  const fmtDoc = (doc) => {
+    if (!doc) return '<span class="maestro-doc-empty">—</span>';
+    const st = doc.pol ? doc.pol.status : 'identificado';
+    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span>${badge(st)}</div>`;
+  };
+
+  let html = `
+  <div class="maestro-filter">
     <select id="maestro-filtro-dir" onchange="loadMaestro()">
-      <option value="">Todas las Direcciones</option>
-      ${sortedDirs.map(d=>`<option value="${d.codigo}"${fDir===d.codigo?' selected':''}>${d.codigo} · ${d.nombre}</option>`).join('')}
+      <option value="">Todas las Direcciones</option>${dirOpts}
     </select>
-    <select id="maestro-filtro-status" onchange="loadMaestro()">
-      <option value="">Todos los Estatus</option>
-      ${Object.entries(STATUS_LABEL).map(([v,l])=>`<option value="${v}"${fStatus===v?' selected':''}>${l}</option>`).join('')}
-    </select>
-    <input id="maestro-search" placeholder="Buscar código, actividad, departamento…" oninput="loadMaestro()" value="${fSearch}" style="flex:1;min-width:200px">
-    <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} registros</span>
+    <input id="maestro-search" placeholder="Buscar actividad, departamento, área…" oninput="loadMaestro()" value="${fSearch}" style="flex:1;min-width:200px">
+    <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} actividades</span>
   </div>
-  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
+  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip;overflow-x:auto">
   <table class="maestro-table">
     <thead><tr>
-      <th style="width:40px;text-align:right">#</th>
-      <th>Código Político</th>
-      <th>Dirección</th>
-      <th>Área</th>
-      <th>Departamento</th>
-      <th>Actividad</th>
-      <th>Estatus</th>
-      <th>F.Inicio</th>
-      <th>F.Entrega</th>
-      <th>Documento</th>
-      <th>Autorización</th>
-      <th>Comentario</th>
-      <th></th>
+      <th style="width:32px;text-align:right">#</th>
+      <th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th>
+      <th style="min-width:170px">PLT — Política</th>
+      <th style="min-width:170px">PCS — Proceso</th>
+      <th style="min-width:170px">PCD — Procedimiento</th>
     </tr></thead>
     <tbody>`;
 
   if (!filtered.length) {
-    html += `<tr><td colspan="13" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
+    html += `<tr><td colspan="8" class="loading">Sin resultados.</td></tr>`;
   } else {
     filtered.forEach((r, i) => {
-      const st      = r.status || 'sin_iniciar';
-      const docLink = r.urlDoc
-        ? `<a href="${r.urlDoc}" target="_blank" style="font-family:var(--ff-mono);font-size:10px;color:var(--blue);text-decoration:underline">Ver doc ↗</a>`
-        : '<span style="color:var(--fog);font-size:10px">—</span>';
-      const editBtn = r.cat
-        ? `<button onclick="openModalDoc('${r.cat.id}','${r.urlDoc}','${r.fechaInicioDoc}','${r.fechaEntregaDoc}')"
-             style="background:none;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--dust);cursor:pointer">✎</button>`
-        : '';
       html += `<tr>
-        <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
-        <td><span class="maestro-code">${r.codigoLargo}</span></td>
+        <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right">${i+1}</td>
         <td><span class="maestro-label">${r.dir.codigo}</span><br><span class="maestro-sub">${r.dir.nombre}</span></td>
         <td><span class="maestro-label">${r.area.numero}</span><br><span class="maestro-sub">${r.area.nombre}</span></td>
         <td><span class="maestro-sub">${r.dept.nombre}</span></td>
-        <td><span class="maestro-label">${r.act.nombre}</span></td>
-        <td>${badge(st)}</td>
-        <td><span class="maestro-sub">${r.fechaInicioDoc ? fmtDate(r.fechaInicioDoc) : '—'}</span></td>
-        <td><span class="maestro-sub">${r.fechaEntregaDoc ? fmtDate(r.fechaEntregaDoc) : '—'}</span></td>
-        <td>${docLink}</td>
-        <td><span class="maestro-sub">${fmtDate(r.fechaAuth)}</span></td>
-        <td style="max-width:160px;font-size:10px;color:var(--dust)">${r.comentario||'—'}</td>
-        <td>${editBtn}</td>
+        <td><span class="maestro-label">${r.act.nombre}</span><br><span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${r.act.codigo||'—'}</span></td>
+        <td>${fmtDoc(r.docs['PLT'])}</td>
+        <td>${fmtDoc(r.docs['PCS'])}</td>
+        <td>${fmtDoc(r.docs['PCD'])}</td>
       </tr>`;
     });
   }
