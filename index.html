@@ -427,6 +427,27 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Reasignar Área a Dirección -->
+<div class="modal-overlay" id="modal-reasignar-area">
+  <div class="modal" style="max-width:420px">
+    <h3>Reasignar Área a Dirección</h3>
+    <div class="alert alert-error" id="mreasig-error"></div>
+    <input type="hidden" id="mreasig-area-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Área</label>
+      <div id="mreasig-area-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Asignar a Dirección</label>
+      <select id="mreasig-dir"></select>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveReasignarArea()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-area')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Editar nombre genérico -->
 <div class="modal-overlay" id="modal-editar-nombre">
   <div class="modal" style="max-width:420px">
@@ -1828,6 +1849,29 @@ async function loadAdmin() {
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
 }
 
+// ── REASIGNAR ÁREA ────────────────────────────────────────────────────────────
+function openReasignarArea(areaId, dirActualId) {
+  const area = areas.find(a=>a.id===areaId);
+  document.getElementById('mreasig-area-id').value    = areaId;
+  document.getElementById('mreasig-area-nombre').textContent = area ? `${area.numero} · ${area.nombre}` : areaId;
+  document.getElementById('mreasig-dir').innerHTML =
+    [...direcciones].sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}"${d.id===dirActualId?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
+      .join('');
+  document.getElementById('mreasig-error').classList.remove('show');
+  document.getElementById('modal-reasignar-area').classList.add('open');
+}
+
+async function saveReasignarArea() {
+  const areaId  = document.getElementById('mreasig-area-id').value;
+  const dirId   = document.getElementById('mreasig-dir').value;
+  const { error } = await sb.from('pol_areas').update({ direccion_id: dirId }).eq('id', areaId);
+  if (error) { showModalError('mreasig-error', error.message); return; }
+  closeModal('modal-reasignar-area');
+  await loadAdmin();
+  renderEstructura();
+}
+
 // ── INACTIVAR / EDITAR NOMBRE ─────────────────────────────────────────────────
 function openEditarNombre(tabla, id, nombreActual) {
   document.getElementById('medit-tabla').value  = tabla;
@@ -1903,7 +1947,9 @@ function renderEstructura() {
         <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--linen)">
           <span style="font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--amber)">${area.numero}</span>
           <span style="font-size:13px;font-weight:500">${area.nombre}</span>
-          <span style="font-size:10px;color:var(--fog);margin-left:auto">${areaDepts.length} depto${areaDepts.length!==1?'s':''}</span>
+          <span style="font-size:10px;color:var(--fog);margin-left:4px">${areaDepts.length} depto${areaDepts.length!==1?'s':''}</span>
+          <button onclick="openReasignarArea('${area.id}','${dir.id}')"
+            style="margin-left:auto;border:1px solid var(--stone);border-radius:4px;padding:2px 9px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>
         </div>
         ${deptsHtml||'<div style="padding:10px 14px;font-size:11px;color:var(--fog)">Sin departamentos</div>'}
       </div>`;
