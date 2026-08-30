@@ -1254,8 +1254,8 @@ async function loadMaestro() {
         <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right">${i+1}</td>
         <td><span class="maestro-label">${r.dir.codigo}</span><br><span class="maestro-sub">${r.dir.nombre}</span></td>
         <td><span class="maestro-label">${r.area.numero}</span><br><span class="maestro-sub">${r.area.nombre}</span></td>
-        <td><span class="maestro-sub">${r.dept.nombre}</span></td>
-        <td><span class="maestro-label">${r.act.nombre}</span><br><span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${r.act.codigo||'—'}</span></td>
+        <td><span class="maestro-label">${r.dept.codigo||'—'}</span><br><span class="maestro-sub">${r.dept.nombre}</span></td>
+        <td><span class="maestro-label">${r.act.codigo||'—'}</span><br><span class="maestro-sub">${r.act.nombre}</span></td>
         <td>${fmtDoc(r.docs['PLT'])}</td>
         <td>${fmtDoc(r.docs['PCS'])}</td>
         <td>${fmtDoc(r.docs['PCD'])}</td>
