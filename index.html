@@ -481,64 +481,6 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
-<!-- MODAL: Registrar folio en catálogo -->
-<div class="modal-overlay" id="modal-catalogo">
-  <div class="modal" style="max-width:560px">
-    <h3>Registrar Folio en Catálogo</h3>
-    <div class="alert alert-error" id="mcat-error"></div>
-    <div class="form-group" style="margin-bottom:16px">
-      <label>Código generado</label>
-      <div id="mcat-codigo-preview" style="font-family:var(--ff-mono);font-size:20px;color:var(--gold);padding:6px 0;letter-spacing:.1em">PLT — — — —</div>
-    </div>
-    <div class="form-grid" style="margin-bottom:14px">
-      <div class="form-group">
-        <label>Tipo de Documento</label>
-        <select id="mcat-tipo" onchange="updateCodigoPreview()">
-          <option value="PLT">PLT — Política</option>
-          <option value="PCS">PCS — Proceso</option>
-          <option value="PCD">PCD — Procedimiento</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Prioridad</label>
-        <select id="mcat-prioridad">
-          <option value="alta">Alta</option>
-          <option value="media" selected>Media</option>
-          <option value="baja">Baja</option>
-        </select>
-      </div>
-      <div class="form-group full">
-        <label>Dirección</label>
-        <select id="mcat-dir" onchange="onCatDirChange()"><option value="">— Selecciona —</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Área</label>
-        <select id="mcat-area" onchange="onCatAreaChange()"><option value="">— selecciona dirección primero —</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Departamento</label>
-        <select id="mcat-dept" onchange="onCatDeptChange()"><option value="">— selecciona área primero —</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Actividad</label>
-        <select id="mcat-act" onchange="updateCodigoPreview()"><option value="">— selecciona departamento primero —</option></select>
-      </div>
-      <div class="form-group full">
-        <label>Nombre de la Política / Documento</label>
-        <input id="mcat-nombre" placeholder="Ej: Política de Vacaciones y Permisos">
-      </div>
-      <div class="form-group full">
-        <label>Descripción (opcional)</label>
-        <textarea id="mcat-desc" rows="2" placeholder="Propósito general del documento"></textarea>
-      </div>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveCatalogo()">Registrar Folio</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-catalogo')">Cancelar</button>
-    </div>
-  </div>
-</div>
-
 <!-- MAIN -->
 <div class="main">
 
@@ -856,7 +798,6 @@ input,textarea,select{font-family:inherit}
       <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
       <button class="tab" onclick="switchTab(this,'atab-actividades')">Actividades</button>
       <button class="tab" onclick="switchTab(this,'atab-estructura')">Estructura</button>
-      <button class="tab" onclick="switchTab(this,'atab-catalogo')">Catálogo</button>
     </div>
 
     <div class="tab-panel active" id="atab-direcciones">
@@ -907,17 +848,6 @@ input,textarea,select{font-family:inherit}
       </div>
     </div>
 
-    <div class="tab-panel" id="atab-catalogo">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-        <button class="btn btn-primary btn-sm" onclick="openModalCatalogo()">+ Nuevo Folio</button>
-      </div>
-      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table">
-          <thead><tr><th>Folio</th><th>Nombre de la Política / Documento</th><th>Área</th><th>Actividad</th><th>Tipo</th><th>Prioridad</th></tr></thead>
-          <tbody id="admin-catalogo-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
 </div><!-- /main -->
