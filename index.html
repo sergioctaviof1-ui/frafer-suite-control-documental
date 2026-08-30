@@ -922,18 +922,28 @@ function renderFlow(pol) {
     autorizado:  pol?.autorizacion_at,
     publicado:   pol?.publicacion_at
   };
-  const fmtTs = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '';
-  let html = '';
+  const fmt = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '';
+  let html = '<div style="display:flex;gap:6px;width:100%;align-items:stretch;overflow-x:auto;padding:2px 0">';
   STATUS_ORDER.forEach((s, i) => {
     const done = i < idx;
     const cur  = i === idx;
-    const ts   = fmtTs(tsMap[s]);
-    if (i > 0) html += `<div class="flow-arrow">›</div>`;
-    html += `<div class="flow-chip${done?' done':''}${cur?' current':''}">
-      <div class="flow-chip-label">${done ? '✓ ' : ''}${STATUS_LABEL[s]}</div>
-      ${ts ? `<div class="flow-chip-date">${ts}</div>` : ''}
+    const ts   = fmt(tsMap[s]);
+    if (i > 0) html += '<div style="display:flex;align-items:center;color:#9c8e84;font-size:16px;flex-shrink:0">›</div>';
+    const bg      = cur  ? '#1C2B3A' : done ? '#EAF4EE' : '#F5F0EB';
+    const border  = cur  ? '2px solid #C08050' : done ? '1.5px solid #5A9E72' : '1.5px solid #C8C2BB';
+    const opacity = (done || cur) ? '1' : '0.65';
+    const lColor  = cur  ? '#E8A96B' : done ? '#3D7A55' : '#6E6259';
+    const dColor  = cur  ? 'rgba(255,255,255,.55)' : done ? 'rgba(61,122,85,.75)' : '#9c8e84';
+    html += `<div style="flex:1;min-width:100px;display:flex;flex-direction:column;align-items:center;
+        justify-content:center;gap:3px;padding:10px 8px;border-radius:7px;border:${border};
+        background:${bg};opacity:${opacity};text-align:center;box-sizing:border-box">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+        font-family:var(--ff-mono);color:${lColor};line-height:1.3">
+        ${done ? '✓ ' : ''}${STATUS_LABEL[s]}</div>
+      ${ts ? `<div style="font-size:8px;font-family:var(--ff-mono);color:${dColor};margin-top:1px">${ts}</div>` : ''}
     </div>`;
   });
+  html += '</div>';
   return html;
 }
 
