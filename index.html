@@ -427,6 +427,33 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Campos de documento (Maestro) -->
+<div class="modal-overlay" id="modal-doc">
+  <div class="modal" style="max-width:480px">
+    <h3>Documento · Planificación</h3>
+    <div class="alert alert-error" id="mdoc-error"></div>
+    <input type="hidden" id="mdoc-cat-id">
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="form-group full">
+        <label>URL del Documento (última versión)</label>
+        <input id="mdoc-url" type="url" placeholder="https://drive.google.com/...">
+      </div>
+      <div class="form-group">
+        <label>Fecha de Inicio</label>
+        <input id="mdoc-inicio" type="date">
+      </div>
+      <div class="form-group">
+        <label>Fecha de Entrega</label>
+        <input id="mdoc-entrega" type="date">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveDocFields()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-doc')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Registrar folio en catálogo -->
 <div class="modal-overlay" id="modal-catalogo">
   <div class="modal" style="max-width:560px">
@@ -1138,13 +1165,16 @@ async function loadMaestro() {
   // Ensure hierarchy + actividades loaded
   if (!direcciones.length || !actividades.length) await loadCatalogo();
 
-  // Fresh pull of politicas + comments
-  const [{ data: pols }, { data: coms }] = await Promise.all([
+  // Fresh pull de politicas, comentarios y campos extendidos del catálogo
+  const [{ data: pols }, { data: coms }, { data: catsFull }] = await Promise.all([
     sb.from('pol_politicas')
       .select('id,catalogo_id,status,version,fecha_inicio_vigencia,autorizacion_at,updated_at'),
     sb.from('pol_comentarios')
-      .select('politica_id,comentario,created_at').order('created_at', {ascending:false})
+      .select('politica_id,comentario,created_at').order('created_at', {ascending:false}),
+    sb.from('pol_catalogo')
+      .select('id,actividad_id,url_documento,fecha_inicio,fecha_entrega')
   ]);
+  const catExtraById = Object.fromEntries((catsFull||[]).map(c=>[c.id,c]));
 
   const latestPols = {};
   (pols||[]).forEach(p => {
@@ -1160,21 +1190,25 @@ async function loadMaestro() {
   sortedDirs.forEach(dir => {
     areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
       departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
-        const deptCode = String(dept.orden).padStart(3,'0');
         actividades.filter(a=>a.departamento_id===dept.id)
           .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
-          .forEach((act,idx) => {
-            const actCode     = String(idx+1).padStart(2,'0');
-            const codigoLargo = `PLT-${dir.codigo}-${area.numero}-${deptCode}-${actCode}`;
+          .forEach((act) => {
+            const deptSeq     = dept.codigo ? dept.codigo.split('-').pop() : String(dept.orden).padStart(2,'0');
+            const actSeq      = act.codigo  ? act.codigo.split('-').pop()  : '—';
+            const codigoLargo = `PLT-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
             const cat         = catalogo.find(c=>c.actividad_id===act.id);
             const pol         = cat ? latestPols[cat.id] : null;
+            const catExtra    = cat ? (catExtraById[cat.id]||{}) : {};
             rows.push({
-              codigoLargo, dir, area, dept, deptCode, act, actCode, cat, pol,
-              status:      pol ? pol.status               : null,
-              fechaInicio: pol ? pol.fecha_inicio_vigencia : null,
-              fechaAuth:   pol ? pol.autorizacion_at       : null,
-              updatedAt:   pol ? pol.updated_at            : null,
-              comentario:  pol ? (lastComment[pol.id]||'') : ''
+              codigoLargo, dir, area, dept, act, cat, pol,
+              status:         pol ? pol.status                : null,
+              fechaInicio:    pol ? pol.fecha_inicio_vigencia  : null,
+              fechaAuth:      pol ? pol.autorizacion_at        : null,
+              updatedAt:      pol ? pol.updated_at             : null,
+              comentario:     pol ? (lastComment[pol.id]||'')  : '',
+              urlDoc:         catExtra.url_documento  || '',
+              fechaInicioDoc: catExtra.fecha_inicio   || '',
+              fechaEntregaDoc:catExtra.fecha_entrega  || ''
             });
           });
       });
@@ -1214,29 +1248,40 @@ async function loadMaestro() {
       <th>Departamento</th>
       <th>Actividad</th>
       <th>Estatus</th>
-      <th>Inicio</th>
+      <th>F.Inicio</th>
+      <th>F.Entrega</th>
+      <th>Documento</th>
       <th>Autorización</th>
-      <th>Actualización</th>
       <th>Comentario</th>
+      <th></th>
     </tr></thead>
     <tbody>`;
 
   if (!filtered.length) {
-    html += `<tr><td colspan="10" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
+    html += `<tr><td colspan="11" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
   } else {
     filtered.forEach(r => {
-      const st = r.status || 'sin_iniciar';
+      const st      = r.status || 'sin_iniciar';
+      const docLink = r.urlDoc
+        ? `<a href="${r.urlDoc}" target="_blank" style="font-family:var(--ff-mono);font-size:10px;color:var(--blue);text-decoration:underline">Ver doc ↗</a>`
+        : '<span style="color:var(--fog);font-size:10px">—</span>';
+      const editBtn = r.cat
+        ? `<button onclick="openModalDoc('${r.cat.id}','${r.urlDoc}','${r.fechaInicioDoc}','${r.fechaEntregaDoc}')"
+             style="background:none;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--dust);cursor:pointer">✎</button>`
+        : '';
       html += `<tr>
         <td><span class="maestro-code">${r.codigoLargo}</span></td>
         <td><span class="maestro-label">${r.dir.codigo}</span><br><span class="maestro-sub">${r.dir.nombre}</span></td>
         <td><span class="maestro-label">${r.area.numero}</span><br><span class="maestro-sub">${r.area.nombre}</span></td>
-        <td><span class="maestro-label">${r.deptCode}</span><br><span class="maestro-sub">${r.dept.nombre}</span></td>
-        <td><span class="maestro-label">${r.actCode} · ${r.act.nombre}</span></td>
+        <td><span class="maestro-sub">${r.dept.nombre}</span></td>
+        <td><span class="maestro-label">${r.act.nombre}</span></td>
         <td>${badge(st)}</td>
-        <td><span class="maestro-sub">${fmtDate(r.fechaInicio)}</span></td>
+        <td><span class="maestro-sub">${r.fechaInicioDoc ? fmtDate(r.fechaInicioDoc) : '—'}</span></td>
+        <td><span class="maestro-sub">${r.fechaEntregaDoc ? fmtDate(r.fechaEntregaDoc) : '—'}</span></td>
+        <td>${docLink}</td>
         <td><span class="maestro-sub">${fmtDate(r.fechaAuth)}</span></td>
-        <td><span class="maestro-sub">${fmtDate(r.updatedAt)}</span></td>
-        <td style="max-width:180px;font-size:10px;color:var(--dust)">${r.comentario||'—'}</td>
+        <td style="max-width:160px;font-size:10px;color:var(--dust)">${r.comentario||'—'}</td>
+        <td>${editBtn}</td>
       </tr>`;
     });
   }
@@ -1744,6 +1789,31 @@ async function loadAdmin() {
         <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
+}
+
+// ── MODAL DOC ─────────────────────────────────────────────────────────────────
+function openModalDoc(catId, urlDoc, fechaInicio, fechaEntrega) {
+  document.getElementById('mdoc-cat-id').value  = catId;
+  document.getElementById('mdoc-url').value     = urlDoc     || '';
+  document.getElementById('mdoc-inicio').value  = fechaInicio  || '';
+  document.getElementById('mdoc-entrega').value = fechaEntrega || '';
+  document.getElementById('mdoc-error').classList.remove('show');
+  document.getElementById('modal-doc').classList.add('open');
+}
+
+async function saveDocFields() {
+  const catId        = document.getElementById('mdoc-cat-id').value;
+  const urlDoc       = document.getElementById('mdoc-url').value.trim()    || null;
+  const fechaInicio  = document.getElementById('mdoc-inicio').value         || null;
+  const fechaEntrega = document.getElementById('mdoc-entrega').value        || null;
+  const { error } = await sb.from('pol_catalogo').update({
+    url_documento: urlDoc,
+    fecha_inicio:  fechaInicio,
+    fecha_entrega: fechaEntrega
+  }).eq('id', catId);
+  if (error) { showModalError('mdoc-error', error.message); return; }
+  closeModal('modal-doc');
+  loadMaestro();
 }
 
 // ── ESTRUCTURA ────────────────────────────────────────────────────────────────
