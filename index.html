@@ -253,7 +253,7 @@ input,textarea,select{font-family:inherit}
 
 /* STATUS FLOW */
 .status-flow{display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding:4px 0}
-.flow-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;opacity:.35;transition:opacity .2s}
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;opacity:.5;transition:opacity .2s}
 .flow-step.done,.flow-step.current{opacity:1}
 .flow-step.current .flow-dot{box-shadow:0 0 0 3px var(--parchment),0 0 0 5px var(--ember)}
 .flow-dot{width:12px;height:12px;border-radius:50%;background:var(--stone);flex-shrink:0;z-index:1}
@@ -879,16 +879,27 @@ function badge(status) {
   return `<span class="badge badge-${status}">${STATUS_LABEL[status]||status}</span>`;
 }
 
-function renderFlow(currentStatus) {
+function renderFlow(pol) {
+  const currentStatus = (pol && pol.status) ? pol.status : 'en_catalogo';
   const idx = STATUS_ORDER.indexOf(currentStatus);
+  const tsMap = {
+    en_catalogo: pol?.created_at,
+    borrador:    pol?.borrador_at,
+    en_revision: pol?.revision_at,
+    autorizado:  pol?.autorizacion_at,
+    publicado:   pol?.publicacion_at
+  };
+  const fmtTs = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '';
   let html = '';
   STATUS_ORDER.forEach((s, i) => {
     const done = i < idx;
     const cur  = i === idx;
-    if (i > 0) html += `<div class="flow-line" style="${done?'background:var(--green)':''}"></div>`;
+    const ts   = fmtTs(tsMap[s]);
+    if (i > 0) html += `<div class="flow-line" style="${done?'background:var(--green)':'background:var(--stone)'}"></div>`;
     html += `<div class="flow-step${done?' done':''}${cur?' current':''}">
       <div class="flow-dot"></div>
       <div class="flow-label">${STATUS_LABEL[s]}</div>
+      ${ts ? `<div style="font-size:8px;color:var(--fog);font-family:var(--ff-mono);text-align:center;margin-top:1px;white-space:nowrap">${ts}</div>` : ''}
     </div>`;
   });
   return html;
@@ -1310,6 +1321,11 @@ async function openPolitica(catalogoId, polId) {
     document.getElementById('pol-ident-area').textContent = area ? `${area.numero} · ${area.nombre}`  : '—';
     document.getElementById('pol-ident-dept').textContent = dept ? `${deptCode} · ${dept.nombre}`     : '—';
     document.getElementById('pol-ident-act').textContent  = act  ? `${actCode} · ${act.nombre}`       : '—';
+    // Auto-poblar Dirección Responsable desde estructura org
+    if (dir) {
+      const respEl = document.getElementById('pol-resp-dir');
+      if (respEl && !respEl.value) respEl.value = `${dir.codigo} · ${dir.nombre}`;
+    }
   }
 
   if (polId) {
@@ -1369,7 +1385,7 @@ function fillPoliticaForm(pol) {
   const bc = document.getElementById('pol-badge-ctrl');
   if (bc) bc.innerHTML = badge(pol.status);
   document.getElementById('pol-badge').innerHTML = badge(pol.status);
-  document.getElementById('status-flow').innerHTML = renderFlow(pol.status);
+  document.getElementById('status-flow').innerHTML = renderFlow(pol);
   renderAdvanceActions(pol);
   // auto-calc vencimiento
   document.getElementById('pol-vigencia-meses')?.addEventListener('input', calcVencimiento);
@@ -1409,11 +1425,23 @@ async function savePolitica() {
     revisado_por:             document.getElementById('pol-revisado-por').value,
     autorizado_por:           document.getElementById('pol-autorizado-por').value,
   };
+  // Auto-avanzar a Borrador en el primer guardado + auto-fecha inicio
+  if (politicaActual.status === 'en_catalogo') {
+    const hoy = new Date().toISOString().split('T')[0];
+    payload.status      = 'borrador';
+    payload.borrador_at = new Date().toISOString();
+    if (!payload.fecha_inicio_vigencia) payload.fecha_inicio_vigencia = hoy;
+  }
   const { error } = await sb.from('pol_politicas').update(payload).eq('id', politicaActual.id);
   const sEl = document.getElementById('pol-success');
   const eEl = document.getElementById('pol-error');
   if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
-  else { sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500); }
+  else {
+    politicaActual = { ...politicaActual, ...payload };
+    fillPoliticaForm(politicaActual);
+    loadCatalogo();
+    sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500);
+  }
 }
 
 async function nuevaVersion(polId) {
@@ -1644,7 +1672,7 @@ function onDeptoAreaChange() {
     const maxSeq = Math.max(...deptsEnArea.map(d => parseInt(d.codigo.split('-').pop())||0));
     nextSeq = maxSeq + 1;
   }
-  document.getElementById('mdepto-codigo-preview').textContent = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
+  document.getElementById('mdepto-codigo-preview').textContent = `${area.numero}-${String(nextSeq).padStart(3,'0')}`;
 }
 
 function openModalDepto() {
@@ -1670,7 +1698,7 @@ async function saveDepto() {
     const maxSeq = Math.max(...deptsEnArea.map(d => parseInt(d.codigo.split('-').pop())||0));
     nextSeq = maxSeq + 1;
   }
-  const codigo = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
+  const codigo = `${area.numero}-${String(nextSeq).padStart(3,'0')}`;
   const orden  = nextSeq;
   const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, codigo, orden });
   if (error) { showModalError('mdepto-error', error.message); return; }
