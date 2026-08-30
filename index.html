@@ -1231,8 +1231,7 @@ async function loadMaestro() {
 
   const fmtDoc = (doc) => {
     if (!doc) return '<span class="maestro-doc-empty">—</span>';
-    const st = doc.pol ? doc.pol.status : 'identificado';
-    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span>${badge(st)}</div>`;
+    return `<span class="maestro-doc-folio">${doc.codigo_documento}</span>`;
   };
 
   let html = `
