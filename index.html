@@ -174,7 +174,7 @@ input,textarea,select{font-family:inherit}
 .maestro-doc-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.06em;white-space:nowrap}
 .maestro-doc-empty{color:var(--fog);font-size:10px}
 .maestro-doc-status{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
-.maestro-doc-status--identificado{color:var(--stone)}
+.maestro-doc-status--en_catalogo,.maestro-doc-status--identificado{color:var(--stone)}
 .maestro-doc-status--pendiente,.maestro-doc-status--sin_iniciar{color:var(--stone)}
 .maestro-doc-status--en_levantamiento{color:#b08a30}
 .maestro-doc-status--borrador{color:#7a6fa0}
@@ -1129,7 +1129,7 @@ async function loadCatalogo() {
         ? `<span class="cat-folio">${r.cat.codigo_documento}</span>`
         : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
       }</td>
-      <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">Sin iniciar</span>'}</td>
+      <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
       <td style="font-size:10px;color:var(--fog);white-space:nowrap">${r.pol?.updated_at ? new Date(r.pol.updated_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
     </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
     document.getElementById('cat-tbody').innerHTML = tbody;
@@ -1239,9 +1239,9 @@ async function loadMaestro() {
 
   const fmtDoc = (doc) => {
     if (!doc) return '<span class="maestro-doc-empty">—</span>';
-    const st = doc.pol ? doc.pol.status : 'identificado';
-    const stLabel = STATUS_LABEL[st] || st;
-    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span><span class="maestro-doc-status maestro-doc-status--${st}">${stLabel}</span></div>`;
+    const st = doc.pol ? doc.pol.status : null;
+    const stLabel = st ? (STATUS_LABEL[st] || st) : 'En Catálogo';
+    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span><span class="maestro-doc-status${st ? ' maestro-doc-status--'+st : ' maestro-doc-status--en_catalogo'}">${stLabel}</span></div>`;
   };
 
   let html = `
