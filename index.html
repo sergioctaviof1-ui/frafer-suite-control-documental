@@ -1232,7 +1232,8 @@ async function loadMaestro() {
     <input id="maestro-search" placeholder="Buscar actividad, departamento, área…" oninput="loadMaestro()" value="${fSearch}" style="flex:1;min-width:200px">
     <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} actividades</span>
   </div>
-  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip;overflow-x:auto">
+  <div style="border:1px solid var(--stone);border-radius:12px;overflow:hidden">
+  <div style="overflow-x:auto">
   <table class="maestro-table">
     <thead><tr>
       <th style="width:32px;text-align:right">#</th>
@@ -1260,7 +1261,7 @@ async function loadMaestro() {
     });
   }
 
-  html += `</tbody></table></div>`;
+  html += `</tbody></table></div></div>`;
   el.innerHTML = html;
 }
 
