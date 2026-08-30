@@ -135,13 +135,12 @@ input,textarea,select{font-family:inherit}
 .doc-header-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-header-actions{display:flex;gap:8px;flex-shrink:0}
 /* DOCUMENTAR — buscador de política */
-.doc-pol-wrap{position:relative;flex:1;min-width:0;max-width:600px}
-.doc-pol-box{display:flex;align-items:baseline;gap:8px;cursor:text;padding:4px 0}
+.doc-pol-wrap{position:relative;flex:1;min-width:0;max-width:620px}
 .doc-pol-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap;flex-shrink:0}
-.doc-pol-sep{color:rgba(255,255,255,.3);font-size:12px}
-.doc-pol-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.doc-pol-input{position:absolute;inset:0;width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:12px;padding:0 10px;font-family:var(--ff-body);outline:none;opacity:0;pointer-events:none;transition:opacity .15s}
-.doc-pol-input.open{opacity:1;pointer-events:auto}
+.doc-pol-nombre{font-size:12px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-pol-input{width:100%;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:12px;padding:7px 12px;font-family:var(--ff-body);outline:none;box-sizing:border-box}
+.doc-pol-input::placeholder{color:rgba(255,255,255,.4)}
+.doc-pol-input:focus{border-color:var(--gold);background:rgba(255,255,255,.13)}
 .doc-pol-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--stone);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:480px;overflow-y:auto;display:none}
 .doc-pol-dropdown.open{display:block}
 .doc-pol-opt{display:flex;align-items:baseline;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--linen);transition:background .1s}
@@ -598,17 +597,17 @@ input,textarea,select{font-family:inherit}
 
       <!-- Buscador de política -->
       <div class="doc-pol-wrap" id="doc-pol-wrap">
-        <div class="doc-pol-box" onclick="focusPolSearch()">
-          <span class="doc-pol-folio" id="pol-form-code">—</span>
-          <span class="doc-pol-sep" id="doc-pol-sep" style="display:none">·</span>
-          <span class="doc-pol-nombre" id="pol-form-title">Selecciona una política</span>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span class="doc-pol-folio" id="pol-form-code" style="display:none"></span>
+            <span class="doc-pol-nombre" id="pol-form-title" style="display:none"></span>
+          </div>
+          <input class="doc-pol-input" id="doc-pol-input" type="text"
+            placeholder="Buscar política por folio o nombre…"
+            oninput="filterPolSearch(this.value)"
+            onkeydown="polSearchKey(event)"
+            autocomplete="off">
         </div>
-        <input class="doc-pol-input" id="doc-pol-input" type="text"
-          placeholder="Buscar por folio o nombre…"
-          oninput="filterPolSearch(this.value)"
-          onkeydown="polSearchKey(event)"
-          onblur="hidePolDropdown()"
-          autocomplete="off">
         <div class="doc-pol-dropdown" id="doc-pol-dropdown"></div>
       </div>
 
@@ -1404,8 +1403,10 @@ async function openPolitica(catalogoId, polId) {
     const deptActs = dept ? actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)) : [];
     const actIdx  = act ? deptActs.indexOf(act) : -1;
-    const deptCode = dept ? String(dept.orden).padStart(3,'0') : '—';
-    const actCode  = actIdx >= 0 ? String(actIdx+1).padStart(2,'0') : '—';
+    const deptSeq  = dept ? String(dept.orden).padStart(3,'0') : '??';
+    const deptCode = dept && area ? `${area.numero}-${deptSeq}` : '—';
+    const actSeq   = actIdx >= 0 ? String(actIdx+1).padStart(2,'0') : '??';
+    const actCode  = dept && area && actIdx >= 0 ? `${area.numero}-${deptSeq}-${actSeq}` : '—';
 
     // Folio canónico calculado en vivo (nunca desde cat.codigo_documento)
     const folioVivo = (dir && area && dept && actIdx>=0)
@@ -1434,19 +1435,17 @@ async function openPolitica(catalogoId, polId) {
     if (pol) {
       politicaActual = pol;
       fillPoliticaForm(pol);
+    } else {
+      // Fetch falló (RLS u otro error) — mostrar en_catalogo virtual
+      politicaActual = { status: 'en_catalogo', catalogo_id: catalogoId };
+      document.getElementById('status-flow').innerHTML = renderFlow(politicaActual);
+      document.getElementById('pol-badge').innerHTML = badge('en_catalogo');
     }
   } else {
-    // Crear nueva
-    const { data: pol, error } = await sb.from('pol_politicas').insert({
-      catalogo_id: catalogoId,
-      status: 'en_catalogo',
-      version: 1,
-      vigencia_meses: 6
-    }).select().single();
-    if (!error && pol) {
-      politicaActual = pol;
-      fillPoliticaForm(pol);
-    }
+    // Sin registro en BD aún — en_catalogo es estado virtual (no se guarda en DB)
+    politicaActual = { status: 'en_catalogo', catalogo_id: catalogoId };
+    document.getElementById('status-flow').innerHTML = renderFlow(politicaActual);
+    document.getElementById('pol-badge').innerHTML = badge('en_catalogo');
   }
   // re-render tree to reflect state
 }
@@ -1505,6 +1504,8 @@ function calcVencimiento() {
 
 async function savePolitica() {
   if (!politicaActual) return;
+  const sEl = document.getElementById('pol-success');
+  const eEl = document.getElementById('pol-error');
   const payload = {
     objeto:                   document.getElementById('pol-objeto').value,
     alcance:                  document.getElementById('pol-alcance').value,
@@ -1526,16 +1527,27 @@ async function savePolitica() {
     revisado_por:             document.getElementById('pol-revisado-por').value,
     autorizado_por:           document.getElementById('pol-autorizado-por').value,
   };
-  // Auto-avanzar a Borrador en el primer guardado + auto-fecha inicio
-  if (politicaActual.status === 'en_catalogo') {
+  // Primer guardado (estado virtual en_catalogo, sin ID en BD) → INSERT con borrador
+  if (!politicaActual.id || politicaActual.status === 'en_catalogo') {
     const hoy = new Date().toISOString().split('T')[0];
     payload.status      = 'borrador';
     payload.borrador_at = new Date().toISOString();
+    payload.catalogo_id = politicaActual.catalogo_id;
+    payload.version     = 1;
     if (!payload.fecha_inicio_vigencia) payload.fecha_inicio_vigencia = hoy;
+    const { data: newPol, error } = await sb.from('pol_politicas').insert(payload).select().single();
+    if (!error && newPol) {
+      politicaActual = newPol;
+      fillPoliticaForm(newPol);
+      loadCatalogo();
+      sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500);
+    } else {
+      eEl.textContent = error?.message || 'Error al guardar'; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000);
+    }
+    return;
   }
+  // Guardado subsecuente — UPDATE
   const { error } = await sb.from('pol_politicas').update(payload).eq('id', politicaActual.id);
-  const sEl = document.getElementById('pol-success');
-  const eEl = document.getElementById('pol-error');
   if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
   else {
     politicaActual = { ...politicaActual, ...payload };
@@ -1546,10 +1558,10 @@ async function savePolitica() {
 }
 
 async function nuevaVersion(polId) {
-  const now = new Date().toISOString();
   const { data: pol } = await sb.from('pol_politicas').insert({
     catalogo_id: politicaActual.catalogo_id,
-    status: 'en_catalogo',
+    status: 'borrador',
+    borrador_at: new Date().toISOString(),
     version: (politicaActual.version||1) + 1,
     vigencia_meses: 6
   }).select().single();
@@ -1630,35 +1642,31 @@ async function navDocumentar() {
   }
 }
 
-let _polSearchFocused = false;
 let _polSearchFocusIdx = -1;
 
 function focusPolSearch() {
   const input = document.getElementById('doc-pol-input');
-  const box   = document.querySelector('.doc-pol-box');
-  const drop  = document.getElementById('doc-pol-dropdown');
   if (!input) return;
-  _polSearchFocused = true;
-  input.classList.add('open');
+  input.style.display = '';
+  document.getElementById('pol-form-code').style.display = 'none';
+  document.getElementById('pol-form-title').style.display = 'none';
   input.value = '';
-  if (box) box.style.opacity = '0';
   input.focus();
-  filterPolSearch('');
-  drop.classList.add('open');
 }
 
-function hidePolDropdown() {
-  setTimeout(() => {
-    const input = document.getElementById('doc-pol-input');
-    const box   = document.querySelector('.doc-pol-box');
-    const drop  = document.getElementById('doc-pol-dropdown');
-    _polSearchFocused = false;
-    _polSearchFocusIdx = -1;
-    if (input) { input.classList.remove('open'); input.value = ''; }
-    if (box) box.style.opacity = '1';
-    if (drop) drop.classList.remove('open');
-  }, 200);
-}
+// Abrir dropdown al focus en el input
+document.addEventListener('focusin', e => {
+  if (e.target.id === 'doc-pol-input') {
+    filterPolSearch(e.target.value || '');
+    document.getElementById('doc-pol-dropdown')?.classList.add('open');
+  }
+});
+// Cerrar dropdown al click fuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('#doc-pol-wrap')) {
+    document.getElementById('doc-pol-dropdown')?.classList.remove('open');
+  }
+});
 
 function filterPolSearch(q) {
   const drop = document.getElementById('doc-pol-dropdown');
@@ -1689,18 +1697,18 @@ function filterPolSearch(q) {
     return;
   }
 
-  // Agrupar por dirección
-  const grupos = {};
+  // Agrupar por dirección, orden jerárquico por dir.orden
+  const gruposMap = {};
   matches.forEach(m => {
-    const key = m.dir.codigo;
-    if (!grupos[key]) grupos[key] = { dir: m.dir, items: [] };
-    grupos[key].items.push(m);
+    if (!gruposMap[m.dir.id]) gruposMap[m.dir.id] = { dir: m.dir, items: [] };
+    gruposMap[m.dir.id].items.push(m);
   });
+  const grupos = Object.values(gruposMap).sort((a,b) => (a.dir.orden||0) - (b.dir.orden||0));
 
   const total = matches.length;
   let html = `<div style="padding:6px 14px 4px;font-size:10px;color:var(--fog);font-family:var(--ff-mono);border-bottom:1px solid var(--linen)">${total} política${total!==1?'s':''} · scroll para ver todas</div>`;
-  Object.values(grupos).forEach(g => {
-    html += `<div style="padding:5px 14px 3px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);background:var(--linen);font-family:var(--ff-mono);position:sticky;top:0">${g.dir.codigo} · ${g.dir.nombre}</div>`;
+  grupos.forEach(g => {
+    html += `<div style="padding:5px 14px 3px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);background:var(--linen);font-family:var(--ff-mono);position:sticky;top:0;z-index:1">${g.dir.codigo} · ${g.dir.nombre}</div>`;
     g.items.forEach(m => {
       html += `<div class="doc-pol-opt" data-cat-id="${m.cat.id}" onmousedown="selectPolOption('${m.cat.id}')">
         <span class="doc-pol-opt-folio">${m.folio}</span>
@@ -1712,17 +1720,19 @@ function filterPolSearch(q) {
 }
 
 async function selectPolOption(catalogoId) {
-  const drop = document.getElementById('doc-pol-dropdown');
-  if (drop) drop.classList.remove('open');
+  document.getElementById('doc-pol-dropdown')?.classList.remove('open');
   const input = document.getElementById('doc-pol-input');
-  const box   = document.querySelector('.doc-pol-box');
-  if (input) { input.classList.remove('open'); input.value = ''; }
-  if (box) box.style.opacity = '1';
-  // Buscar si ya tiene una política asociada
+  if (input) input.value = '';
   const { data: pols } = await sb.from('pol_politicas')
     .select('id,version').eq('catalogo_id', catalogoId).order('version', {ascending:false}).limit(1);
   const polId = pols?.length ? pols[0].id : null;
   await openPolitica(catalogoId, polId);
+  // Mostrar folio y nombre en el header (ocultar el input)
+  const fc = document.getElementById('pol-form-code');
+  const ft = document.getElementById('pol-form-title');
+  if (fc) fc.style.display = '';
+  if (ft) ft.style.display = '';
+  if (input) input.style.display = 'none';
 }
 
 function polSearchKey(e) {
