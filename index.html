@@ -126,6 +126,10 @@ input,textarea,select{font-family:inherit}
 .cat-table td{padding:7px 12px;vertical-align:middle}
 .cat-mono{font-family:var(--ff-mono);font-size:9px;color:var(--navy);font-weight:700;letter-spacing:.06em;white-space:nowrap;margin-right:6px}
 .cat-folio{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.04em}
+.dash-tipo-toggle{display:flex;gap:0;border:1px solid var(--stone);border-radius:8px;overflow:hidden;align-self:center}
+.dash-tipo-btn{padding:7px 16px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;font-family:var(--ff-mono);background:transparent;border:none;color:var(--stone);cursor:pointer;border-right:1px solid var(--stone);transition:all .15s}
+.dash-tipo-btn:last-child{border-right:none}
+.dash-tipo-btn.active{background:var(--navy);color:var(--ember-glow)}
 .btn-accion{border:none;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;font-family:var(--ff-mono)}
 .btn-accion-iniciar{background:var(--ember-glow);color:var(--navy)}
 .btn-accion-update{background:transparent;color:var(--gold);border:1px solid var(--gold)}
@@ -504,9 +508,16 @@ input,textarea,select{font-family:inherit}
 
   <!-- VIEW: DASHBOARD -->
   <div class="view active" id="view-dashboard">
-    <div class="page-header">
-      <h1>Dashboard</h1>
-      <p>Estado general del catálogo documental</p>
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Estado general del catálogo documental</p>
+      </div>
+      <div class="dash-tipo-toggle">
+        <button class="dash-tipo-btn active" onclick="switchDashTipo('PLT',this)">Políticas</button>
+        <button class="dash-tipo-btn" onclick="switchDashTipo('PCS',this)">Procesos</button>
+        <button class="dash-tipo-btn" onclick="switchDashTipo('PCD',this)">Procedimientos</button>
+      </div>
     </div>
     <div class="stats-row" id="dash-stats">
       <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">En Catálogo</div></div>
@@ -987,54 +998,79 @@ function renderAdvanceActions(pol) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
+let dashTipo = 'PLT';
+let _dashCache = {};
+
+function switchDashTipo(tipo, btn) {
+  dashTipo = tipo;
+  document.querySelectorAll('.dash-tipo-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
 async function loadDashboard() {
   const [{ data: pols }, { data: cats }, { data: dirs }, { data: areasData }] = await Promise.all([
     sb.from('pol_politicas').select('id,status,catalogo_id,fecha_vencimiento'),
-    sb.from('pol_catalogo').select('id,area_id,codigo_documento'),
+    sb.from('pol_catalogo').select('id,area_id,tipo_documento,codigo_documento').eq('activo',true),
     sb.from('pol_direcciones').select('id,nombre,codigo,tipo').order('orden'),
     sb.from('pol_areas').select('id,direccion_id')
   ]);
+  _dashCache = { pols: pols||[], cats: cats||[], dirs: dirs||[], areasData: areasData||[] };
 
-  const totalCat = cats?.length || 0;
-  const pub    = pols?.filter(p=>p.status==='publicado').length || 0;
-  const proc   = pols?.filter(p=>['en_catalogo','borrador','en_revision','autorizado'].includes(p.status)).length || 0;
-  const pend   = pols?.filter(p=>p.status==='en_catalogo').length || 0;
+  // Badge en nav: cantidad PLT (= actividades)
+  const pltCount = (cats||[]).filter(c=>c.tipo_documento==='PLT').length;
+  const navCat = document.querySelector('[data-view="catalogo"]');
+  if (navCat) navCat.textContent = `Catálogo · ${pltCount}`;
+
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const { pols, cats, dirs, areasData } = _dashCache;
+  if (!dirs?.length) return;
+
+  const filteredCats = cats.filter(c=>c.tipo_documento===dashTipo);
+  const catIds = new Set(filteredCats.map(c=>c.id));
+  const filteredPols = pols.filter(p=>catIds.has(p.catalogo_id));
+
+  const totalCat = filteredCats.length;
+  const pub    = filteredPols.filter(p=>p.status==='publicado').length;
+  const proc   = filteredPols.filter(p=>['en_catalogo','borrador','en_revision','autorizado'].includes(p.status)).length;
+  const pend   = filteredPols.filter(p=>p.status==='en_catalogo').length;
   const today  = new Date(); today.setHours(0,0,0,0);
   const d60    = new Date(today); d60.setDate(d60.getDate()+60);
-  const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)>today&&new Date(p.fecha_vencimiento)<=d60).length || 0;
-  const venc   = pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<today).length || 0;
+  const alertas= filteredPols.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)>today&&new Date(p.fecha_vencimiento)<=d60).length;
+  const venc   = filteredPols.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<today).length;
 
-  document.getElementById('stat-total').textContent  = totalCat;
-  document.getElementById('stat-pub').textContent    = pub;
-  document.getElementById('stat-proceso').textContent= proc;
-  document.getElementById('stat-pend').textContent   = pend;
-  document.getElementById('stat-venc').textContent   = (venc+alertas) || '—';
+  document.getElementById('stat-total').textContent   = totalCat;
+  document.getElementById('stat-pub').textContent     = pub;
+  document.getElementById('stat-proceso').textContent = proc;
+  document.getElementById('stat-pend').textContent    = pend;
+  document.getElementById('stat-venc').textContent    = (venc+alertas) || '—';
 
-  if (!dirs) return;
-  const catById   = Object.fromEntries((cats||[]).map(c=>[c.id,c]));
-  const areaToDir = Object.fromEntries((areasData||[]).map(a=>[a.id,a.direccion_id]));
+  const catById   = Object.fromEntries(filteredCats.map(c=>[c.id,c]));
+  const areaToDir = Object.fromEntries(areasData.map(a=>[a.id,a.direccion_id]));
 
   const dirStats = {};
-  // Contar catálogo por dirección
-  (cats||[]).forEach(c => {
+  filteredCats.forEach(c => {
     const dirId = areaToDir[c.area_id]; if (!dirId) return;
     if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
     dirStats[dirId].cat++;
   });
-  // Contar pol_politicas por dirección
-  (pols||[]).forEach(p => {
+  filteredPols.forEach(p => {
     const cat = catById[p.catalogo_id]; if (!cat) return;
     const dirId = areaToDir[cat.area_id]; if (!dirId) return;
     if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
-    if (p.status==='publicado') dirStats[dirId].pub++;
-    else if (p.status==='pendiente') dirStats[dirId].pend++;
-    else if (p.status==='vencido') dirStats[dirId].venc++;
+    const est = effectiveStatus(p);
+    if (est==='publicado')  dirStats[dirId].pub++;
+    else if (est==='vencido') dirStats[dirId].venc++;
+    else if (est==='en_catalogo') dirStats[dirId].pend++;
     else dirStats[dirId].proc++;
   });
 
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
   let tbody = '';
-  (dirs||[]).forEach(dir => {
+  dirs.forEach(dir => {
     const s = dirStats[dir.id] || {pub:0,proc:0,pend:0,venc:0,cat:0};
     const doc = s.pub+s.proc+s.pend+s.venc;
     const pct = s.cat ? Math.round((s.pub/s.cat)*100) : 0;
@@ -1051,7 +1087,7 @@ async function loadDashboard() {
       </td>
     </tr>`;
   });
-  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';
+  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';
 }
 
 // ── CATÁLOGO — TABLA FLAT FILTRABLE ───────────────────────────────────────────
