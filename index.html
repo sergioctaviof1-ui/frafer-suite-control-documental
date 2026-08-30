@@ -318,8 +318,8 @@ input,textarea,select{font-family:inherit}
         <input id="mdir-nombre" placeholder="Ej: Dirección de Operaciones" oninput="autoFillDirCodigo()">
       </div>
       <div class="form-group">
-        <label>Código (siglas · auto)</label>
-        <input id="mdir-codigo" placeholder="Auto" maxlength="4" style="text-transform:uppercase;background:var(--linen);font-family:var(--ff-mono)" title="Generado de las iniciales del nombre. Editable si es necesario.">
+        <label>Código · exactamente 3 letras</label>
+        <input id="mdir-codigo" placeholder="Auto" maxlength="3" minlength="3" style="text-transform:uppercase;background:var(--linen);font-family:var(--ff-mono);letter-spacing:.12em" title="Siempre 3 letras mayúsculas. Auto-generado de las iniciales del nombre.">
       </div>
       <div class="form-group full">
         <label>Tipo</label>
@@ -1653,7 +1653,7 @@ async function saveDireccion() {
   let codigo   = document.getElementById('mdir-codigo').value.trim().toUpperCase();
   if (!nombre) { showModalError('mdir-error','El Nombre es obligatorio.'); return; }
   if (!codigo) { autoFillDirCodigo(); codigo = document.getElementById('mdir-codigo').value.trim().toUpperCase(); }
-  if (!codigo) { showModalError('mdir-error','No se pudo generar el código — escribe el nombre completo primero.'); return; }
+  if (codigo.length !== 3) { showModalError('mdir-error','El código debe tener exactamente 3 letras.'); return; }
   const orden = direcciones.length > 0 ? Math.max(...direcciones.map(d=>d.orden||0)) + 1 : 1;
   const { error } = await sb.from('pol_direcciones').insert({ codigo, nombre, tipo, orden });
   if (error) { showModalError('mdir-error', error.message); return; }
