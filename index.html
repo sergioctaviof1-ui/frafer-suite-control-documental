@@ -939,6 +939,11 @@ const STATUS_NEXT_LABEL = {
   borrador:'Enviar a Revisión', en_revision:'Autorizar', autorizado:'Publicar'
 };
 
+function effectiveStatus(pol) {
+  if (!pol) return null;
+  if (pol.status === 'publicado' && pol.fecha_vencimiento && new Date(pol.fecha_vencimiento) < new Date()) return 'vencido';
+  return pol.status;
+}
 function badge(status) {
   return `<span class="badge badge-${status}">${STATUS_LABEL[status]||status}</span>`;
 }
@@ -966,8 +971,9 @@ function renderAdvanceActions(pol) {
       → ${STATUS_NEXT_LABEL[pol.status]}
     </button>`;
   }
-  if (pol.status === 'publicado' || pol.status === 'vencido') {
-    html += `<button class="btn btn-ghost btn-sm" onclick="advanceStatus('${pol.id}','en_levantamiento')">↺ Nueva Versión</button>`;
+  const est = effectiveStatus(pol);
+  if (est === 'publicado' || est === 'vencido') {
+    html += `<button class="btn btn-ghost btn-sm" onclick="nuevaVersion('${pol.id}')">↺ Nueva Versión</button>`;
   }
   document.getElementById('advance-actions').innerHTML = html || '<span style="color:var(--muted);font-size:12px">No hay transiciones disponibles desde este estado.</span>';
 }
@@ -987,8 +993,8 @@ async function loadDashboard() {
   const pend   = pols?.filter(p=>p.status==='en_catalogo').length || 0;
   const today  = new Date(); today.setHours(0,0,0,0);
   const d60    = new Date(today); d60.setDate(d60.getDate()+60);
-  const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<=d60).length || 0;
-  const venc   = pols?.filter(p=>p.status==='vencido').length || 0;
+  const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)>today&&new Date(p.fecha_vencimiento)<=d60).length || 0;
+  const venc   = pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<today).length || 0;
 
   document.getElementById('stat-total').textContent  = totalCat;
   document.getElementById('stat-pub').textContent    = pub;
@@ -1141,7 +1147,7 @@ async function loadCatalogo() {
         ? `<div style="display:flex;flex-direction:column;gap:2px"><span class="cat-folio">${r.cat.codigo_documento}</span><span style="font-size:10px;color:var(--fog)">${r.cat.nombre||''}</span></div>`
         : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
       }</td>
-      <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
+      <td>${r.pol ? badge(effectiveStatus(r.pol)) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
       <td style="font-size:10px;color:var(--fog);white-space:nowrap">${r.pol?.updated_at ? new Date(r.pol.updated_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
       <td style="text-align:center">${r.cat
         ? `<button class="btn-accion ${r.pol ? 'btn-accion-update' : 'btn-accion-iniciar'}" onclick="openPolitica('${r.cat.id}',${r.pol ? `'${r.pol.id}'` : 'null'})">${r.pol ? 'Actualizar' : 'Iniciar'}</button>`
@@ -1255,7 +1261,7 @@ async function loadMaestro() {
 
   const fmtDoc = (doc) => {
     if (!doc) return '<span class="maestro-doc-empty">—</span>';
-    const st = doc.pol ? doc.pol.status : null;
+    const st = doc.pol ? effectiveStatus(doc.pol) : null;
     const stLabel = st ? (STATUS_LABEL[st] || st) : 'En Catálogo';
     return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span><span class="maestro-doc-status${st ? ' maestro-doc-status--'+st : ' maestro-doc-status--en_catalogo'}">${stLabel}</span></div>`;
   };
@@ -1347,7 +1353,8 @@ async function openPolitica(catalogoId, polId) {
     const { data: pol, error } = await sb.from('pol_politicas').insert({
       catalogo_id: catalogoId,
       status: 'en_catalogo',
-      version: 1
+      version: 1,
+      vigencia_meses: 6
     }).select().single();
     if (!error && pol) {
       politicaActual = pol;
@@ -1439,24 +1446,32 @@ async function savePolitica() {
   else { sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500); }
 }
 
+async function nuevaVersion(polId) {
+  const now = new Date().toISOString();
+  const { data: pol } = await sb.from('pol_politicas').insert({
+    catalogo_id: politicaActual.catalogo_id,
+    status: 'en_catalogo',
+    version: (politicaActual.version||1) + 1,
+    vigencia_meses: 6
+  }).select().single();
+  if (pol) { politicaActual = pol; fillPoliticaForm(pol); loadCatalogo(); }
+}
+
 async function advanceStatus(polId, newStatus) {
   const now = new Date().toISOString();
   const tsField = {
-    en_levantamiento:'levantamiento_at', borrador:'borrador_at',
-    en_revision:'revision_at', autorizado:'autorizacion_at', publicado:'publicacion_at'
+    borrador:'borrador_at', en_revision:'revision_at',
+    autorizado:'autorizacion_at', publicado:'publicacion_at'
   }[newStatus];
   const update = { status: newStatus };
   if (tsField) update[tsField] = now;
-  if (newStatus === 'en_levantamiento' && politicaActual.status === 'autorizado') {
-    // nueva versión
-    const { data: pol } = await sb.from('pol_politicas').insert({
-      catalogo_id: politicaActual.catalogo_id,
-      status: 'en_levantamiento',
-      version: (politicaActual.version||1)+1,
-      levantamiento_at: now
-    }).select().single();
-    if (pol) { politicaActual = pol; fillPoliticaForm(pol); }
-    return;
+  if (newStatus === 'publicado') {
+    const hoy = new Date();
+    const meses = politicaActual.vigencia_meses || 6;
+    update.fecha_inicio_vigencia = hoy.toISOString().split('T')[0];
+    const venc = new Date(hoy); venc.setMonth(venc.getMonth() + meses);
+    update.fecha_vencimiento = venc.toISOString().split('T')[0];
+    if (!politicaActual.vigencia_meses) update.vigencia_meses = 6;
   }
   const { error } = await sb.from('pol_politicas').update(update).eq('id', polId);
   if (!error) {
