@@ -1121,7 +1121,7 @@ async function loadCatalogo() {
     </div>
     <table class="cat-table">
       <thead><tr>
-        <th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th>
+        <th style="width:40px;text-align:right">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th>
       </tr></thead>
       <tbody id="cat-tbody"></tbody>
     </table>`;
@@ -1139,7 +1139,8 @@ async function loadCatalogo() {
       }
       return true;
     });
-    const tbody = filtered.map(r => `<tr>
+    const tbody = filtered.map((r,i) => `<tr>
+      <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
       <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
       <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
       <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
@@ -1149,7 +1150,7 @@ async function loadCatalogo() {
         : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
       }</td>
       <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">Sin iniciar</span>'}</td>
-    </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
     document.getElementById('cat-tbody').innerHTML = tbody;
     document.getElementById('cat-count').textContent = `${filtered.length} de ${total}`;
   };
@@ -1248,6 +1249,7 @@ async function loadMaestro() {
   <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
   <table class="maestro-table">
     <thead><tr>
+      <th style="width:40px;text-align:right">#</th>
       <th>Código Político</th>
       <th>Dirección</th>
       <th>Área</th>
@@ -1264,9 +1266,9 @@ async function loadMaestro() {
     <tbody>`;
 
   if (!filtered.length) {
-    html += `<tr><td colspan="11" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
+    html += `<tr><td colspan="13" class="loading">Sin registros para los filtros seleccionados.</td></tr>`;
   } else {
-    filtered.forEach(r => {
+    filtered.forEach((r, i) => {
       const st      = r.status || 'sin_iniciar';
       const docLink = r.urlDoc
         ? `<a href="${r.urlDoc}" target="_blank" style="font-family:var(--ff-mono);font-size:10px;color:var(--blue);text-decoration:underline">Ver doc ↗</a>`
@@ -1276,6 +1278,7 @@ async function loadMaestro() {
              style="background:none;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--dust);cursor:pointer">✎</button>`
         : '';
       html += `<tr>
+        <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
         <td><span class="maestro-code">${r.codigoLargo}</span></td>
         <td><span class="maestro-label">${r.dir.codigo}</span><br><span class="maestro-sub">${r.dir.nombre}</span></td>
         <td><span class="maestro-label">${r.area.numero}</span><br><span class="maestro-sub">${r.area.nombre}</span></td>
