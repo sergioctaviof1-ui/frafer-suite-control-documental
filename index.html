@@ -1092,7 +1092,7 @@ async function loadCatalogo() {
     sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
     sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
-    sb.from('pol_politicas').select('id,catalogo_id,status,version')
+    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at')
   ]);
   direcciones = dirsData||[]; areas = areasData||[];
   departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
@@ -1148,7 +1148,7 @@ async function loadCatalogo() {
     </div>
     <table class="cat-table">
       <thead><tr>
-        <th style="width:40px;text-align:right">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th>
+        <th style="width:40px;text-align:right">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th><th style="white-space:nowrap">Últ. Actualización</th>
       </tr></thead>
       <tbody id="cat-tbody"></tbody>
     </table>`;
@@ -1177,7 +1177,8 @@ async function loadCatalogo() {
         : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
       }</td>
       <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">Sin iniciar</span>'}</td>
-    </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
+      <td style="font-size:10px;color:var(--fog);white-space:nowrap">${r.pol?.updated_at ? new Date(r.pol.updated_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+    </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
     document.getElementById('cat-tbody').innerHTML = tbody;
     document.getElementById('cat-count').textContent = `${filtered.length} de ${total}`;
   };
