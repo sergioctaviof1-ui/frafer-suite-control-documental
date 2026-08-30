@@ -801,6 +801,7 @@ input,textarea,select{font-family:inherit}
       <button class="tab" onclick="switchTab(this,'atab-areas')">Áreas</button>
       <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
       <button class="tab" onclick="switchTab(this,'atab-actividades')">Actividades</button>
+      <button class="tab" onclick="switchTab(this,'atab-estructura')">Estructura</button>
       <button class="tab" onclick="switchTab(this,'atab-catalogo')">Catálogo</button>
     </div>
 
@@ -843,6 +844,12 @@ input,textarea,select{font-family:inherit}
           <thead><tr><th style="width:40px">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Código</th><th>Actividad</th><th>Tipo</th></tr></thead>
           <tbody id="admin-acts-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-estructura">
+      <div id="estructura-content" style="margin-top:4px">
+        <p style="color:var(--fog);font-size:12px;padding:24px">Selecciona esta pestaña para cargar la estructura.</p>
       </div>
     </div>
 
@@ -910,6 +917,7 @@ function switchTab(btn, panelId) {
   if (panel) panel.classList.add('active');
   if (panelId === 'tab-historial' && politicaActual) loadHistorial(politicaActual.id);
   if (panelId === 'tab-comentarios' && politicaActual) loadComentarios(politicaActual.id);
+  if (panelId === 'atab-estructura') renderEstructura();
 }
 
 // ── STATUS HELPERS ────────────────────────────────────────────────────────────
@@ -1711,7 +1719,7 @@ async function loadAdmin() {
               <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
               <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
               <td style="font-size:11px">${dept.nombre}</td>
-              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);white-space:nowrap">${String(dept.orden).padStart(3,'0')}-${String(idx+1).padStart(2,'0')}</td>
+              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
               <td>${act.nombre}</td>
               <td style="font-size:10px;color:var(--dust)">${act.tipo||'actividad'}</td>
             </tr>`);
@@ -1736,6 +1744,51 @@ async function loadAdmin() {
         <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
+}
+
+// ── ESTRUCTURA ────────────────────────────────────────────────────────────────
+function renderEstructura() {
+  const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
+  const dirsSorted = [...direcciones].sort((a,b)=>a.orden-b.orden);
+
+  const html = dirsSorted.map(dir => {
+    const dirAreas = areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden);
+
+    const areasHtml = dirAreas.map(area => {
+      const areaDepts = departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden);
+
+      const deptsHtml = areaDepts.map(d =>
+        `<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--stone)">
+          <span style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);min-width:80px">${d.codigo||'—'}</span>
+          <span style="font-size:12px">${d.nombre}</span>
+          <span class="badge ${d.activo?'badge-publicado':'badge-vencido'}" style="margin-left:auto">${d.activo?'Activo':'Inactivo'}</span>
+        </div>`
+      ).join('');
+
+      return `<div style="margin-bottom:8px;border:1px solid var(--stone);border-radius:8px;overflow:clip">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--linen)">
+          <span style="font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--amber)">${area.numero}</span>
+          <span style="font-size:13px;font-weight:500">${area.nombre}</span>
+          <span style="font-size:10px;color:var(--fog);margin-left:auto">${areaDepts.length} depto${areaDepts.length!==1?'s':''}</span>
+        </div>
+        ${deptsHtml||'<div style="padding:10px 14px;font-size:11px;color:var(--fog)">Sin departamentos</div>'}
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;background:var(--navy);border-radius:8px 8px 0 0">
+        <span style="font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--ember-glow)">${dir.codigo}</span>
+        <span style="font-size:14px;font-weight:600;color:var(--parchment)">${dir.nombre}</span>
+        <span style="font-size:10px;color:var(--ember-glow);opacity:.55;margin-left:auto">${tipoLabel[dir.tipo]||dir.tipo} · ${dirAreas.length} área${dirAreas.length!==1?'s':''}</span>
+      </div>
+      <div style="padding:12px;background:#FDF9F5;border:1px solid var(--stone);border-top:none;border-radius:0 0 8px 8px">
+        ${areasHtml||'<p style="font-size:11px;color:var(--fog);padding:8px">Sin áreas asignadas</p>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('estructura-content').innerHTML =
+    html || '<p style="color:var(--fog);padding:24px">Sin datos</p>';
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
