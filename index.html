@@ -134,6 +134,21 @@ input,textarea,select{font-family:inherit}
 .doc-header-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap}
 .doc-header-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-header-actions{display:flex;gap:8px;flex-shrink:0}
+/* DOCUMENTAR — buscador de política */
+.doc-pol-wrap{position:relative;flex:1;min-width:0;max-width:600px}
+.doc-pol-box{display:flex;align-items:baseline;gap:8px;cursor:text;padding:4px 0}
+.doc-pol-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap;flex-shrink:0}
+.doc-pol-sep{color:rgba(255,255,255,.3);font-size:12px}
+.doc-pol-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-pol-input{position:absolute;inset:0;width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:12px;padding:0 10px;font-family:var(--ff-body);outline:none;opacity:0;pointer-events:none;transition:opacity .15s}
+.doc-pol-input.open{opacity:1;pointer-events:auto}
+.doc-pol-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--stone);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:320px;overflow-y:auto;display:none}
+.doc-pol-dropdown.open{display:block}
+.doc-pol-opt{display:flex;align-items:baseline;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--linen);transition:background .1s}
+.doc-pol-opt:hover,.doc-pol-opt.focused{background:var(--linen)}
+.doc-pol-opt-folio{font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.07em;white-space:nowrap;flex-shrink:0}
+.doc-pol-opt-nombre{font-size:12px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-pol-opt-dir{font-size:10px;color:var(--fog);margin-left:auto;white-space:nowrap;font-family:var(--ff-mono);flex-shrink:0}
 .doc-lifecycle{padding:14px 40px 12px;background:var(--linen);border-bottom:1px solid var(--stone)}
 .doc-lifecycle-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:10px}
 .doc-tabs-bar{display:flex;gap:0;padding:0 40px;background:var(--parchment);border-bottom:1px solid var(--stone)}
@@ -579,13 +594,26 @@ input,textarea,select{font-family:inherit}
   <div class="view" id="view-documentar">
     <!-- HEADER STICKY DE DOCUMENTAR -->
     <div class="doc-header">
-      <button class="doc-back-btn" onclick="closePoliticaPanel()">← Catálogo de Políticas</button>
-      <div class="doc-header-identity">
-        <span class="doc-header-folio" id="pol-form-code"></span>
-        <span class="doc-header-nombre" id="pol-form-title">Política</span>
-        <span id="pol-badge"></span>
+      <button class="doc-back-btn" onclick="closePoliticaPanel()">← Catálogo</button>
+
+      <!-- Buscador de política -->
+      <div class="doc-pol-wrap" id="doc-pol-wrap">
+        <div class="doc-pol-box" onclick="focusPolSearch()">
+          <span class="doc-pol-folio" id="pol-form-code">—</span>
+          <span class="doc-pol-sep" id="doc-pol-sep" style="display:none">·</span>
+          <span class="doc-pol-nombre" id="pol-form-title">Selecciona una política</span>
+        </div>
+        <input class="doc-pol-input" id="doc-pol-input" type="text"
+          placeholder="Buscar por folio o nombre…"
+          oninput="filterPolSearch(this.value)"
+          onkeydown="polSearchKey(event)"
+          onblur="hidePolDropdown()"
+          autocomplete="off">
+        <div class="doc-pol-dropdown" id="doc-pol-dropdown"></div>
       </div>
-      <div class="doc-header-actions">
+
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span id="pol-badge"></span>
         <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
       </div>
     </div>
@@ -1362,6 +1390,8 @@ async function openPolitica(catalogoId, polId) {
       : cat.codigo_documento;
 
     document.getElementById('pol-form-code').textContent = folioVivo;
+    const sep = document.getElementById('doc-pol-sep');
+    if (sep) sep.style.display = '';
     const nf = document.getElementById('pol-nombre-folio');
     if (nf) nf.textContent = folioVivo;
 
@@ -1570,16 +1600,109 @@ async function saveComentario() {
 }
 
 function navDocumentar() {
-  if (politicaActual) {
-    showView('documentar');
-  } else {
-    showView('catalogo');
-    // Pequeño aviso para que sepa que debe seleccionar una política
-    setTimeout(() => {
-      const el = document.getElementById('cat-count');
-      if (el) { el.textContent += ' — Selecciona una política para documentar'; }
-    }, 300);
+  showView('documentar');
+  if (!politicaActual) {
+    // Abrir el buscador automáticamente si no hay política seleccionada
+    setTimeout(() => focusPolSearch(), 150);
   }
+}
+
+let _polSearchFocused = false;
+let _polSearchFocusIdx = -1;
+
+function focusPolSearch() {
+  const input = document.getElementById('doc-pol-input');
+  const box   = document.querySelector('.doc-pol-box');
+  const drop  = document.getElementById('doc-pol-dropdown');
+  if (!input) return;
+  _polSearchFocused = true;
+  input.classList.add('open');
+  input.value = '';
+  if (box) box.style.opacity = '0';
+  input.focus();
+  filterPolSearch('');
+  drop.classList.add('open');
+}
+
+function hidePolDropdown() {
+  setTimeout(() => {
+    const input = document.getElementById('doc-pol-input');
+    const box   = document.querySelector('.doc-pol-box');
+    const drop  = document.getElementById('doc-pol-dropdown');
+    _polSearchFocused = false;
+    _polSearchFocusIdx = -1;
+    if (input) { input.classList.remove('open'); input.value = ''; }
+    if (box) box.style.opacity = '1';
+    if (drop) drop.classList.remove('open');
+  }, 200);
+}
+
+function filterPolSearch(q) {
+  const drop = document.getElementById('doc-pol-dropdown');
+  if (!drop) return;
+  const query = q.toLowerCase();
+  // Construir lista de políticas PLT con folio calculado en vivo
+  const matches = [];
+  catalogo.filter(c=>c.tipo_documento==='PLT' && c.activo).forEach(cat => {
+    const act  = actividades.find(a=>a.id===cat.actividad_id);
+    const dept = act  ? departamentos.find(d=>d.id===act.departamento_id) : null;
+    const area = dept ? areas.find(a=>a.id===dept.area_id) : null;
+    const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
+    if (!act||!dept||!area||!dir) return;
+    const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    const actIdx = deptActs.indexOf(act);
+    if (actIdx<0) return;
+    const folio = computeFolio('PLT', dir, area, dept, actIdx);
+    const text  = (folio + ' ' + cat.nombre).toLowerCase();
+    if (!query || text.includes(query)) {
+      matches.push({ cat, folio, dir });
+    }
+  });
+  matches.sort((a,b)=>a.folio.localeCompare(b.folio));
+  _polSearchFocusIdx = -1;
+  if (!matches.length) {
+    drop.innerHTML = `<div style="padding:14px;font-size:12px;color:var(--fog);text-align:center">Sin resultados</div>`;
+    return;
+  }
+  drop.innerHTML = matches.slice(0,40).map((m,i) =>
+    `<div class="doc-pol-opt" data-cat-id="${m.cat.id}" onmousedown="selectPolOption('${m.cat.id}')">
+      <span class="doc-pol-opt-folio">${m.folio}</span>
+      <span class="doc-pol-opt-nombre">${m.cat.nombre}</span>
+      <span class="doc-pol-opt-dir">${m.dir.codigo}</span>
+    </div>`
+  ).join('');
+}
+
+async function selectPolOption(catalogoId) {
+  const drop = document.getElementById('doc-pol-dropdown');
+  if (drop) drop.classList.remove('open');
+  const input = document.getElementById('doc-pol-input');
+  const box   = document.querySelector('.doc-pol-box');
+  if (input) { input.classList.remove('open'); input.value = ''; }
+  if (box) box.style.opacity = '1';
+  // Buscar si ya tiene una política asociada
+  const { data: pols } = await sb.from('pol_politicas')
+    .select('id,version').eq('catalogo_id', catalogoId).order('version', {ascending:false}).limit(1);
+  const polId = pols?.length ? pols[0].id : null;
+  await openPolitica(catalogoId, polId);
+}
+
+function polSearchKey(e) {
+  const drop = document.getElementById('doc-pol-dropdown');
+  const opts = drop ? drop.querySelectorAll('.doc-pol-opt') : [];
+  if (e.key === 'ArrowDown') {
+    _polSearchFocusIdx = Math.min(_polSearchFocusIdx+1, opts.length-1);
+  } else if (e.key === 'ArrowUp') {
+    _polSearchFocusIdx = Math.max(_polSearchFocusIdx-1, 0);
+  } else if (e.key === 'Enter' && _polSearchFocusIdx>=0) {
+    const opt = opts[_polSearchFocusIdx];
+    if (opt) selectPolOption(opt.dataset.catId);
+    return;
+  } else if (e.key === 'Escape') {
+    hidePolDropdown(); return;
+  }
+  opts.forEach((o,i)=>o.classList.toggle('focused', i===_polSearchFocusIdx));
 }
 
 function closePoliticaPanel() {
