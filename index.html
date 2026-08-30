@@ -340,6 +340,7 @@ input,textarea,select{font-family:inherit}
   <nav class="topbar-nav">
     <button class="nav-btn active" onclick="showView('dashboard')" data-view="dashboard">Dashboard</button>
     <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo</button>
+    <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -1566,6 +1567,19 @@ async function saveComentario() {
   await sb.from('pol_comentarios').insert({ politica_id: politicaActual.id, autor, comentario, etapa });
   document.getElementById('nuevo-comentario').value = '';
   loadComentarios(politicaActual.id);
+}
+
+function navDocumentar() {
+  if (politicaActual) {
+    showView('documentar');
+  } else {
+    showView('catalogo');
+    // Pequeño aviso para que sepa que debe seleccionar una política
+    setTimeout(() => {
+      const el = document.getElementById('cat-count');
+      if (el) { el.textContent += ' — Selecciona una política para documentar'; }
+    }, 300);
+  }
 }
 
 function closePoliticaPanel() {
