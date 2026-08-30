@@ -726,7 +726,7 @@ input,textarea,select{font-family:inherit}
           <div class="form-section-title">Vigencia</div>
           <div class="form-grid cols3">
             <div class="form-group"><label>Vigencia (meses)</label><input id="pol-vigencia-meses" type="number" min="1" max="60" placeholder="6"></div>
-            <div class="form-group"><label>Fecha de Inicio</label><input id="pol-fecha-inicio" type="date"></div>
+            <div class="form-group"><label>Fecha de Autorización</label><input id="pol-fecha-inicio" type="date"></div>
             <div class="form-group"><label>Fecha de Vencimiento</label><input id="pol-fecha-venc" type="date" readonly style="opacity:.6"></div>
           </div>
         </div>
@@ -1263,9 +1263,9 @@ async function repairExistingFolios() {
     toFix.push({ id: cat.id, codigo_documento: expected, nombre: `${prefix} de ${act.nombre}` });
   });
 
-  for (const u of toFix) {
-    await sb.from('pol_catalogo').update({ codigo_documento: u.codigo_documento, nombre: u.nombre }).eq('id', u.id);
-  }
+  if (!toFix.length) return 0;
+  // Upsert en lote (un solo viaje de red en vez de N seriales)
+  await sb.from('pol_catalogo').upsert(toFix, { onConflict: 'id' });
   return toFix.length;
 }
 
@@ -1605,7 +1605,8 @@ async function advanceStatus(polId, newStatus) {
   }[newStatus];
   const update = { status: newStatus };
   if (tsField) update[tsField] = now;
-  if (newStatus === 'publicado') {
+  if (newStatus === 'autorizado') {
+    // Vigencia corre desde la fecha de autorización
     const hoy = new Date();
     const meses = politicaActual.vigencia_meses || 6;
     update.fecha_inicio_vigencia = hoy.toISOString().split('T')[0];
