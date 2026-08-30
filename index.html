@@ -142,7 +142,7 @@ input,textarea,select{font-family:inherit}
 .doc-pol-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-pol-input{position:absolute;inset:0;width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:6px;color:#fff;font-size:12px;padding:0 10px;font-family:var(--ff-body);outline:none;opacity:0;pointer-events:none;transition:opacity .15s}
 .doc-pol-input.open{opacity:1;pointer-events:auto}
-.doc-pol-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--stone);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:320px;overflow-y:auto;display:none}
+.doc-pol-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--stone);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:480px;overflow-y:auto;display:none}
 .doc-pol-dropdown.open{display:block}
 .doc-pol-opt{display:flex;align-items:baseline;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--linen);transition:background .1s}
 .doc-pol-opt:hover,.doc-pol-opt.focused{background:var(--linen)}
@@ -1678,13 +1678,27 @@ function filterPolSearch(q) {
     drop.innerHTML = `<div style="padding:14px;font-size:12px;color:var(--fog);text-align:center">Sin resultados</div>`;
     return;
   }
-  drop.innerHTML = matches.slice(0,40).map((m,i) =>
-    `<div class="doc-pol-opt" data-cat-id="${m.cat.id}" onmousedown="selectPolOption('${m.cat.id}')">
-      <span class="doc-pol-opt-folio">${m.folio}</span>
-      <span class="doc-pol-opt-nombre">${m.cat.nombre}</span>
-      <span class="doc-pol-opt-dir">${m.dir.codigo}</span>
-    </div>`
-  ).join('');
+
+  // Agrupar por dirección
+  const grupos = {};
+  matches.forEach(m => {
+    const key = m.dir.codigo;
+    if (!grupos[key]) grupos[key] = { dir: m.dir, items: [] };
+    grupos[key].items.push(m);
+  });
+
+  const total = matches.length;
+  let html = `<div style="padding:6px 14px 4px;font-size:10px;color:var(--fog);font-family:var(--ff-mono);border-bottom:1px solid var(--linen)">${total} política${total!==1?'s':''} · scroll para ver todas</div>`;
+  Object.values(grupos).forEach(g => {
+    html += `<div style="padding:5px 14px 3px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);background:var(--linen);font-family:var(--ff-mono);position:sticky;top:0">${g.dir.codigo} · ${g.dir.nombre}</div>`;
+    g.items.forEach(m => {
+      html += `<div class="doc-pol-opt" data-cat-id="${m.cat.id}" onmousedown="selectPolOption('${m.cat.id}')">
+        <span class="doc-pol-opt-folio">${m.folio}</span>
+        <span class="doc-pol-opt-nombre">${m.cat.nombre}</span>
+      </div>`;
+    });
+  });
+  drop.innerHTML = html;
 }
 
 async function selectPolOption(catalogoId) {
