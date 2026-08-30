@@ -104,6 +104,7 @@ input,textarea,select{font-family:inherit}
 /* STATUS BADGES */
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:3px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;white-space:nowrap;font-family:var(--ff-mono)}
 .badge::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.badge-en_catalogo{color:var(--stone);background:var(--linen);border:1px solid var(--stone)}.badge-en_catalogo::before{background:var(--stone)}
 .badge-pendiente{color:var(--dust);background:var(--linen);border:1px solid var(--stone)}.badge-pendiente::before{background:var(--dust)}
 .badge-en_levantamiento{color:var(--blue);background:#4878a810;border:1px solid #4878a830}.badge-en_levantamiento::before{background:var(--blue)}
 .badge-borrador{color:var(--gold);background:var(--gold-mist);border:1px solid #A8885830}.badge-borrador::before{background:var(--gold)}
@@ -923,18 +924,18 @@ function switchTab(btn, panelId) {
 }
 
 // ── STATUS HELPERS ────────────────────────────────────────────────────────────
-const STATUS_ORDER = ['pendiente','en_levantamiento','borrador','en_revision','autorizado','publicado'];
+const STATUS_ORDER = ['en_catalogo','borrador','en_revision','autorizado','publicado'];
 const STATUS_LABEL = {
-  identificado:'Identificado', sin_iniciar:'Sin Iniciar',
-  pendiente:'Pendiente', en_levantamiento:'Levantamiento', borrador:'Borrador',
-  en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado', vencido:'Vencido'
+  en_catalogo:'En Catálogo',
+  pendiente:'Pendiente', en_levantamiento:'En Catálogo', identificado:'En Catálogo', sin_iniciar:'En Catálogo',
+  borrador:'Borrador', en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado', vencido:'Vencido'
 };
 const STATUS_NEXT = {
-  pendiente:'en_levantamiento', en_levantamiento:'borrador',
+  en_catalogo:'borrador',
   borrador:'en_revision', en_revision:'autorizado', autorizado:'publicado'
 };
 const STATUS_NEXT_LABEL = {
-  pendiente:'Iniciar Levantamiento', en_levantamiento:'Marcar como Borrador',
+  en_catalogo:'Iniciar Borrador',
   borrador:'Enviar a Revisión', en_revision:'Autorizar', autorizado:'Publicar'
 };
 
@@ -982,8 +983,8 @@ async function loadDashboard() {
 
   const totalCat = cats?.length || 0;
   const pub    = pols?.filter(p=>p.status==='publicado').length || 0;
-  const proc   = pols?.filter(p=>['en_levantamiento','borrador','en_revision','autorizado'].includes(p.status)).length || 0;
-  const pend   = pols?.filter(p=>p.status==='pendiente').length || 0;
+  const proc   = pols?.filter(p=>['en_catalogo','borrador','en_revision','autorizado'].includes(p.status)).length || 0;
+  const pend   = pols?.filter(p=>p.status==='en_catalogo').length || 0;
   const today  = new Date(); today.setHours(0,0,0,0);
   const d60    = new Date(today); d60.setDate(d60.getDate()+60);
   const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<=d60).length || 0;
@@ -1345,7 +1346,7 @@ async function openPolitica(catalogoId, polId) {
     // Crear nueva
     const { data: pol, error } = await sb.from('pol_politicas').insert({
       catalogo_id: catalogoId,
-      status: 'borrador',
+      status: 'en_catalogo',
       version: 1
     }).select().single();
     if (!error && pol) {
