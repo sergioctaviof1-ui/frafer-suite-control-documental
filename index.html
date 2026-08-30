@@ -1127,35 +1127,45 @@ async function loadCatalogo() {
   renderCatTable();
 }
 
-// ── GENERACIÓN AUTOMÁTICA DE FOLIOS ──────────────────────────────────────────
+// ── GENERACIÓN Y REPARACIÓN DE FOLIOS ────────────────────────────────────────
+
+// Calcula el folio canónico desde la jerarquía — nunca desde act.codigo
+function computeFolio(tipo, dir, area, dept, actIdxInDept) {
+  const deptSeq = String(dept.orden).padStart(3,'0');
+  const actSeq  = String(actIdxInDept + 1).padStart(2,'0');
+  return `${tipo}-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
+}
+
+// Índice de una actividad dentro de su dpto (orden por created_at)
+function actIndexInDept(actId, deptId) {
+  return actividades
+    .filter(a=>a.departamento_id===deptId && a.activa)
+    .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
+    .findIndex(a=>a.id===actId);
+}
+
 async function generateMissingFolios() {
   if (!actividades.length || !direcciones.length) return 0;
   const { data: existing } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento');
   const existingSet = new Set((existing||[]).map(e=>`${e.actividad_id}:${e.tipo_documento}`));
 
-  const actsByArea = {};
-  actividades.filter(a=>a.activa && a.codigo).forEach(act => {
-    const dept = departamentos.find(d=>d.id===act.departamento_id);
-    if (!dept?.area_id) return;
-    if (!actsByArea[dept.area_id]) actsByArea[dept.area_id] = [];
-    actsByArea[dept.area_id].push(act);
-  });
-
   const toInsert = [];
-  Object.entries(actsByArea).forEach(([areaId, acts]) => {
-    const area = areas.find(a=>a.id===areaId);
-    const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
-    if (!dir || !area) return;
-    const sorted = [...acts].sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''));
-    sorted.forEach((act, idx) => {
-      const numero = idx + 1;
+  departamentos.forEach(dept => {
+    const area = areas.find(a=>a.id===dept.area_id);
+    if (!area) return;
+    const dir = direcciones.find(d=>d.id===area.direccion_id);
+    if (!dir) return;
+    const deptActs = actividades
+      .filter(a=>a.departamento_id===dept.id && a.activa)
+      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+    deptActs.forEach((act, idx) => {
       ['PLT','PCS','PCD'].forEach(tipo => {
         if (existingSet.has(`${act.id}:${tipo}`)) return;
         const prefix = tipo==='PLT' ? 'Política' : tipo==='PCS' ? 'Proceso' : 'Procedimiento';
         toInsert.push({
-          area_id: areaId, actividad_id: act.id,
-          tipo_documento: tipo, numero,
-          codigo_documento: `${tipo}-${dir.codigo}-${act.codigo}`,
+          area_id: area.id, actividad_id: act.id,
+          tipo_documento: tipo, numero: idx + 1,
+          codigo_documento: computeFolio(tipo, dir, area, dept, idx),
           nombre: `${prefix} de ${act.nombre}`,
           prioridad: 'media'
         });
@@ -1167,6 +1177,32 @@ async function generateMissingFolios() {
   const { error } = await sb.from('pol_catalogo').insert(toInsert);
   if (error) console.error('generateMissingFolios:', error.message);
   return toInsert.length;
+}
+
+// Repara folios existentes (UPDATE in-place, nunca borra) sin requerir acción del usuario
+async function repairExistingFolios() {
+  if (!actividades.length || !direcciones.length) return 0;
+  const { data: cats } = await sb.from('pol_catalogo')
+    .select('id,actividad_id,tipo_documento,codigo_documento,nombre').eq('activo',true);
+  if (!cats?.length) return 0;
+
+  const toFix = [];
+  cats.forEach(cat => {
+    const act  = actividades.find(a=>a.id===cat.actividad_id);  if (!act)  return;
+    const dept = departamentos.find(d=>d.id===act.departamento_id); if (!dept) return;
+    const area = areas.find(a=>a.id===dept.area_id);            if (!area) return;
+    const dir  = direcciones.find(d=>d.id===area.direccion_id); if (!dir)  return;
+    const idx  = actIndexInDept(act.id, dept.id);               if (idx<0) return;
+    const expected = computeFolio(cat.tipo_documento, dir, area, dept, idx);
+    if (cat.codigo_documento === expected) return;
+    const prefix = cat.tipo_documento==='PLT' ? 'Política' : cat.tipo_documento==='PCS' ? 'Proceso' : 'Procedimiento';
+    toFix.push({ id: cat.id, codigo_documento: expected, nombre: `${prefix} de ${act.nombre}` });
+  });
+
+  for (const u of toFix) {
+    await sb.from('pol_catalogo').update({ codigo_documento: u.codigo_documento, nombre: u.nombre }).eq('id', u.id);
+  }
+  return toFix.length;
 }
 
 // ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
@@ -1181,7 +1217,8 @@ async function loadMaestro() {
 
   if (!direcciones.length || !actividades.length) await loadCatalogo();
 
-  // Auto-generar folios faltantes
+  // Reparar folios con formato incorrecto (silencioso, in-place) + generar faltantes
+  await repairExistingFolios();
   await generateMissingFolios();
 
   // Pull fresco de catalogo + politicas
@@ -2027,6 +2064,7 @@ function renderEstructura() {
   alignBrandWidth();
   window.addEventListener('resize', alignBrandWidth);
 })();
+
 </script>
 </body>
 </html>
