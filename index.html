@@ -170,10 +170,18 @@ input,textarea,select{font-family:inherit}
 .tree-act-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.04em;margin-left:auto;padding-right:6px}
 .badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
 .badge-identificado{color:var(--dust);background:#edeae5;border:1px solid #c8c2bb}.badge-identificado::before{background:var(--stone)}
-.maestro-doc-cell{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:2px 0}
+.maestro-doc-cell{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 0}
 .maestro-doc-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.06em;white-space:nowrap}
 .maestro-doc-empty{color:var(--fog);font-size:10px}
-.maestro-doc-cell .status-badge{font-size:8px;padding:1px 5px;line-height:1.4}
+.maestro-doc-status{font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.maestro-doc-status--identificado{color:var(--stone)}
+.maestro-doc-status--pendiente,.maestro-doc-status--sin_iniciar{color:var(--stone)}
+.maestro-doc-status--en_levantamiento{color:#b08a30}
+.maestro-doc-status--borrador{color:#7a6fa0}
+.maestro-doc-status--en_revision{color:#3a7abf}
+.maestro-doc-status--autorizado{color:#2e8c5a}
+.maestro-doc-status--publicado{color:#1a7a3c}
+.maestro-doc-status--vencido{color:#b03a2e}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
 .maestro-table th{position:static;top:auto}
 .maestro-table th{padding:8px 10px}
@@ -1231,7 +1239,9 @@ async function loadMaestro() {
 
   const fmtDoc = (doc) => {
     if (!doc) return '<span class="maestro-doc-empty">—</span>';
-    return `<span class="maestro-doc-folio">${doc.codigo_documento}</span>`;
+    const st = doc.pol ? doc.pol.status : 'identificado';
+    const stLabel = STATUS_LABEL[st] || st;
+    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span><span class="maestro-doc-status maestro-doc-status--${st}">${stLabel}</span></div>`;
   };
 
   let html = `
