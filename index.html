@@ -427,6 +427,24 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Editar nombre genérico -->
+<div class="modal-overlay" id="modal-editar-nombre">
+  <div class="modal" style="max-width:420px">
+    <h3>Editar Nombre</h3>
+    <div class="alert alert-error" id="medit-error"></div>
+    <input type="hidden" id="medit-tabla">
+    <input type="hidden" id="medit-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Nombre</label>
+      <input id="medit-nombre">
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveNombre()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-editar-nombre')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Campos de documento (Maestro) -->
 <div class="modal-overlay" id="modal-doc">
   <div class="modal" style="max-width:480px">
@@ -837,8 +855,8 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th></tr></thead>
-        <tbody id="admin-direcciones-body"><tr><td colspan="4" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="admin-direcciones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -847,7 +865,7 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Dirección</th><th>Núm.</th><th>Nombre</th><th>Orden</th><th>Estado</th></tr></thead>
+        <table class="admin-table"><thead><tr><th>Dirección</th><th>Núm.</th><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="admin-areas-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
@@ -857,8 +875,8 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalDepto()">+ Nuevo Departamento</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Dirección</th><th>Área</th><th>Código</th><th>Departamento</th><th>Estado</th></tr></thead>
-        <tbody id="admin-deptos-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Dirección</th><th>Área</th><th>Código</th><th>Departamento</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="admin-deptos-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -1723,13 +1741,21 @@ async function loadAdmin() {
   const areaById = Object.fromEntries(areas.map(a=>[a.id,a]));
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
 
+  const accionesBtns = (tabla, id, activo, campoActivo, nombre) => `
+    <button onclick="openEditarNombre('${tabla}','${id}',\`${nombre.replace(/`/g,"'")}\`)"
+      style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
+    <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campoActivo}')"
+      style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer">
+      ${activo?'Inactivar':'Activar'}</button>`;
+
   document.getElementById('admin-direcciones-body').innerHTML =
     direcciones.map(d=>`<tr>
       <td><span class="code-tag">${d.codigo}</span></td>
       <td>${d.nombre}</td>
       <td style="font-size:11px;color:var(--muted)">${tipoLabel[d.tipo]||d.tipo}</td>
       <td><span class="badge ${d.activa?'badge-publicado':'badge-vencido'}">${d.activa?'Activa':'Inactiva'}</span></td>
-    </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
+      <td style="white-space:nowrap">${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
   document.getElementById('admin-areas-body').innerHTML =
     areas.map(a=>{
@@ -1738,8 +1764,8 @@ async function loadAdmin() {
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
         <td><span class="code-tag">${a.numero}</span></td>
         <td>${a.nombre}</td>
-        <td>${a.orden}</td>
         <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
+        <td style="white-space:nowrap">${accionesBtns('pol_areas',a.id,a.activa,'activa',a.nombre)}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
 
@@ -1752,11 +1778,12 @@ async function loadAdmin() {
       return `<tr>
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
         <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
-        <td>${d.nombre}</td>
         <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
+        <td>${d.nombre}</td>
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
+        <td style="white-space:nowrap">${accionesBtns('pol_departamentos',d.id,d.activo,'activo',d.nombre)}</td>
       </tr>`;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
 
   // Construir tabla de actividades con jerarquía completa
   const sortedDirsA = [...direcciones].sort((a,b)=>a.orden-b.orden);
@@ -1776,6 +1803,7 @@ async function loadAdmin() {
               <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
               <td>${act.nombre}</td>
               <td style="font-size:10px;color:var(--dust)">${act.tipo||'actividad'}</td>
+              <td style="white-space:nowrap">${accionesBtns('pol_actividades',act.id,act.activa,'activa',act.nombre)}</td>
             </tr>`);
           });
       });
@@ -1798,6 +1826,33 @@ async function loadAdmin() {
         <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
+}
+
+// ── INACTIVAR / EDITAR NOMBRE ─────────────────────────────────────────────────
+function openEditarNombre(tabla, id, nombreActual) {
+  document.getElementById('medit-tabla').value  = tabla;
+  document.getElementById('medit-id').value     = id;
+  document.getElementById('medit-nombre').value = nombreActual;
+  document.getElementById('medit-error').classList.remove('show');
+  document.getElementById('modal-editar-nombre').classList.add('open');
+}
+
+async function saveNombre() {
+  const tabla  = document.getElementById('medit-tabla').value;
+  const id     = document.getElementById('medit-id').value;
+  const nombre = document.getElementById('medit-nombre').value.trim();
+  if (!nombre) { showModalError('medit-error','El nombre no puede estar vacío.'); return; }
+  const { error } = await sb.from(tabla).update({ nombre }).eq('id', id);
+  if (error) { showModalError('medit-error', error.message); return; }
+  closeModal('modal-editar-nombre');
+  loadAdmin();
+}
+
+async function toggleActivo(tabla, id, activo, campo) {
+  const patch = {}; patch[campo] = !activo;
+  const { error } = await sb.from(tabla).update(patch).eq('id', id);
+  if (error) { alert(error.message); return; }
+  loadAdmin();
 }
 
 // ── MODAL DOC ─────────────────────────────────────────────────────────────────
