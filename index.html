@@ -170,7 +170,7 @@ input,textarea,select{font-family:inherit}
 .tree-act-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.04em;margin-left:auto;padding-right:6px}
 .badge-sin_iniciar{color:var(--fog);background:var(--linen);border:1px solid var(--stone)}.badge-sin_iniciar::before{background:var(--fog)}
 .badge-identificado{color:var(--dust);background:#edeae5;border:1px solid #c8c2bb}.badge-identificado::before{background:var(--stone)}
-.maestro-doc-cell{display:flex;flex-direction:column;gap:3px;padding:2px 0}
+.maestro-doc-cell{display:flex;flex-direction:row;align-items:center;gap:6px;flex-wrap:wrap;padding:2px 0}
 .maestro-doc-folio{font-family:var(--ff-mono);font-size:9px;color:var(--gold);letter-spacing:.06em;white-space:nowrap}
 .maestro-doc-empty{color:var(--fog);font-size:10px}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
@@ -496,7 +496,7 @@ input,textarea,select{font-family:inherit}
       <p>Estado general del catálogo documental</p>
     </div>
     <div class="stats-row" id="dash-stats">
-      <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">Total Políticas</div></div>
+      <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">En Catálogo</div></div>
       <div class="stat-card green"><div class="num" id="stat-pub">—</div><div class="lbl">Publicadas</div></div>
       <div class="stat-card amber"><div class="num" id="stat-proceso">—</div><div class="lbl">En Proceso</div></div>
       <div class="stat-card"><div class="num" id="stat-pend">—</div><div class="lbl">Pendientes</div></div>
@@ -510,11 +510,12 @@ input,textarea,select{font-family:inherit}
             <th class="th-pub">Publicadas</th>
             <th class="th-proceso">En Proceso</th>
             <th class="th-pend">Pendientes</th>
-            <th class="th-total">Total</th>
+            <th class="th-total">En Catálogo</th>
+            <th class="th-total">Documentadas</th>
             <th class="th-avance">Avance</th>
           </tr>
         </thead>
-        <tbody id="semaforo-body"><tr><td colspan="6" class="loading">Cargando datos…</td></tr></tbody>
+        <tbody id="semaforo-body"><tr><td colspan="7" class="loading">Cargando datos…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -967,7 +968,7 @@ async function loadDashboard() {
     sb.from('pol_areas').select('id,direccion_id')
   ]);
 
-  const total  = pols?.length || 0;
+  const totalCat = cats?.length || 0;
   const pub    = pols?.filter(p=>p.status==='publicado').length || 0;
   const proc   = pols?.filter(p=>['en_levantamiento','borrador','en_revision','autorizado'].includes(p.status)).length || 0;
   const pend   = pols?.filter(p=>p.status==='pendiente').length || 0;
@@ -976,7 +977,7 @@ async function loadDashboard() {
   const alertas= pols?.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<=d60).length || 0;
   const venc   = pols?.filter(p=>p.status==='vencido').length || 0;
 
-  document.getElementById('stat-total').textContent  = total;
+  document.getElementById('stat-total').textContent  = totalCat;
   document.getElementById('stat-pub').textContent    = pub;
   document.getElementById('stat-proceso').textContent= proc;
   document.getElementById('stat-pend').textContent   = pend;
@@ -987,10 +988,17 @@ async function loadDashboard() {
   const areaToDir = Object.fromEntries((areasData||[]).map(a=>[a.id,a.direccion_id]));
 
   const dirStats = {};
+  // Contar catálogo por dirección
+  (cats||[]).forEach(c => {
+    const dirId = areaToDir[c.area_id]; if (!dirId) return;
+    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
+    dirStats[dirId].cat++;
+  });
+  // Contar pol_politicas por dirección
   (pols||[]).forEach(p => {
     const cat = catById[p.catalogo_id]; if (!cat) return;
     const dirId = areaToDir[cat.area_id]; if (!dirId) return;
-    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0};
+    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
     if (p.status==='publicado') dirStats[dirId].pub++;
     else if (p.status==='pendiente') dirStats[dirId].pend++;
     else if (p.status==='vencido') dirStats[dirId].venc++;
@@ -1000,15 +1008,16 @@ async function loadDashboard() {
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
   let tbody = '';
   (dirs||[]).forEach(dir => {
-    const s = dirStats[dir.id] || {pub:0,proc:0,pend:0,venc:0};
-    const tot = s.pub+s.proc+s.pend+s.venc;
-    const pct = tot ? Math.round((s.pub/tot)*100) : 0;
+    const s = dirStats[dir.id] || {pub:0,proc:0,pend:0,venc:0,cat:0};
+    const doc = s.pub+s.proc+s.pend+s.venc;
+    const pct = s.cat ? Math.round((s.pub/s.cat)*100) : 0;
     tbody += `<tr>
       <td><span class="div-label">[${dir.codigo}] ${dir.nombre}</span><br><span style="font-size:10px;color:var(--muted)">${tipoLabel[dir.tipo]||dir.tipo}</span></td>
       <td style="color:var(--green)">${s.pub}</td>
       <td style="color:var(--amber)">${s.proc}</td>
       <td style="color:var(--muted)">${s.pend}</td>
-      <td>${tot}</td>
+      <td style="color:var(--dust)">${s.cat}</td>
+      <td>${doc}</td>
       <td style="min-width:120px">
         <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pct}%</div>
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -1222,8 +1231,7 @@ async function loadMaestro() {
   const fmtDoc = (doc) => {
     if (!doc) return '<span class="maestro-doc-empty">—</span>';
     const st = doc.pol ? doc.pol.status : 'identificado';
-    const statusBadge = st !== 'identificado' ? badge(st) : '';
-    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span>${statusBadge}</div>`;
+    return `<div class="maestro-doc-cell"><span class="maestro-doc-folio">${doc.codigo_documento}</span>${badge(st)}</div>`;
   };
 
   let html = `
