@@ -313,13 +313,13 @@ input,textarea,select{font-family:inherit}
     <h3>Nueva Dirección</h3>
     <div class="alert alert-error" id="mdir-error"></div>
     <div class="form-grid" style="margin-bottom:14px">
-      <div class="form-group">
-        <label>Código (siglas)</label>
-        <input id="mdir-codigo" placeholder="Ej: DA" maxlength="4" style="text-transform:uppercase">
-      </div>
       <div class="form-group full">
         <label>Nombre</label>
-        <input id="mdir-nombre" placeholder="Ej: Dirección de Operaciones">
+        <input id="mdir-nombre" placeholder="Ej: Dirección de Operaciones" oninput="autoFillDirCodigo()">
+      </div>
+      <div class="form-group">
+        <label>Código (siglas · auto)</label>
+        <input id="mdir-codigo" placeholder="Auto" maxlength="4" style="text-transform:uppercase;background:var(--linen);font-family:var(--ff-mono)" title="Generado de las iniciales del nombre. Editable si es necesario.">
       </div>
       <div class="form-group">
         <label>Tipo</label>
@@ -351,17 +351,13 @@ input,textarea,select{font-family:inherit}
         <label>Dirección</label>
         <select id="marea-direccion"></select>
       </div>
-      <div class="form-group">
-        <label>Número (600-699)</label>
-        <input id="marea-numero" placeholder="Ej: 614" maxlength="3" type="number">
-      </div>
-      <div class="form-group">
-        <label>Orden</label>
-        <input id="marea-orden" type="number" value="0">
-      </div>
       <div class="form-group full">
         <label>Nombre</label>
         <input id="marea-nombre" placeholder="Ej: Comercio Exterior">
+      </div>
+      <div class="form-group full" style="background:var(--linen);border:1px solid var(--stone);border-radius:8px;padding:10px 14px">
+        <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:4px">Número que se asignará</div>
+        <div id="marea-numero-preview" style="font-family:var(--ff-mono);font-size:16px;color:var(--gold);font-weight:500">—</div>
       </div>
     </div>
     <div class="actions-row">
@@ -379,15 +375,15 @@ input,textarea,select{font-family:inherit}
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group full">
         <label>Área</label>
-        <select id="mdepto-area"></select>
+        <select id="mdepto-area" onchange="onDeptoAreaChange()"></select>
       </div>
       <div class="form-group full">
         <label>Nombre del Departamento</label>
         <input id="mdepto-nombre" placeholder="Ej: Compras Internacionales">
       </div>
-      <div class="form-group">
-        <label>Orden dentro del Área</label>
-        <input id="mdepto-orden" type="number" value="1" min="1">
+      <div class="form-group full" style="background:var(--linen);border:1px solid var(--stone);border-radius:8px;padding:10px 14px">
+        <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:4px">Código que se asignará</div>
+        <div id="mdepto-codigo-preview" style="font-family:var(--ff-mono);font-size:16px;color:var(--gold);font-weight:500">—</div>
       </div>
     </div>
     <div class="actions-row">
@@ -411,13 +407,9 @@ input,textarea,select{font-family:inherit}
         <label>Nombre de la Actividad</label>
         <input id="mact-nombre" placeholder="Ej: Evaluación de proveedores estratégicos">
       </div>
-      <div class="form-group">
-        <label>Tipo</label>
-        <select id="mact-tipo">
-          <option value="actividad">Actividad</option>
-          <option value="transaccion">Transacción</option>
-          <option value="decision">Decisión</option>
-        </select>
+      <div class="form-group full" style="background:var(--linen);border:1px solid var(--stone);border-radius:8px;padding:10px 14px">
+        <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:4px">Código que se asignará</div>
+        <div id="mact-codigo-preview" style="font-family:var(--ff-mono);font-size:16px;color:var(--gold);font-weight:500">—</div>
       </div>
     </div>
     <div class="actions-row">
@@ -1551,6 +1543,22 @@ function closePoliticaPanel() {
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
+function autoFillDirCodigo() {
+  const nombre = document.getElementById('mdir-nombre').value;
+  const stops = new Set(['de','del','la','los','las','y','e','a','o','en','el','un','una']);
+  const words = nombre.trim().split(/\s+/).filter(w => w.length > 0);
+  let code = '';
+  for (const w of words) {
+    if (!stops.has(w.toLowerCase())) code += w[0].toUpperCase();
+    if (code.length >= 3) break;
+  }
+  if (code.length < 3 && words.length > 0) {
+    const sig = words.find(w => !stops.has(w.toLowerCase()));
+    if (sig) code = sig.substring(0, 3).toUpperCase();
+  }
+  document.getElementById('mdir-codigo').value = code.substring(0, 3);
+}
+
 function openModalDireccion() {
   document.getElementById('mdir-codigo').value = '';
   document.getElementById('mdir-nombre').value = '';
@@ -1562,9 +1570,9 @@ function openModalDireccion() {
 function openModalArea(direccionId) {
   const sel = document.getElementById('marea-direccion');
   sel.innerHTML = direcciones.map(d=>`<option value="${d.id}"${d.id===direccionId?' selected':''}>[${d.codigo}] ${d.nombre}</option>`).join('');
-  document.getElementById('marea-numero').value = '';
+  const nextNum = areas.length > 0 ? Math.max(...areas.map(a=>parseInt(a.numero)||0)) + 1 : 600;
+  document.getElementById('marea-numero-preview').textContent = nextNum;
   document.getElementById('marea-nombre').value = '';
-  document.getElementById('marea-orden').value  = '0';
   document.getElementById('marea-error').classList.remove('show');
   document.getElementById('modal-area').classList.add('open');
 }
@@ -1642,11 +1650,13 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 async function saveDireccion() {
-  const codigo = document.getElementById('mdir-codigo').value.trim().toUpperCase();
   const nombre = document.getElementById('mdir-nombre').value.trim();
   const tipo   = document.getElementById('mdir-tipo').value;
   const orden  = parseInt(document.getElementById('mdir-orden').value)||0;
-  if (!codigo || !nombre) { showModalError('mdir-error','Código y Nombre son obligatorios.'); return; }
+  let codigo   = document.getElementById('mdir-codigo').value.trim().toUpperCase();
+  if (!nombre) { showModalError('mdir-error','El Nombre es obligatorio.'); return; }
+  if (!codigo) { autoFillDirCodigo(); codigo = document.getElementById('mdir-codigo').value.trim().toUpperCase(); }
+  if (!codigo) { showModalError('mdir-error','No se pudo generar el código. Escribe el nombre primero.'); return; }
   const { error } = await sb.from('pol_direcciones').insert({ codigo, nombre, tipo, orden });
   if (error) { showModalError('mdir-error', error.message); return; }
   closeModal('modal-direccion');
@@ -1655,14 +1665,27 @@ async function saveDireccion() {
 
 async function saveArea() {
   const direccion_id = document.getElementById('marea-direccion').value;
-  const numero       = document.getElementById('marea-numero').value.trim();
   const nombre       = document.getElementById('marea-nombre').value.trim();
-  const orden        = parseInt(document.getElementById('marea-orden').value)||0;
-  if (!numero || !nombre) { showModalError('marea-error','Número y Nombre son obligatorios.'); return; }
+  const numero       = String(areas.length > 0 ? Math.max(...areas.map(a=>parseInt(a.numero)||0)) + 1 : 600);
+  if (!direccion_id || !nombre) { showModalError('marea-error','Dirección y Nombre son obligatorios.'); return; }
+  const orden = areas.filter(a=>a.direccion_id===direccion_id).length + 1;
   const { error } = await sb.from('pol_areas').insert({ direccion_id, numero, nombre, orden });
   if (error) { showModalError('marea-error', error.message); return; }
   closeModal('modal-area');
   loadCatalogo(); loadAdmin();
+}
+
+function onDeptoAreaChange() {
+  const area_id = document.getElementById('mdepto-area').value;
+  const area = areas.find(a=>a.id===area_id);
+  if (!area) { document.getElementById('mdepto-codigo-preview').textContent = '—'; return; }
+  const deptsEnArea = departamentos.filter(d=>d.area_id===area_id && d.codigo);
+  let nextSeq = 1;
+  if (deptsEnArea.length > 0) {
+    const maxSeq = Math.max(...deptsEnArea.map(d => parseInt(d.codigo.split('-').pop())||0));
+    nextSeq = maxSeq + 1;
+  }
+  document.getElementById('mdepto-codigo-preview').textContent = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
 }
 
 function openModalDepto() {
@@ -1672,20 +1695,41 @@ function openModalDepto() {
       return `<option value="${a.id}">${dir?.codigo||''} · ${a.numero} · ${a.nombre}</option>`;
     }).join('');
   document.getElementById('mdepto-nombre').value = '';
-  document.getElementById('mdepto-orden').value  = '1';
   document.getElementById('mdepto-error').classList.remove('show');
+  onDeptoAreaChange();
   document.getElementById('modal-depto').classList.add('open');
 }
 
 async function saveDepto() {
   const area_id = document.getElementById('mdepto-area').value;
   const nombre  = document.getElementById('mdepto-nombre').value.trim();
-  const orden   = parseInt(document.getElementById('mdepto-orden').value)||1;
   if (!area_id || !nombre) { showModalError('mdepto-error','Área y Nombre son obligatorios.'); return; }
-  const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, orden });
+  const area = areas.find(a=>a.id===area_id);
+  const deptsEnArea = departamentos.filter(d=>d.area_id===area_id && d.codigo);
+  let nextSeq = 1;
+  if (deptsEnArea.length > 0) {
+    const maxSeq = Math.max(...deptsEnArea.map(d => parseInt(d.codigo.split('-').pop())||0));
+    nextSeq = maxSeq + 1;
+  }
+  const codigo = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
+  const orden  = nextSeq;
+  const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, codigo, orden });
   if (error) { showModalError('mdepto-error', error.message); return; }
   closeModal('modal-depto');
   loadCatalogo(); loadAdmin();
+}
+
+function onActDeptChange() {
+  const departamento_id = document.getElementById('mact-dept').value;
+  const dept = departamentos.find(d=>d.id===departamento_id);
+  if (!dept?.codigo) { document.getElementById('mact-codigo-preview').textContent = '—'; return; }
+  const actsEnDept = actividades.filter(a=>a.departamento_id===departamento_id && a.codigo);
+  let nextSeq = 1;
+  if (actsEnDept.length > 0) {
+    const maxSeq = Math.max(...actsEnDept.map(a => parseInt(a.codigo.split('-').pop())||0));
+    nextSeq = maxSeq + 1;
+  }
+  document.getElementById('mact-codigo-preview').textContent = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
 }
 
 function openModalActividad() {
@@ -1697,19 +1741,25 @@ function openModalActividad() {
     }).join('');
   document.getElementById('mact-nombre').value = '';
   document.getElementById('mact-error').classList.remove('show');
+  onActDeptChange();
   document.getElementById('modal-actividad').classList.add('open');
 }
-
-function onActDeptChange() { /* dept selected — placeholder for future area_id linking */ }
 
 async function saveActividad() {
   const departamento_id = document.getElementById('mact-dept').value;
   const nombre          = document.getElementById('mact-nombre').value.trim();
-  const tipo            = document.getElementById('mact-tipo').value;
   if (!departamento_id || !nombre) { showModalError('mact-error','Departamento y Nombre son obligatorios.'); return; }
-  const dept   = departamentos.find(d=>d.id===departamento_id);
+  const dept    = departamentos.find(d=>d.id===departamento_id);
   const area_id = dept?.area_id || null;
-  const { error } = await sb.from('pol_actividades').insert({ departamento_id, area_id, nombre, tipo });
+  const actsEnDept = actividades.filter(a=>a.departamento_id===departamento_id && a.codigo);
+  let nextSeq = 1;
+  if (actsEnDept.length > 0) {
+    const maxSeq = Math.max(...actsEnDept.map(a => parseInt(a.codigo.split('-').pop())||0));
+    nextSeq = maxSeq + 1;
+  }
+  const payload = { departamento_id, area_id, nombre, tipo: 'actividad' };
+  if (dept?.codigo) payload.codigo = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
+  const { error } = await sb.from('pol_actividades').insert(payload);
   if (error) { showModalError('mact-error', error.message); return; }
   closeModal('modal-actividad');
   loadCatalogo(); loadAdmin();
