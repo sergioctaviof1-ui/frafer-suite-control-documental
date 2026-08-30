@@ -1071,6 +1071,14 @@ async function loadCatalogo() {
     const proposed = `PLT-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
     rows.push({ dir, area, dept, deptCode, act, actCode, cat, pol, proposed });
   });
+  rows.sort((a,b)=>{
+    if (a.dir.orden !== b.dir.orden) return a.dir.orden - b.dir.orden;
+    const an = a.area.numero.localeCompare(b.area.numero, undefined, {numeric:true});
+    if (an) return an;
+    const dn = (a.deptCode).localeCompare(b.deptCode, undefined, {numeric:true});
+    if (dn) return dn;
+    return (a.actCode).localeCompare(b.actCode, undefined, {numeric:true});
+  });
 
   const total      = rows.length;
   const conFolio   = rows.filter(r=>r.cat).length;
@@ -1126,7 +1134,7 @@ async function loadCatalogo() {
       <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
       <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
       <td>${r.cat
-        ? `<span class="cat-folio">${r.cat.codigo_documento}</span>`
+        ? `<div style="display:flex;flex-direction:column;gap:2px"><span class="cat-folio">${r.cat.codigo_documento}</span><span style="font-size:10px;color:var(--fog)">${r.cat.nombre||''}</span></div>`
         : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
       }</td>
       <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
