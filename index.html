@@ -1543,12 +1543,18 @@ function autoFillDirCodigo() {
   const nombre = document.getElementById('mdir-nombre').value;
   const stops = new Set(['de','del','la','los','las','y','e','a','o','en','el','un','una']);
   const words = nombre.trim().split(/\s+/).filter(w => w.length > 0);
-  let code = '';
-  for (const w of words) {
-    if (!stops.has(w.toLowerCase())) code += w[0].toUpperCase();
-    if (code.length >= 3) break;
+  const sig = words.filter(w => !stops.has(w.toLowerCase()));
+  // Paso 1: inicial de cada palabra significativa
+  let code = sig.map(w => w[0].toUpperCase()).join('').substring(0, 3);
+  // Paso 2: si faltan letras, completar con letras internas de la última palabra significativa
+  if (code.length < 3 && sig.length > 0) {
+    const last = sig[sig.length - 1];
+    let i = 1;
+    while (code.length < 3 && i < last.length) {
+      code += last[i].toUpperCase();
+      i++;
+    }
   }
-  // Solo initiales — sin fallback que tome letras del interior de palabras
   document.getElementById('mdir-codigo').value = code.substring(0, 3);
 }
 
