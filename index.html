@@ -830,7 +830,7 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalDepto()">+ Nuevo Departamento</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Dirección</th><th>Área</th><th>Departamento</th><th>Orden</th><th>Estado</th></tr></thead>
+        <table class="admin-table"><thead><tr><th>Dirección</th><th>Área</th><th>Código</th><th>Departamento</th><th>Estado</th></tr></thead>
         <tbody id="admin-deptos-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
@@ -1055,12 +1055,10 @@ async function loadCatalogo() {
     const dept = departamentos.find(d=>d.id===act.departamento_id); if (!dept) return;
     const area = areas.find(a=>a.id===dept.area_id);               if (!area) return;
     const dir  = direcciones.find(d=>d.id===area.direccion_id);    if (!dir)  return;
-    const deptActs = actividades.filter(a=>a.departamento_id===dept.id)
-      .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-    const actCode  = String(deptActs.indexOf(act)+1).padStart(2,'0');
-    const deptCode = String(dept.orden).padStart(3,'0');
     const cat = catalogo.find(c=>c.actividad_id===act.id);
     const pol = cat ? latestPols[cat.id] : null;
+    const deptCode = dept.codigo || String(dept.orden).padStart(3,'0');
+    const actCode  = act.codigo  || '—';
     rows.push({ dir, area, dept, deptCode, act, actCode, cat, pol });
   });
 
@@ -1699,7 +1697,7 @@ async function loadAdmin() {
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
         <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
         <td>${d.nombre}</td>
-        <td style="font-family:var(--ff-mono);font-size:11px">${String(d.orden).padStart(3,'0')}</td>
+        <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
@@ -1758,8 +1756,8 @@ function renderEstructura() {
       const areaDepts = departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden);
 
       const deptsHtml = areaDepts.map(d =>
-        `<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--stone)">
-          <span style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);min-width:80px">${d.codigo||'—'}</span>
+        `<div style="display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--stone)">
+          <span style="font-family:var(--ff-mono);font-size:11px;font-weight:600;color:var(--gold);background:var(--gold-mist);padding:2px 7px;border-radius:4px;min-width:72px;text-align:center">${d.codigo||'—'}</span>
           <span style="font-size:12px">${d.nombre}</span>
           <span class="badge ${d.activo?'badge-publicado':'badge-vencido'}" style="margin-left:auto">${d.activo?'Activo':'Inactivo'}</span>
         </div>`
