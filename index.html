@@ -1086,7 +1086,10 @@ async function loadCatalogo() {
     const pol = cat ? latestPols[cat.id] : null;
     const deptCode = dept.codigo || String(dept.orden).padStart(3,'0');
     const actCode  = act.codigo  || '—';
-    rows.push({ dir, area, dept, deptCode, act, actCode, cat, pol });
+    const deptSeq  = dept.codigo ? dept.codigo.split('-').pop() : '??';
+    const actSeq   = act.codigo  ? act.codigo.split('-').pop()  : '??';
+    const proposed = `PLT-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
+    rows.push({ dir, area, dept, deptCode, act, actCode, cat, pol, proposed });
   });
 
   const total      = rows.length;
@@ -1141,8 +1144,11 @@ async function loadCatalogo() {
       <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
       <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
       <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
-      <td>${r.cat ? `<span class="cat-folio">${r.cat.codigo_documento}</span>` : '<span class="cat-dim">—</span>'}</td>
-      <td>${r.pol ? badge(r.pol.status) : '<span class="cat-dim">Sin iniciar</span>'}</td>
+      <td>${r.cat
+        ? `<span class="cat-folio">${r.cat.codigo_documento}</span>`
+        : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
+      }</td>
+      <td>${r.pol ? badge(r.pol.status) : '<span style="font-size:10px;color:var(--stone)">Sin iniciar</span>'}</td>
     </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
     document.getElementById('cat-tbody').innerHTML = tbody;
     document.getElementById('cat-count').textContent = `${filtered.length} de ${total}`;
