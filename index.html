@@ -218,8 +218,7 @@ input,textarea,select{font-family:inherit}
 .maestro-doc-status--publicado{color:#1a7a3c}
 .maestro-doc-status--vencido{color:#b03a2e}
 .maestro-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
-.maestro-table th{position:static;top:auto}
-.maestro-table th{padding:8px 10px}
+.maestro-table th{position:sticky;top:0;z-index:20;padding:8px 10px}
 .maestro-table td{padding:7px 10px;vertical-align:middle}
 .maestro-code{font-family:var(--ff-mono);font-size:10px;color:var(--navy);font-weight:600;letter-spacing:.06em;white-space:nowrap}
 .maestro-label{font-size:10px;font-weight:500;color:var(--ink)}
@@ -726,8 +725,8 @@ input,textarea,select{font-family:inherit}
           <div class="form-section-title">Vigencia</div>
           <div class="form-grid cols3">
             <div class="form-group"><label>Vigencia (meses)</label><input id="pol-vigencia-meses" type="number" min="1" max="60" placeholder="6"></div>
-            <div class="form-group"><label>Fecha de Autorización</label><input id="pol-fecha-inicio" type="date"></div>
-            <div class="form-group"><label>Fecha de Vencimiento</label><input id="pol-fecha-venc" type="date" readonly style="opacity:.6"></div>
+            <div class="form-group"><label>Fecha de Autorización</label><input id="pol-fecha-inicio" type="date" readonly style="opacity:.6" title="Se registra automáticamente al autorizar"></div>
+            <div class="form-group"><label>Fecha de Vencimiento</label><input id="pol-fecha-venc" type="date" readonly style="opacity:.6" title="Fecha de Autorización + Vigencia"></div>
           </div>
         </div>
         <div class="alert alert-success" id="pol-success"></div>
@@ -1343,7 +1342,7 @@ async function loadMaestro() {
     <span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog)">${filtered.length} / ${rows.length} actividades</span>
   </div>
   <div style="border:1px solid var(--stone);border-radius:12px;overflow:hidden">
-  <div style="overflow-x:auto">
+  <div style="overflow:auto;max-height:calc(100vh - 240px)">
   <table class="maestro-table">
     <thead><tr>
       <th style="width:32px;text-align:right">#</th>
