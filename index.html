@@ -131,12 +131,12 @@ input,textarea,select{font-family:inherit}
 .doc-back-btn{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;white-space:nowrap;padding:0;font-family:var(--ff-mono)}
 .doc-back-btn:hover{color:var(--ember-glow)}
 .doc-header-identity{display:flex;align-items:center;gap:10px;flex:1;min-width:0;overflow:hidden}
-.doc-header-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap}
+.doc-header-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--ember-glow);letter-spacing:.09em;white-space:nowrap}
 .doc-header-nombre{font-size:13px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-header-actions{display:flex;gap:8px;flex-shrink:0}
 /* DOCUMENTAR — buscador de política */
 .doc-pol-wrap{position:relative;flex:1;min-width:0;max-width:620px}
-.doc-pol-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.09em;white-space:nowrap;flex-shrink:0}
+.doc-pol-folio{font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--ember-glow);letter-spacing:.09em;white-space:nowrap;flex-shrink:0}
 .doc-pol-nombre{font-size:12px;font-weight:600;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .doc-pol-input{width:100%;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#fff;font-size:12px;padding:7px 12px;font-family:var(--ff-body);outline:none;box-sizing:border-box}
 .doc-pol-input::placeholder{color:rgba(255,255,255,.4)}
@@ -145,14 +145,14 @@ input,textarea,select{font-family:inherit}
 .doc-pol-dropdown.open{display:block}
 .doc-pol-opt{display:flex;align-items:baseline;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--linen);transition:background .1s}
 .doc-pol-opt:hover,.doc-pol-opt.focused{background:var(--linen)}
-.doc-pol-opt-folio{font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.07em;white-space:nowrap;flex-shrink:0}
+.doc-pol-opt-folio{font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--ember-glow);letter-spacing:.07em;white-space:nowrap;flex-shrink:0}
 .doc-pol-opt-nombre{font-size:12px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .doc-pol-opt-dir{font-size:10px;color:var(--fog);margin-left:auto;white-space:nowrap;font-family:var(--ff-mono);flex-shrink:0}
 .doc-lifecycle{padding:14px 40px 12px;background:var(--linen);border-bottom:1px solid var(--stone)}
 .doc-lifecycle-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:10px}
 .doc-tabs-bar{display:flex;gap:0;padding:0 40px;background:var(--parchment);border-bottom:1px solid var(--stone)}
 .doc-tabs-bar .tab{border-radius:0}
-.doc-body{padding:28px 40px 64px;max-width:940px;margin:0 auto;width:100%}
+.doc-body{padding:28px 40px 64px;width:100%}
 .dash-tipo-toggle{display:flex;gap:0;border:1px solid var(--stone);border-radius:8px;overflow:hidden;align-self:center}
 .dash-tipo-btn{padding:7px 16px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;font-family:var(--ff-mono);background:transparent;border:none;color:var(--stone);cursor:pointer;border-right:1px solid var(--stone);transition:all .15s}
 .dash-tipo-btn:last-child{border-right:none}
@@ -248,7 +248,7 @@ input,textarea,select{font-family:inherit}
 .dc-input{width:100%;border:none;background:transparent;font-size:11px;color:var(--ink);font-family:var(--ff-body);outline:none;padding:0}
 .dc-display{font-size:11px;color:var(--ink);font-family:var(--ff-mono)}
 .form-title{font-family:var(--ff-display);font-size:20px;font-weight:400;color:var(--ink);letter-spacing:.04em}
-.form-code{font-size:11px;font-family:var(--ff-mono);color:var(--gold);margin-top:4px;letter-spacing:.06em}
+.form-code{font-size:11px;font-family:var(--ff-mono);color:var(--ember-deep);margin-top:4px;letter-spacing:.06em}
 .form-section{margin-bottom:28px}
 .form-section-title{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--fog);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--stone);font-family:var(--ff-mono)}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -632,6 +632,7 @@ input,textarea,select{font-family:inherit}
 
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span id="pol-badge"></span>
+        <button id="btn-cerrar-pol" class="btn" style="display:none;background:transparent;border:1px solid rgba(192,136,152,.4);color:var(--ember-glow);font-size:12px;padding:6px 12px" onclick="clearCurrentPolitica()">× Cerrar</button>
         <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
       </div>
     </div>
@@ -938,10 +939,10 @@ function renderFlow(pol) {
     const ts   = fmt(tsMap[s]);
     if (i > 0) html += '<div style="display:flex;align-items:center;color:#9c8e84;font-size:16px;flex-shrink:0">›</div>';
     const bg      = cur  ? '#1C2B3A' : done ? '#EAF4EE' : '#F5F0EB';
-    const border  = cur  ? '2px solid #C08050' : done ? '1.5px solid #5A9E72' : '1.5px solid #C8C2BB';
+    const border  = cur  ? '2px solid #C08898' : done ? '1.5px solid #5A9E72' : '1.5px solid #C8C2BB';
     const opacity = (done || cur) ? '1' : '0.65';
-    const lColor  = cur  ? '#E8A96B' : done ? '#3D7A55' : '#6E6259';
-    const dColor  = cur  ? 'rgba(255,255,255,.55)' : done ? 'rgba(61,122,85,.75)' : '#9c8e84';
+    const lColor  = cur  ? '#E0B8C8' : done ? '#3D7A55' : '#6E6259';
+    const dColor  = cur  ? 'rgba(224,184,200,.75)' : done ? 'rgba(61,122,85,.75)' : '#9c8e84';
     html += `<div style="flex:1;min-width:100px;display:flex;flex-direction:column;align-items:center;
         justify-content:center;gap:3px;padding:10px 8px;border-radius:7px;border:${border};
         background:${bg};opacity:${opacity};text-align:center;box-sizing:border-box">
@@ -1752,6 +1753,9 @@ async function selectPolOption(catalogoId) {
   if (fc) fc.style.display = '';
   if (ft) ft.style.display = '';
   if (input) input.style.display = 'none';
+  // Mostrar botón Cerrar
+  const btnCerrar = document.getElementById('btn-cerrar-pol');
+  if (btnCerrar) btnCerrar.style.display = '';
 }
 
 function polSearchKey(e) {
@@ -1775,6 +1779,26 @@ function closePoliticaPanel() {
   politicaActual = null;
   showView('catalogo');
   loadCatalogo();
+}
+
+function clearCurrentPolitica() {
+  politicaActual = null;
+  // Ocultar folio/nombre y mostrar buscador
+  const fc = document.getElementById('pol-form-code');
+  const ft = document.getElementById('pol-form-title');
+  if (fc) { fc.style.display = 'none'; fc.textContent = ''; }
+  if (ft) { ft.style.display = 'none'; ft.textContent = ''; }
+  const input = document.getElementById('doc-pol-input');
+  if (input) { input.style.display = ''; input.value = ''; }
+  // Limpiar badge y botón cerrar
+  document.getElementById('pol-badge').innerHTML = '';
+  document.getElementById('btn-cerrar-pol').style.display = 'none';
+  // Limpiar strip y ciclo de vida
+  document.getElementById('status-flow').innerHTML = '';
+  ['pol-ident-dir','pol-ident-area','pol-ident-dept','pol-ident-act'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = '—';
+  });
+  setTimeout(() => document.getElementById('doc-pol-input')?.focus(), 80);
 }
 
 // ── MODALS ────────────────────────────────────────────────────────────────────
