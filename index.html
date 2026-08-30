@@ -895,8 +895,8 @@ input,textarea,select{font-family:inherit}
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
         <table class="admin-table">
-          <thead><tr><th style="width:40px">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Código</th><th>Actividad</th><th>Tipo</th></tr></thead>
-          <tbody id="admin-acts-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody>
+          <thead><tr><th style="width:40px">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Código</th><th>Actividad</th><th>Acciones</th></tr></thead>
+          <tbody id="admin-acts-body"><tr><td colspan="7" class="loading">Cargando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1869,7 +1869,6 @@ async function loadAdmin() {
               <td style="font-size:11px">${dept.nombre}</td>
               <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
               <td>${act.nombre}</td>
-              <td style="font-size:10px;color:var(--dust)">${act.tipo||'actividad'}</td>
               <td style="white-space:nowrap">${accionesBtns('pol_actividades',act.id,act.activa,'activa',act.nombre)}</td>
             </tr>`);
           });
