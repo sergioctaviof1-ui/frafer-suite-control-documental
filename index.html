@@ -353,7 +353,7 @@ input,textarea,select{font-family:inherit}
   <nav class="topbar-nav">
     <button class="nav-btn active" onclick="showView('dashboard')" data-view="dashboard">Dashboard</button>
     <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo</button>
-    <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar</button>
+    <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar Política</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -632,6 +632,8 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span id="pol-badge"></span>
         <button id="btn-cerrar-pol" class="btn" style="display:none;background:transparent;border:1px solid rgba(192,136,152,.4);color:var(--ember-glow);font-size:12px;padding:6px 12px" onclick="clearCurrentPolitica()">× Cerrar</button>
+        <button id="btn-gen-pdf" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generatePDF()" title="Generar PDF de esta política">PDF</button>
+        <button id="btn-gen-word" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generateWord()" title="Descargar plantilla Word editable">Word</button>
         <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
       </div>
     </div>
@@ -1396,6 +1398,10 @@ async function openPolitica(catalogoId, polId) {
   if (ftEl) ftEl.style.display = '';
   if (inpEl) { inpEl.style.display = 'none'; inpEl.value = ''; }
   if (btnC) btnC.style.display = '';
+  const btnPDF  = document.getElementById('btn-gen-pdf');
+  const btnWord = document.getElementById('btn-gen-word');
+  if (btnPDF)  btnPDF.style.display  = '';
+  if (btnWord) btnWord.style.display = '';
 
   const cat = catalogo.find(c=>c.id===catalogoId);
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
@@ -1799,9 +1805,13 @@ function clearCurrentPolitica() {
   if (ft) { ft.style.display = 'none'; ft.textContent = ''; }
   const input = document.getElementById('doc-pol-input');
   if (input) { input.style.display = ''; input.value = ''; }
-  // Limpiar badge y botón cerrar
+  // Limpiar badge y botones
   document.getElementById('pol-badge').innerHTML = '';
   document.getElementById('btn-cerrar-pol').style.display = 'none';
+  const bPDF = document.getElementById('btn-gen-pdf');
+  const bWord = document.getElementById('btn-gen-word');
+  if (bPDF)  bPDF.style.display  = 'none';
+  if (bWord) bWord.style.display = 'none';
   // Limpiar strip y ciclo de vida
   document.getElementById('status-flow').innerHTML = '';
   ['pol-ident-dir','pol-ident-area','pol-ident-dept','pol-ident-act'].forEach(id => {
@@ -1810,7 +1820,159 @@ function clearCurrentPolitica() {
   setTimeout(() => document.getElementById('doc-pol-input')?.focus(), 80);
 }
 
-// ── MODALS ────────────────────────────────────────────────────────────────────
+// ── GENERACIÓN DE DOCUMENTOS ──────────────────────────────────────────────────
+function _getDocData() {
+  if (!politicaActual) return null;
+  const g = id => document.getElementById(id)?.value || '';
+  const t = id => document.getElementById(id)?.textContent?.trim() || '';
+  const fmtDate = s => s ? new Date(s + 'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  return {
+    folio:            t('pol-form-code') || t('pol-nombre-folio'),
+    nombre:           t('pol-nombre-texto'),
+    dir:              t('pol-ident-dir'),
+    area:             t('pol-ident-area'),
+    dept:             t('pol-ident-dept'),
+    act:              t('pol-ident-act'),
+    objeto:           g('pol-objeto'),
+    alcance:          g('pol-alcance'),
+    definiciones:     g('pol-definiciones'),
+    contenido:        g('pol-contenido'),
+    sanciones:        g('pol-sanciones'),
+    excepciones:      g('pol-excepciones'),
+    numReglas:        g('pol-num-reglas'),
+    respDir:          g('pol-resp-dir'),
+    respElab:         g('pol-resp-elab'),
+    autorizadoPor:    g('pol-autorizado-por'),
+    colaboradores:    g('pol-colab'),
+    canal:            g('pol-canal-comunicacion'),
+    capacitacion:     g('pol-esquema-capacitacion'),
+    directrices:      g('pol-directrices-valores'),
+    vigenciaMeses:    g('pol-vigencia-meses'),
+    fechaAutorizacion:fmtDate(g('pol-fecha-inicio')),
+    fechaVencimiento: fmtDate(g('pol-fecha-venc')),
+    version:          politicaActual.version || 1,
+    status:           STATUS_LABEL[politicaActual.status] || politicaActual.status,
+    generadoEl:       new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})
+  };
+}
+
+function _buildDocHTML(d, forWord) {
+  const sec = (titulo, contenido) => contenido?.trim()
+    ? `<div class="sec"><div class="sec-title">${titulo}</div><div class="sec-body">${contenido.replace(/\n/g,'<br>')}</div></div>`
+    : '';
+  const row = (lbl, val) => `<tr><td class="ct-lbl">${lbl}</td><td class="ct-val">${val||'—'}</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html${forWord ? " xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'" : ''}>
+<head>
+<meta charset="UTF-8">
+<title>${d.folio} · ${d.nombre}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#1a1a1a;background:#fff;max-width:820px;margin:0 auto;padding:${forWord?'0':'32px 40px'}}
+  .doc-header{background:#1C2B3A;color:#fff;padding:20px 28px 16px;margin-bottom:0;page-break-inside:avoid}
+  .dh-brand{font-size:9pt;letter-spacing:.18em;text-transform:uppercase;color:#E0B8C8;margin-bottom:4px;font-family:Arial,sans-serif}
+  .dh-tipo{font-size:8pt;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);font-family:Arial,sans-serif}
+  .dh-folio{font-family:'Courier New',monospace;font-size:18pt;font-weight:700;color:#E0B8C8;letter-spacing:.08em;margin:10px 0 4px}
+  .dh-nombre{font-size:14pt;color:#fff;font-weight:400;line-height:1.35}
+  .ident-strip{display:flex;gap:0;background:#f5f0eb;border:1px solid #c8bfb5;margin-bottom:0;page-break-inside:avoid}
+  .ident-item{flex:1;padding:8px 12px;border-right:1px solid #c8bfb5;min-width:0}
+  .ident-item:last-child{border-right:none}
+  .ident-lbl{font-size:7pt;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;font-family:Arial,sans-serif;margin-bottom:2px}
+  .ident-val{font-size:9pt;color:#2a2826;font-weight:600;font-family:Arial,sans-serif;word-break:break-word}
+  .ctrl-table{width:100%;border-collapse:collapse;margin-bottom:0;page-break-inside:avoid;font-family:Arial,sans-serif;font-size:9pt}
+  .ctrl-table td{padding:6px 10px;border:1px solid #c8bfb5}
+  .ct-lbl{background:#f5f0eb;width:25%;font-weight:700;color:#3c3632;font-size:8pt;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+  .ct-val{color:#2a2826}
+  .sec{margin:16px 0;page-break-inside:avoid}
+  .sec-title{font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9a6070;font-family:Arial,sans-serif;margin-bottom:6px;padding-bottom:4px;border-bottom:1.5px solid #E0B8C8}
+  .sec-body{font-size:10.5pt;line-height:1.65;color:#2a2826}
+  .divider{height:1px;background:#c8bfb5;margin:20px 0}
+  .footer{margin-top:32px;padding-top:12px;border-top:1px solid #c8bfb5;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;font-size:8pt;color:#9c8e84;page-break-inside:avoid}
+  .sign-row{display:flex;gap:32px;margin-top:24px;page-break-inside:avoid}
+  .sign-box{flex:1;text-align:center;padding-top:32px;border-top:1px solid #9c8e84;font-family:Arial,sans-serif;font-size:8pt;color:#5a5450}
+  @media print{body{padding:0}@page{margin:18mm 20mm}}
+</style>
+</head>
+<body>
+<div class="doc-header">
+  <div class="dh-brand">Grupo Morsa · Control Documental</div>
+  <div class="dh-tipo">Política Organizacional</div>
+  <div class="dh-folio">${d.folio}</div>
+  <div class="dh-nombre">${d.nombre}</div>
+</div>
+<div class="ident-strip">
+  <div class="ident-item"><div class="ident-lbl">Dirección</div><div class="ident-val">${d.dir}</div></div>
+  <div class="ident-item"><div class="ident-lbl">Área</div><div class="ident-val">${d.area}</div></div>
+  <div class="ident-item"><div class="ident-lbl">Departamento</div><div class="ident-val">${d.dept}</div></div>
+  <div class="ident-item"><div class="ident-lbl">Actividad</div><div class="ident-val">${d.act}</div></div>
+</div>
+<table class="ctrl-table">
+  ${row('Versión', `v${d.version}`)}
+  ${row('Estado', d.status)}
+  ${row('Fecha de Autorización', d.fechaAutorizacion)}
+  ${row('Fecha de Vencimiento', d.fechaVencimiento)}
+  ${row('Vigencia', d.vigenciaMeses ? `${d.vigenciaMeses} meses` : '—')}
+  ${row('# de Reglas', d.numReglas || '—')}
+  ${row('Dirección Responsable', d.respDir)}
+  ${row('Elaboró', d.respElab)}
+  ${row('Autorizó', d.autorizadoPor)}
+  ${d.colaboradores ? row('Colaboradores', d.colaboradores) : ''}
+</table>
+<div class="divider"></div>
+${sec('Objetivo de la Política', d.objeto)}
+${sec('Alcance', d.alcance)}
+${sec('Definiciones', d.definiciones)}
+${sec('Reglas y Lineamientos', d.contenido)}
+${sec('Sanciones', d.sanciones)}
+${sec('Excepciones', d.excepciones)}
+${sec('Canal de Comunicación', d.canal)}
+${sec('Esquema de Capacitación', d.capacitacion)}
+${sec('Directrices y Valores Asociados', d.directrices)}
+<div class="divider"></div>
+<div class="sign-row">
+  <div class="sign-box">Elaboró<br><strong>${d.respElab||'_______________________'}</strong></div>
+  <div class="sign-box">Revisó<br><strong>_______________________</strong></div>
+  <div class="sign-box">Autorizó<br><strong>${d.autorizadoPor||'_______________________'}</strong></div>
+</div>
+<div class="footer">
+  <span>${d.folio} · v${d.version}</span>
+  <span>Generado el ${d.generadoEl} · Frafer Suite Control Documental</span>
+</div>
+</body>
+</html>`;
+}
+
+function generatePDF() {
+  const d = _getDocData();
+  if (!d) { alert('Selecciona una política primero.'); return; }
+  const html = _buildDocHTML(d, false);
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) { alert('Permite las ventanas emergentes para generar el PDF.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
+  // fallback si onload ya disparó
+  setTimeout(() => { try { w.focus(); w.print(); } catch(e){} }, 800);
+}
+
+function generateWord() {
+  const d = _getDocData();
+  if (!d) { alert('Selecciona una política primero.'); return; }
+  const html = _buildDocHTML(d, true);
+  const blob = new Blob(['﻿', html], { type: 'application/msword;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${d.folio}_v${d.version}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── MODALES ────────────────────────────────────────────────────────────────────
 function autoFillDirCodigo() {
   const nombre = document.getElementById('mdir-nombre').value;
   const stops = new Set(['de','del','la','los','las','y','e','a','o','en','el','un','una']);
