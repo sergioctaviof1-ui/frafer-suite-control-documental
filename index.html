@@ -2316,18 +2316,171 @@ ${HIST}
 </body></html>`;
 }
 
-function generatePDF() {
+async function generatePDF() {
   const d = _getDocData();
   if (!d) { alert('Selecciona una política primero.'); return; }
-  const html = _buildDocHTML(d, false);
-  const w = window.open('', '_blank', 'width=900,height=700');
-  if (!w) { alert('Permite las ventanas emergentes para generar el PDF.'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.onload = () => { w.focus(); w.print(); };
-  // fallback si onload ya disparó
-  setTimeout(() => { try { w.focus(); w.print(); } catch(e){} }, 800);
+  const btn = document.getElementById('btn-gen-pdf');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
+  try {
+    // Cargar pdfmake desde CDN (lazy, solo la primera vez)
+    if (!window.pdfMake) {
+      const loadScript = src => new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js');
+    }
+
+    // Consultar historial de versiones
+    let versHist = [];
+    if (d.politicaId) {
+      const { data } = await sb.from('pol_versiones')
+        .select('version,fuente,created_at,elaboro,autorizo')
+        .eq('politica_id', d.politicaId)
+        .order('created_at', { ascending: true });
+      versHist = data || [];
+    }
+    const versionNum = versHist.length > 0
+      ? Math.max(...versHist.map(v => v.version)) + 1
+      : (parseInt(d.version) || 1);
+
+    // Paleta
+    const NAVY='#1C2B3A', MAUVE='#9A6070', GRAY='#9C8E84';
+    const CREAM='#F0E8DC', BORDER='#C8BFB5', GREEN='#2D6B47', WHITE='#FFFFFF';
+    const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
+
+    // Helpers de layout
+    const ctrlRow = (l1,v1,l2,v2) => ([
+      { columns:[{text:l1,bold:true,color:GRAY,fontSize:6.5,width:'40%'},{text:dk(v1),fontSize:8.5,width:'60%'}], fillColor:CREAM, margin:[6,3,0,3] },
+      { columns:[{text:l2,bold:true,color:GRAY,fontSize:6.5,width:'45%'},{text:dk(v2),fontSize:8.5,width:'55%'}], fillColor:WHITE, margin:[6,3,6,3] }
+    ]);
+
+    let sNum = 0;
+    const mkSec = (title, body) => {
+      const has = body?.trim();
+      if (!has && !d.isTemplate) return [];
+      sNum++;
+      const lines = has ? body.split('\n') : ['[ Completar este campo ]'];
+      return [
+        { table:{ widths:['*'], body:[[{text:`${sNum}. ${title.toUpperCase()}`,bold:true,color:WHITE,fontSize:8.5,margin:[6,3,6,3]}]] },
+          layout:{ fillColor:()=>NAVY, hLineWidth:()=>0, vLineWidth:()=>0 }, margin:[0,6,0,0] },
+        ...lines.map(l => ({ text:l||' ', fontSize:9.5, color:has?'#1a1a1a':GRAY, italics:!has, margin:[8,1,6,1] })),
+        { text:'', margin:[0,4,0,0] }
+      ];
+    };
+
+    const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
+
+    // Bloque de título
+    const titleBlock = { margin:[0,0,0,10],
+      table:{ widths:['62%','38%'], body:[
+        [
+          { stack:[
+              {text:'GRUPO MORSA',bold:true,color:WHITE,fontSize:10.5,margin:[6,8,0,2]},
+              {text:'Control Documental  ·  Política Organizacional',color:MAUVE,fontSize:6,margin:[6,0,0,8]}
+            ], fillColor:NAVY },
+          { stack:[
+              {text:dk(d.folio),bold:true,color:MAUVE,fontSize:13,font:'Courier',alignment:'right',margin:[0,8,6,2]},
+              {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Courier'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
+            ], fillColor:CREAM }
+        ],
+        [{text:dk(d.nombre),bold:true,color:NAVY,fontSize:12,colSpan:2,margin:[6,8,6,4],fillColor:CREAM},{}],
+        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}`,color:GRAY,fontSize:6.5,colSpan:2,margin:[6,0,6,6],fillColor:CREAM},{}],
+        ctrlRow('ESTADO',d.status,'DIR. RESPONSABLE',d.respDir),
+        ctrlRow('VIGENCIA',d.vigenciaMeses?`${d.vigenciaMeses} meses`:null,'ELABORÓ',d.respElab),
+        ctrlRow('FECHA AUTORIZACIÓN',d.fechaAutorizacion,'AUTORIZÓ',d.autorizadoPor),
+        ctrlRow('VIGENTE HASTA',d.fechaVencimiento,'COLABORADORES',d.colaboradores),
+        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,fontSize:7,colSpan:2,margin:[6,3,6,3],fillColor:GREEN},{}]
+      ]},
+      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+    };
+
+    // Firmas
+    const sigTable = { margin:[0,14,0,0],
+      table:{ widths:['33.33%','33.33%','33.34%'], body:[
+        [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:NAVY},{},{}],
+        [{text:'ELABORÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'REVISÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'AUTORIZÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]}],
+        [{text:'\n\n\n'},{text:'\n\n\n'},{text:'\n\n\n'}],
+        [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:'___________________________',alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
+        [{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]}]
+      ]},
+      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+    };
+
+    // Control de cambios
+    const nowDt = new Date();
+    const fmtFD = iso => new Date(iso).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+    const fmtFH = iso => new Date(iso).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    const histRows = [
+      ...versHist.map(v=>[String(v.version),fmtFD(v.created_at),fmtFH(v.created_at),v.fuente==='adjuntado'?'Adjuntado':'Generado',dk(v.elaboro),dk(v.autorizo)]),
+      [String(versionNum),fmtFD(nowDt.toISOString()),fmtFH(nowDt.toISOString()),'Generado',dk(d.respElab),dk(d.autorizadoPor)]
+    ];
+    const histTable = { margin:[0,14,0,0],
+      table:{ widths:[28,62,38,50,'*','*'], body:[
+        [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:NAVY},{},{},{},{},{}],
+        ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'].map(h=>({text:h,bold:true,color:GRAY,fontSize:6.5,alignment:'center',fillColor:CREAM,margin:[3,3,3,3]})),
+        ...histRows.map((row,ri)=>{ const last=ri===histRows.length-1; return row.map((v,i)=>({
+          text:v, fontSize:8, bold:i===0||last, font:i===0?'Courier':'Roboto',
+          color:last&&i===0?GREEN:'#1a1a1a', fillColor:last?'#EAF4EE':WHITE,
+          alignment:i<3?'center':'left', margin:[3,3,3,3]
+        }));})
+      ]},
+      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+    };
+
+    // Definición completa del documento
+    const dd = {
+      pageSize:'LETTER', pageMargins:[72,72,54,72],
+      header:(currentPage) => ({
+        table:{ widths:['30%','42%','28%'], body:[[
+          {text:dk(d.folio),bold:true,color:MAUVE,font:'Courier',fontSize:7.5,margin:[4,4,0,4]},
+          {text:String(d.nombre||'').slice(0,50),alignment:'center',color:NAVY,fontSize:7,margin:[0,4,0,4]},
+          {text:'GRUPO MORSA',bold:true,alignment:'right',color:NAVY,fontSize:8.5,margin:[0,4,4,4]}
+        ]]},
+        layout:{ hLineWidth:(i)=>i===1?1:0, vLineWidth:()=>0, hLineColor:()=>NAVY },
+        margin:[72,24,54,0]
+      }),
+      footer:(currentPage, pageCount) => ({ stack:[
+        { canvas:[{type:'line',x1:0,y1:0,x2:486,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[72,4,54,2] },
+        { columns:[
+          {text:`Elaboró: ${dk(d.respElab)}  ·  Autorizó: ${dk(d.autorizadoPor)}  ·  Vigente: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`,color:GRAY,fontSize:6,width:'*'},
+          {text:`Pág. ${currentPage} / ${pageCount}`,alignment:'right',color:GRAY,fontSize:7,bold:true,width:55}
+        ], margin:[72,0,54,2] },
+        {text:`Grupo Morsa  ·  Control Documental  ·  Uso Interno  ·  Generado el ${d.generadoEl||''}`,color:GRAY,fontSize:5.5,alignment:'center',margin:[72,0,54,0]}
+      ]}),
+      content:[
+        titleBlock,
+        grpLabel('Contenido de la Política'),
+        ...mkSec('Propósito y Objetivo',           d.objeto),
+        ...mkSec('Alcance',                        d.alcance),
+        ...mkSec('Marco Normativo y Referencias',  d.marcoNormativo),
+        ...mkSec('Definiciones y Terminología',    d.definiciones),
+        ...mkSec('Responsabilidades',              d.responsabilidades),
+        ...mkSec('Lineamientos y Reglas',          d.contenido),
+        ...mkSec('Controles y Monitoreo',          d.controles),
+        ...mkSec('Sanciones por Incumplimiento',   d.sanciones),
+        ...mkSec('Excepciones y Casos Especiales', d.excepciones),
+        grpLabel('Comunicación e Implementación'),
+        ...mkSec('Canal de Comunicación',          d.canal),
+        ...mkSec('Esquema de Capacitación',        d.capacitacion),
+        ...mkSec('Directrices y Valores Asociados',d.directrices),
+        sigTable,
+        histTable
+      ],
+      defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 }
+    };
+
+    // Descargar directamente sin diálogo
+    const fileName = `${d.folio}_v${versionNum}.pdf`;
+    window.pdfMake.createPdf(dd).download(fileName);
+
+  } catch(e) {
+    alert('Error al generar PDF: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'PDF'; }
+  }
 }
 
 async function _generateWordCore(d) {
