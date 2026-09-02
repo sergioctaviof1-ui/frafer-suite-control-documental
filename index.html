@@ -2211,30 +2211,205 @@ async function generateWord() {
   const btn = document.getElementById('btn-gen-word');
   if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
   try {
-    const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch(`${SB_URL}/functions/v1/generate-word-policy`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-        'apikey': SB_ANON,
-      },
-      body: JSON.stringify(d),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${res.status}`);
+    // Cargar librería docx desde CDN la primera vez
+    if (!window.docx) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/docx@8/build/index.js';
+        s.onload = res; s.onerror = () => rej(new Error('No se pudo cargar docx'));
+        document.head.appendChild(s);
+      });
     }
-    const blob = await res.blob();
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            Header, Footer, AlignmentType, BorderStyle, ShadingType,
+            VerticalAlign, WidthType, HeightRule, PageNumber } = window.docx;
+
+    // ── Paleta ──────────────────────────────────────────────────────────────
+    const NAVY='1C2B3A', MAUVE='9A6070', GRAY='9C8E84';
+    const CREAM='F0E8DC', BORDER='C8BFB5', GREEN='2D6B47', WHITE='FFFFFF';
+    const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
+
+    const BN = { top:{style:BorderStyle.SINGLE,size:18,color:NAVY}, bottom:{style:BorderStyle.SINGLE,size:18,color:NAVY},
+                 left:{style:BorderStyle.SINGLE,size:18,color:NAVY}, right:{style:BorderStyle.SINGLE,size:18,color:NAVY} };
+    const BT = { top:{style:BorderStyle.SINGLE,size:8,color:BORDER}, bottom:{style:BorderStyle.SINGLE,size:8,color:BORDER},
+                 left:{style:BorderStyle.SINGLE,size:8,color:BORDER}, right:{style:BorderStyle.SINGLE,size:8,color:BORDER} };
+    const BX = { top:{style:BorderStyle.NONE}, bottom:{style:BorderStyle.NONE},
+                 left:{style:BorderStyle.NONE}, right:{style:BorderStyle.NONE} };
+
+    const TW=9720, Q=Math.round(TW*.25), H=Math.round(TW*.5), Q3=Math.round(TW*.75);
+    const W3=Math.round(TW/3), W3b=Math.round(TW*2/3);
+
+    // ── ENCABEZADO (repite cada página) ─────────────────────────────────────
+    const docHeader = new Header({ children:[
+      new Table({ width:{size:TW,type:WidthType.DXA},
+        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:NAVY}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
+        rows:[ new TableRow({ children:[
+          new TableCell({ width:{size:Math.round(TW*.30),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
+            children:[new Paragraph({ spacing:{after:60}, children:[new TextRun({text:dk(d.folio),bold:true,color:MAUVE,font:'Courier New',size:17})] })] }),
+          new TableCell({ width:{size:Math.round(TW*.42),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
+            children:[new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:60}, children:[new TextRun({text:String(d.nombre||'').slice(0,46),color:NAVY,font:'Calibri',size:16})] })] }),
+          new TableCell({ width:{size:Math.round(TW*.28),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
+            children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{after:60}, children:[new TextRun({text:'GRUPO MORSA',bold:true,color:NAVY,font:'Calibri',size:19})] })] }),
+        ]})]
+      })
+    ]});
+
+    // ── PIE DE PÁGINA (repite cada página) ──────────────────────────────────
+    const docFooter = new Footer({ children:[
+      new Table({ width:{size:TW,type:WidthType.DXA},
+        borders:{...BX, top:{style:BorderStyle.SINGLE,size:8,color:BORDER}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
+        rows:[
+          new TableRow({ children:[
+            new TableCell({ width:{size:Math.round(TW*.78),type:WidthType.DXA}, borders:BX,
+              children:[new Paragraph({ spacing:{before:60}, children:[new TextRun({text:`Elaboró: ${dk(d.respElab)}  ·  Autorizó: ${dk(d.autorizadoPor)}  ·  Vigente: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`,color:GRAY,font:'Calibri',size:13})] })] }),
+            new TableCell({ width:{size:Math.round(TW*.22),type:WidthType.DXA}, borders:BX,
+              children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{before:60}, children:[
+                new TextRun({text:'Pág. ',color:GRAY,font:'Calibri',size:15}),
+                new TextRun({children:[PageNumber.CURRENT],color:GRAY,font:'Calibri',size:15}),
+                new TextRun({text:' / ',color:GRAY,font:'Calibri',size:15}),
+                new TextRun({children:[PageNumber.TOTAL_PAGES],color:GRAY,font:'Calibri',size:15}),
+              ]})] }),
+          ]}),
+          new TableRow({ children:[new TableCell({ columnSpan:2, borders:BX,
+            children:[new Paragraph({ children:[new TextRun({text:`Grupo Morsa  ·  Control Documental  ·  Uso Interno  ·  Generado el ${d.generadoEl||''}`,color:GRAY,font:'Calibri',size:11})] })] })] }),
+        ]
+      })
+    ]});
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    const navyBar = (text, cs=4) => new TableRow({ children:[new TableCell({
+      columnSpan:cs, shading:{type:ShadingType.SOLID,color:NAVY}, borders:BN,
+      children:[new Paragraph({ spacing:{before:60,after:60}, children:[new TextRun({text:`  ${text}`,bold:true,color:WHITE,font:'Calibri',size:18})] })]
+    })]});
+
+    const ctRow = (l1,v1,l2,v2) => new TableRow({ children:[
+      new TableCell({width:{size:Q,type:WidthType.DXA},borders:BT,shading:{type:ShadingType.SOLID,color:CREAM},
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:l1,bold:true,color:GRAY,font:'Calibri',size:15})]})] }),
+      new TableCell({width:{size:H-Q,type:WidthType.DXA},borders:BT,
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:dk(v1),font:'Calibri',size:18})]})] }),
+      new TableCell({width:{size:Q3-H,type:WidthType.DXA},borders:BT,shading:{type:ShadingType.SOLID,color:CREAM},
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:l2,bold:true,color:GRAY,font:'Calibri',size:15})]})] }),
+      new TableCell({width:{size:TW-Q3,type:WidthType.DXA},borders:BT,
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:dk(v2),font:'Calibri',size:18})]})] }),
+    ]});
+
+    const grpLabel = t => new Paragraph({ spacing:{before:280,after:80},
+      border:{bottom:{style:BorderStyle.SINGLE,size:8,color:BORDER}},
+      children:[new TextRun({text:t.toUpperCase(),bold:true,smallCaps:true,color:GRAY,font:'Calibri',size:15})] });
+
+    let sNum=0;
+    const mkSec = (title, body) => {
+      if (!body?.trim()) return [];
+      sNum++;
+      return [
+        new Table({ width:{size:TW,type:WidthType.DXA}, rows:[navyBar(`${sNum}. ${title.toUpperCase()}`)] }),
+        ...body.split('\n').map(line => new Paragraph({ spacing:{before:0,after:60}, indent:{left:120,right:120},
+          children:[new TextRun({text:line,font:'Calibri',size:20,color:'1a1a1a'})] })),
+        new Paragraph({ spacing:{before:100,after:0}, text:'' }),
+      ];
+    };
+
+    // ── BLOQUE DE TÍTULO ─────────────────────────────────────────────────────
+    const titleTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
+      new TableRow({ children:[
+        new TableCell({ columnSpan:2, width:{size:Math.round(TW*.62),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:NAVY}, borders:BN,
+          children:[
+            new Paragraph({spacing:{before:80},children:[new TextRun({text:'  GRUPO MORSA',bold:true,color:WHITE,font:'Calibri',size:22})]}),
+            new Paragraph({spacing:{after:80},children:[new TextRun({text:'  Control Documental  ·  Política Organizacional',color:MAUVE,font:'Calibri',size:13})]}),
+          ]}),
+        new TableCell({ columnSpan:2, width:{size:Math.round(TW*.38),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN, verticalAlign:VerticalAlign.CENTER,
+          children:[
+            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:60},children:[new TextRun({text:`${dk(d.folio)}  `,bold:true,color:MAUVE,font:'Courier New',size:26})]}),
+            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{after:60},children:[new TextRun({text:`Versión ${d.version}  ·  Uso Interno  `,color:GRAY,font:'Calibri',size:14})]}),
+          ]}),
+      ]}),
+      new TableRow({ children:[new TableCell({ columnSpan:4, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN,
+        children:[
+          new Paragraph({spacing:{before:100},children:[new TextRun({text:`  ${dk(d.nombre)}`,bold:true,color:NAVY,font:'Calibri',size:26})]}),
+          new Paragraph({spacing:{after:100},children:[new TextRun({text:`  ${dk(d.dir)}`,color:GRAY,font:'Calibri',size:13})]}),
+        ]})] }),
+      ctRow('ESTADO',             d.status,                        'DIRECCIÓN RESPONSABLE', d.respDir),
+      ctRow('VIGENCIA',           d.vigenciaMeses?`${d.vigenciaMeses} meses`:null, 'ELABORÓ', d.respElab),
+      ctRow('FECHA AUTORIZACIÓN', d.fechaAutorizacion,             'AUTORIZÓ',              d.autorizadoPor),
+      ctRow('VIGENTE HASTA',      d.fechaVencimiento,              'COLABORADORES',         d.colaboradores),
+      ...(d.numReglas?[ctRow('# DE REGLAS',String(d.numReglas),'','')]:[]),
+      new TableRow({ children:[new TableCell({ columnSpan:4, shading:{type:ShadingType.SOLID,color:GREEN}, borders:BT,
+        children:[new Paragraph({spacing:{before:40,after:40},children:[new TextRun({text:`  ${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,font:'Calibri',size:15})]})]
+      })]}),
+    ]});
+
+    // ── FIRMAS ───────────────────────────────────────────────────────────────
+    const sigSpace = w => new TableCell({width:{size:w,type:WidthType.DXA},borders:BT,
+      height:{value:900,rule:HeightRule.ATLEAST}, children:[new Paragraph({text:''})] });
+    const sigTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
+      new TableRow({children:[new TableCell({columnSpan:3,shading:{type:ShadingType.SOLID,color:NAVY},borders:BN,
+        children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  CONTROL DE APROBACIONES',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
+      new TableRow({children:['ELABORÓ','REVISÓ','AUTORIZÓ'].map((r,i)=>new TableCell({
+        width:{size:i<2?W3:TW-W3b,type:WidthType.DXA},shading:{type:ShadingType.SOLID,color:CREAM},borders:BT,
+        children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:40,after:40},children:[new TextRun({text:r,bold:true,color:GRAY,font:'Calibri',size:16})]})]})) }),
+      new TableRow({height:{value:900,rule:HeightRule.ATLEAST},children:[sigSpace(W3),sigSpace(W3),sigSpace(TW-W3b)]}),
+      new TableRow({children:[
+        new TableCell({width:{size:W3,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:dk(d.respElab),bold:true,font:'Calibri',size:19})]})]}),
+        new TableCell({width:{size:W3,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'___________________________',font:'Calibri',size:18})]})]}),
+        new TableCell({width:{size:TW-W3b,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:dk(d.autorizadoPor),bold:true,font:'Calibri',size:19})]})]}),
+      ]}),
+      new TableRow({children:['Nombre y Firma','Nombre y Firma','Nombre y Firma'].map((t,i)=>new TableCell({
+        width:{size:i<2?W3:TW-W3b,type:WidthType.DXA},borders:BT,
+        children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:t,color:GRAY,font:'Calibri',size:14})]})]})) }),
+    ]});
+
+    // ── HISTORIAL ────────────────────────────────────────────────────────────
+    const hE=[.10,.28,.47,.60,.80,1].map(f=>Math.round(TW*f));
+    const hW=hE.map((x,i)=>i===0?x:x-hE[i-1]);
+    const hL=['Ver.','Estado','Fecha Aut.','Vigencia','Elaboró','Autorizó'];
+    const hV=[String(d.version||1),dk(d.status),dk(d.fechaAutorizacion),d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—',dk(d.respElab),dk(d.autorizadoPor)];
+    const histTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
+      new TableRow({children:[new TableCell({columnSpan:6,shading:{type:ShadingType.SOLID,color:NAVY},borders:BN,
+        children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  HISTORIAL DE REVISIONES',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
+      new TableRow({children:hL.map((l,i)=>new TableCell({width:{size:hW[i],type:WidthType.DXA},shading:{type:ShadingType.SOLID,color:CREAM},borders:BT,
+        children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:40,after:40},children:[new TextRun({text:l,bold:true,color:GRAY,font:'Calibri',size:15})]})]})) }),
+      new TableRow({children:hV.map((v,i)=>new TableCell({width:{size:hW[i],type:WidthType.DXA},borders:BT,
+        children:[new Paragraph({alignment:i===0?AlignmentType.CENTER:AlignmentType.LEFT,spacing:{before:40,after:40},
+          children:[new TextRun({text:v,bold:i===0,font:i===0?'Courier New':'Calibri',size:18})]})]})) }),
+    ]});
+
+    // ── ARMAR DOCUMENTO ──────────────────────────────────────────────────────
+    const doc = new Document({
+      creator:'Frafer Suite — Control Documental', title:dk(d.nombre),
+      sections:[{ properties:{ page:{ size:{width:12240,height:15840},
+          margin:{top:1440,right:1080,bottom:1440,left:1440,header:720,footer:720} } },
+        headers:{default:docHeader}, footers:{default:docFooter},
+        children:[
+          titleTable,
+          new Paragraph({spacing:{before:160,after:0},text:''}),
+          grpLabel('Contenido de la Política'),
+          ...mkSec('Propósito y Objetivo',        d.objeto),
+          ...mkSec('Alcance',                     d.alcance),
+          ...mkSec('Definiciones',                d.definiciones),
+          ...mkSec('Lineamientos y Reglas',       d.contenido),
+          ...mkSec('Sanciones por Incumplimiento',d.sanciones),
+          ...mkSec('Excepciones',                 d.excepciones),
+          grpLabel('Comunicación e Implementación'),
+          ...mkSec('Canal de Comunicación',        d.canal),
+          ...mkSec('Esquema de Capacitación',      d.capacitacion),
+          ...mkSec('Directrices y Valores Asociados', d.directrices),
+          new Paragraph({spacing:{before:280,after:0},text:''}),
+          sigTable,
+          new Paragraph({spacing:{before:280,after:0},text:''}),
+          histTable,
+        ]
+      }]
+    });
+
+    // ── DESCARGAR ────────────────────────────────────────────────────────────
+    const blob = await Packer.toBlob(doc);
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `${d.folio}_v${d.version}.docx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (e) {
+    a.href = url; a.download = `${d.folio}_v${d.version}.docx`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+
+  } catch(e) {
     alert('Error al generar Word: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Word'; }
