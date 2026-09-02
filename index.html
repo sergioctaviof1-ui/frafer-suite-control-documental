@@ -2983,20 +2983,29 @@ async function _generateWordCore(d) {
     document.body.removeChild(a); URL.revokeObjectURL(url);
 
     // ── REPOSITORIO: subir a Storage + registrar versión ─────────────────────
-    if (d.politicaId) {
+    if (!d.politicaId) {
+      console.warn('[Word] politicaId es null — no se guarda en repositorio');
+    } else {
       const storagePath = `${d.politicaId}/${fileName}`;
       const { error: upErr } = await sb.storage.from('politicas-docs').upload(
         storagePath, blob,
         { contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert:true }
       );
-      await sb.from('pol_versiones').insert({
+      if (upErr) console.error('[Word] Storage upload error:', upErr.message);
+
+      const { error: insErr } = await sb.from('pol_versiones').insert({
         politica_id: d.politicaId, version: versionNum, folio: d.folio,
         fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
         elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
       });
-      await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
-      if (politicaActual) politicaActual.version = versionNum;
-      loadCatalogo();
+      if (insErr) {
+        console.error('[Word] pol_versiones insert error:', insErr.message);
+        alert('Word generado pero no se registró en el repositorio: ' + insErr.message);
+      } else {
+        await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
+        if (politicaActual) politicaActual.version = versionNum;
+        loadCatalogo();
+      }
     }
 
 }
