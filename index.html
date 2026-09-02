@@ -1870,20 +1870,33 @@ async function savePolitica() {
       politicaActual = newPol;
       fillPoliticaForm(newPol);
       loadCatalogo();
-      sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500);
+      sEl.textContent = 'Guardado · Generando documentos…'; sEl.classList.add('show');
+      try {
+        await _generateWordCore(_getDocData(), false);
+        await generatePDF(false);
+        sEl.textContent = '✓ Política creada · Documentos generados v1.';
+      } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = 'Contenido guardado (error al generar documentos).'; }
+      setTimeout(() => sEl.classList.remove('show'), 3500);
     } else {
       eEl.textContent = error?.message || 'Error al guardar'; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000);
     }
     return;
   }
-  // Guardado subsecuente — UPDATE
-  const { error } = await sb.from('pol_politicas').update(payload).eq('id', politicaActual.id);
+  // Guardado subsecuente — UPDATE: incrementar versión y regenerar documentos
+  const newVersion = (politicaActual.version || 1) + 1;
+  const { error } = await sb.from('pol_politicas').update({ ...payload, version: newVersion }).eq('id', politicaActual.id);
   if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
   else {
-    politicaActual = { ...politicaActual, ...payload };
+    politicaActual = { ...politicaActual, ...payload, version: newVersion };
     fillPoliticaForm(politicaActual);
     loadCatalogo();
-    sEl.textContent = 'Cambios guardados.'; sEl.classList.add('show'); setTimeout(()=>sEl.classList.remove('show'),2500);
+    sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show');
+    try {
+      await _generateWordCore(_getDocData(), false);
+      await generatePDF(false);
+      sEl.textContent = `✓ Cambios guardados · Documentos generados v${newVersion}.`;
+    } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = `Contenido guardado v${newVersion} (error al generar documentos).`; }
+    setTimeout(() => sEl.classList.remove('show'), 3500);
   }
 }
 
@@ -2563,10 +2576,10 @@ ${HIST}
 </body></html>`;
 }
 
-async function generatePDF() {
+async function generatePDF(download=true) {
   const d = _getDocData();
-  if (!d) { alert('Selecciona una política primero.'); return; }
-  const btn = document.getElementById('btn-gen-pdf');
+  if (!d) { if (download) alert('Selecciona una política primero.'); return; }
+  const btn = download ? document.getElementById('btn-gen-pdf') : null;
   if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
   try {
     // Cargar pdfmake desde CDN (lazy, solo la primera vez)
@@ -2721,13 +2734,15 @@ async function generatePDF() {
     const fileName = `${d.folio}_v${versionNum}.pdf`;
     const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
 
-    // Descarga directa al navegador
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a');
-    a.href = blobUrl; a.download = fileName;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    // Descarga directa al navegador (solo si se solicitó)
+    if (download) {
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = blobUrl; a.download = fileName;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    }
 
     // Subir a Storage + registrar en pol_versiones
     if (d.politicaId) {
@@ -2753,7 +2768,7 @@ async function generatePDF() {
   }
 }
 
-async function _generateWordCore(d) {
+async function _generateWordCore(d, download=true) {
     // Cargar librería docx via ESM (lazy, solo primera vez)
     if (!window._docxLib) {
       window._docxLib = await import('https://esm.sh/docx@8');
@@ -2978,14 +2993,16 @@ async function _generateWordCore(d) {
       }]
     });
 
-    // ── DESCARGAR ────────────────────────────────────────────────────────────
+    // ── DESCARGAR (solo si se solicitó) ──────────────────────────────────────
     const blob = await Packer.toBlob(doc);
     const fileName = `${d.folio}_v${versionNum}.docx`;
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
+    if (download) {
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
 
     // ── REPOSITORIO: subir a Storage + registrar versión ─────────────────────
     if (!d.politicaId) {
