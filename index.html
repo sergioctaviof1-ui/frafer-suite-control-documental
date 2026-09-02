@@ -1875,158 +1875,221 @@ function _getDocData() {
 }
 
 function _buildDocHTML(d, forWord) {
-  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const nl  = s => esc(s||'').replace(/\n/g,'<br>');
-  const has = s => (s||'').trim().length > 0;
+  const esc    = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nl     = s => esc(s||'').replace(/\n/g,'<br>');
+  const has    = s => (s||'').trim().length > 0;
+  const dash   = s => has(s) ? esc(s) : '—';
+  const cv     = s => (s||'').replace(/"/g,'\\"').replace(/\n/g,' ');  // safe for CSS content:""
+  const trunc  = (s,n) => s.length>n ? s.slice(0,n-3)+'...' : s;
+
   let n = 0;
   const sec = (title, body) => !has(body) ? '' :
-    `<div class="sec"><h2>${++n}. ${title.toUpperCase()}</h2><div class="sb">${nl(body)}</div></div>`;
+    `<div class="sec"><div class="sh">${++n}.&nbsp;&nbsp;${title.toUpperCase()}</div><div class="sb">${nl(body)}</div></div>`;
+
   const r4 = (l1,v1,l2,v2) =>
-    `<tr><td class="ctl">${l1}</td><td class="ctv">${esc(v1)||'—'}</td>`+
-    `<td class="ctl">${l2||''}</td><td class="ctv">${esc(v2)||''}</td></tr>`;
+    `<tr><td class="ctl">${l1}</td><td class="ctv">${dash(v1)}</td>`+
+    (l2?`<td class="ctl">${l2}</td><td class="ctv">${dash(v2)}</td>`:`<td class="ctl" style="background:#fff;border:none"></td><td class="ctv" style="border:none"></td>`)+`</tr>`;
 
-  const sharedCSS = `*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#1a1a1a;background:#fff;line-height:1.5}
-h1{font-size:13.5pt;font-weight:700;color:#1C2B3A;margin:0 0 14px;line-height:1.3;border-bottom:3px solid #1C2B3A;padding-bottom:8px}
-h2{font-size:9.5pt;font-weight:700;letter-spacing:.04em;margin:16px 0 5px;padding-bottom:3px;border-bottom:1.5px solid #1C2B3A;color:#1C2B3A;page-break-after:avoid}
-.sb{font-size:10pt;margin-top:6px;line-height:1.7}
-.sec{margin-bottom:12px;page-break-inside:avoid}
-.ctrl{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:9pt;page-break-inside:avoid}
-.ctl{background:#F0E8DC;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:5px 9px;border:1px solid #C8BFB5;font-size:8pt;color:#3c3632;width:22%;white-space:nowrap;vertical-align:top}
-.ctv{padding:5px 9px;border:1px solid #C8BFB5;font-size:9.5pt;vertical-align:top}
-.divider{height:1px;background:#C8BFB5;margin:18px 0}
-.sign-title{font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;margin-bottom:18px;padding-bottom:4px;border-bottom:1px solid #C8BFB5}
-.sign-row{display:flex;gap:24px;margin-top:4px}
-.sign-box{flex:1;text-align:center}
-.s-line{height:1px;background:#9c8e84;margin:44px 0 8px}
-.s-role{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#9c8e84;font-weight:700}
-.s-name{font-size:9.5pt;font-weight:700;color:#1C2B3A;margin-top:3px}
-.print-header,.print-footer{display:none}
-.screen-header{background:#1C2B3A;padding:20px 36px 16px}
-.sh-brand{font-size:7.5pt;letter-spacing:.18em;text-transform:uppercase;color:#E0B8C8;margin-bottom:4px}
-.sh-folio{font-family:'Courier New',monospace;font-size:18pt;font-weight:700;color:#E0B8C8;letter-spacing:.06em;margin-bottom:4px}
-.sh-nom{font-size:12pt;color:#fff;line-height:1.3}
-.id-strip{display:flex;background:#F0E8DC;border-bottom:1px solid #C8BFB5}
-.ii{flex:1;padding:7px 14px;border-right:1px solid #C8BFB5;font-size:8.5pt}
-.ii:last-child{border-right:none}
-.il{font-size:6.5pt;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;display:block;margin-bottom:2px}
-.iv{font-weight:600;color:#1C2B3A}
-.pw{padding:24px 36px 40px;max-width:780px;margin:0 auto}
-@media print{
-  @page{size:letter;margin:30mm 18mm 20mm}
-  .screen-header,.id-strip{display:none!important}
-  .pw{padding:0;max-width:none}
-  .print-header{display:flex!important;position:fixed;top:0;left:0;right:0;height:26mm;background:#fff;padding:5mm 18mm 4mm;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #1C2B3A}
-  .print-footer{display:flex!important;position:fixed;bottom:0;left:0;right:0;height:16mm;background:#fff;padding:0 18mm;align-items:center;justify-content:space-between;font-size:7.5pt;color:#9c8e84;border-top:1px solid #C8BFB5}
-  .ph-folio{font-family:'Courier New',monospace;font-size:8pt;color:#9a6070;font-weight:700;letter-spacing:.08em;display:block}
-  .ph-title{font-size:8.5pt;font-weight:600;color:#1C2B3A;display:block}
-  .ph-right{font-size:9.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1C2B3A;white-space:nowrap}
-}`;
+  // Valores pre-escapados para inyectar en CSS content:"..."
+  const CV_folio   = cv(d.folio||'');
+  const CV_ptitle  = cv(trunc(d.nombre||'',52));
+  const CV_elab    = cv(d.respElab||'—');
+  const CV_auth    = cv(d.autorizadoPor||'—');
+  const CV_vigFrom = cv(d.fechaAutorizacion||'—');
+  const CV_vigTo   = cv(d.fechaVencimiento||'—');
 
-  if (forWord) {
-    return `<!DOCTYPE html>
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset="UTF-8"><title>${esc(d.folio)}</title>
-<style>${sharedCSS}body{padding:20mm 20mm 15mm}</style></head>
-<body>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:2px solid #1C2B3A;margin-bottom:20px;padding-bottom:10px">
+  // CSS compartido entre PDF y Word (body/secciones/tablas)
+  const css = `*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#1a1a1a;background:#fff;line-height:1.55}
+/* Bloque de título */
+.tb{width:100%;border-collapse:collapse;border:1.5px solid #1C2B3A;margin-bottom:20px}
+.tb td{border:1px solid #C8BFB5}
+.tb-brand{background:#1C2B3A;padding:10px 14px;vertical-align:middle}
+.tb-gm{font-size:10.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;display:block}
+.tb-sub{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:#E0B8C8;display:block;margin-top:2px}
+.tb-fc{padding:10px 14px;text-align:right;vertical-align:middle;background:#F8F5F0;white-space:nowrap}
+.tb-folio{font-family:'Courier New',monospace;font-size:14pt;font-weight:700;color:#9a6070;display:block;letter-spacing:.06em}
+.tb-ver{font-size:8pt;color:#9c8e84;display:block;margin-top:3px}
+.tb-tc{padding:12px 14px;background:#F0E8DC;border-top:1.5px solid #1C2B3A;border-bottom:1.5px solid #1C2B3A}
+.tb-dt{font-size:12.5pt;font-weight:700;color:#1C2B3A;text-transform:uppercase;letter-spacing:.02em}
+.tb-ds{font-size:8pt;color:#9c8e84;margin-top:3px;letter-spacing:.04em}
+/* Tabla de control */
+.ctrl{width:100%;border-collapse:collapse}
+.ctl{background:#F5F1EA;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#3c3632;padding:5px 10px;border:1px solid #C8BFB5;white-space:nowrap;vertical-align:middle;width:20%}
+.ctv{font-size:9.5pt;padding:5px 10px;border:1px solid #C8BFB5;vertical-align:middle}
+.hier-c{padding:6px 12px;border:1px solid #C8BFB5;background:#EAF4EE;font-size:8.5pt;color:#2D6B47}
+.hier-l{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5A9E72;margin-right:6px}
+/* Grupo de secciones */
+.sg{font-size:7.5pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#9c8e84;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #C8BFB5}
+/* Secciones tipo formulario */
+.sec{margin:0 0 8px;border:1px solid #C8BFB5;border-radius:2px;page-break-inside:avoid;overflow:hidden}
+.sh{background:#1C2B3A;color:#fff;padding:6px 12px;font-size:9pt;font-weight:700;letter-spacing:.04em}
+.sb{padding:11px 12px;font-size:10pt;line-height:1.75;min-height:44px;color:#1a1a1a}
+/* Tabla de firmas */
+.sign-t{width:100%;border-collapse:collapse;margin-top:20px;border:1.5px solid #1C2B3A;page-break-inside:avoid}
+.sign-hdr{background:#1C2B3A;color:#E0B8C8;font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;text-align:left}
+.sbox{width:33%;border:1px solid #C8BFB5;vertical-align:top}
+.srole{background:#F5F1EA;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3c3632;padding:5px 10px;border-bottom:1px solid #C8BFB5;text-align:center}
+.ssp{height:52px;border-bottom:1px solid #9c8e84;margin:0 16px}
+.sname{padding:6px 10px;font-size:9.5pt;font-weight:700;color:#1C2B3A;text-align:center}
+.sdate{padding:4px 10px;font-size:8pt;color:#9c8e84;text-align:center;border-top:1px solid #C8BFB5}
+/* Historial */
+.hist-t{width:100%;border-collapse:collapse;font-size:9pt;margin-top:8px}
+.hist-t th{background:#1C2B3A;color:#E0B8C8;padding:5px 10px;font-size:8pt;letter-spacing:.06em;font-weight:700;text-align:left}
+.hist-t td{padding:5px 10px;border:1px solid #C8BFB5}
+.hist-t tr:nth-child(even) td{background:#F8F5F0}
+.divider{height:1.5px;background:#1C2B3A;margin:20px 0}`;
+
+  // Bloque de título (igual para PDF y Word)
+  const TB = `<table class="tb" cellpadding="0" cellspacing="0">
 <tr>
-  <td style="vertical-align:bottom">
-    <div style="font-family:'Courier New',monospace;font-size:8pt;color:#9a6070;font-weight:700;letter-spacing:.08em">${esc(d.folio)}</div>
-    <div style="font-size:9pt;font-weight:600;color:#1C2B3A">${esc(d.nombre)}</div>
-  </td>
-  <td style="text-align:right;font-size:10pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#1C2B3A;white-space:nowrap;padding-left:20px;vertical-align:bottom">GRUPO MORSA</td>
+  <td class="tb-brand"><span class="tb-gm">Grupo Morsa</span><span class="tb-sub">Control Documental &nbsp;·&nbsp; Política Organizacional</span></td>
+  <td class="tb-fc"><span class="tb-folio">${esc(d.folio)}</span><span class="tb-ver">Versión ${d.version} &nbsp;·&nbsp; Uso Interno</span></td>
 </tr>
-<tr><td colspan="2" style="font-size:7.5pt;color:#9c8e84;padding-top:2px">Control Documental · Política Organizacional</td></tr>
-</table>
-<h1>${esc(d.nombre)}</h1>
-<table class="ctrl" cellpadding="0" cellspacing="0">
-  ${r4('Folio',d.folio,'Versión',`v${d.version}`)}
-  ${r4('Estado',d.status,'Vigencia',d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—')}
-  ${r4('Fecha Autorización',d.fechaAutorizacion,'Vencimiento',d.fechaVencimiento)}
-  ${r4('Dir. Responsable',d.respDir,'Elaboró',d.respElab)}
-  ${r4('Autorizó',d.autorizadoPor,'Colaboradores',d.colaboradores||'—')}
-  ${has(d.numReglas)?r4('# de Reglas',d.numReglas,'',''):''}
-</table>
-<div class="divider"></div>
+<tr><td colspan="2" class="tb-tc"><div class="tb-dt">${esc(d.nombre)}</div><div class="tb-ds">${esc(d.dir)}</div></td></tr>
+<tr><td colspan="2" style="padding:0">
+  <table class="ctrl" cellpadding="0" cellspacing="0">
+    ${r4('Estado',d.status,'Dirección Responsable',d.respDir)}
+    ${r4('Vigencia',d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—','Elaboró',d.respElab)}
+    ${r4('Fecha Autorización',d.fechaAutorizacion,'Autorizó',d.autorizadoPor)}
+    ${r4('Vigente hasta',d.fechaVencimiento,'Colaboradores',d.colaboradores||'—')}
+    ${has(d.numReglas)?r4('# de Reglas',d.numReglas,'',''):''}
+  </table>
+</td></tr>
+<tr><td colspan="2" class="hier-c"><span class="hier-l">Jerarquía:</span>${esc(d.dir)} &rsaquo; ${esc(d.area)} &rsaquo; ${esc(d.dept)} &rsaquo; ${esc(d.act)}</td></tr>
+</table>`;
+
+  // Secciones de contenido
+  const SECS = `<div class="sg">Contenido de la Política</div>
 ${sec('Propósito y Objetivo',d.objeto)}
 ${sec('Alcance',d.alcance)}
 ${sec('Definiciones',d.definiciones)}
 ${sec('Lineamientos y Reglas',d.contenido)}
 ${sec('Sanciones por Incumplimiento',d.sanciones)}
 ${sec('Excepciones',d.excepciones)}
+<div class="sg">Comunicación e Implementación</div>
 ${sec('Canal de Comunicación',d.canal)}
 ${sec('Esquema de Capacitación',d.capacitacion)}
-${sec('Directrices y Valores Asociados',d.directrices)}
-<div class="divider"></div>
-<div class="sign-title">Control de Aprobaciones</div>
-<div class="sign-row">
-  <div class="sign-box"><div class="s-line"></div><div class="s-role">Elaboró</div><div class="s-name">${esc(d.respElab)||'___________________________'}</div></div>
-  <div class="sign-box"><div class="s-line"></div><div class="s-role">Revisó</div><div class="s-name">___________________________</div></div>
-  <div class="sign-box"><div class="s-line"></div><div class="s-role">Autorizó</div><div class="s-name">${esc(d.autorizadoPor)||'___________________________'}</div></div>
+${sec('Directrices y Valores Asociados',d.directrices)}`;
+
+  // Tabla de firmas
+  const SIGNS = `<table class="sign-t" cellpadding="0" cellspacing="0">
+<tr><td colspan="3" class="sign-hdr">Control de Aprobaciones</td></tr>
+<tr>
+  <td class="sbox"><div class="srole">Elaboró</div><div class="ssp"></div><div class="sname">${dash(d.respElab)}</div><div class="sdate">Nombre y Firma</div></td>
+  <td class="sbox"><div class="srole">Revisó</div><div class="ssp"></div><div class="sname">___________________________</div><div class="sdate">Nombre y Firma</div></td>
+  <td class="sbox"><div class="srole">Autorizó</div><div class="ssp"></div><div class="sname">${dash(d.autorizadoPor)}</div><div class="sdate">Nombre y Firma</div></td>
+</tr>
+</table>`;
+
+  // Historial de revisiones
+  const HIST = `<div class="sg">Historial de Revisiones</div>
+<table class="hist-t" cellpadding="0" cellspacing="0">
+<thead><tr><th>Versión</th><th>Estado</th><th>Fecha Autorización</th><th>Vigencia</th><th>Elaboró</th><th>Autorizó</th></tr></thead>
+<tbody><tr>
+  <td style="text-align:center;font-family:'Courier New',monospace;font-weight:700">${d.version}</td>
+  <td>${esc(d.status)}</td><td>${dash(d.fechaAutorizacion)}</td>
+  <td>${d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—'}</td>
+  <td>${dash(d.respElab)}</td><td>${dash(d.autorizadoPor)}</td>
+</tr></tbody>
+</table>`;
+
+  if (forWord) {
+    // WORD — encabezado y pie via mso-element:header/footer
+    return `<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset="UTF-8"><title>${esc(d.folio)}</title>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml>
+<style>
+${css}
+@page Section1{
+  size:216mm 279mm;margin:25.4mm 19mm 25.4mm 19mm;
+  mso-header-margin:14mm;mso-footer-margin:12mm;
+  mso-header:h1;mso-footer:f1;mso-paper-source:0
+}
+div.Section1{page:Section1}
+body{padding:0;margin:0}
+</style></head>
+<body>
+<!-- ═══ ENCABEZADO — aparece en CADA página en Word ═══ -->
+<div style="mso-element:header" id="h1">
+  <table width="100%" cellpadding="4" cellspacing="0" border="0" style="border-bottom:1.5pt solid #1C2B3A">
+    <tr>
+      <td style="font-family:'Courier New',monospace;font-size:8pt;font-weight:bold;color:#9a6070;vertical-align:bottom">${esc(d.folio)}</td>
+      <td style="font-size:8pt;color:#1C2B3A;font-weight:600;text-align:center;vertical-align:bottom">${esc(trunc(d.nombre||'',52))}</td>
+      <td style="font-size:9pt;font-weight:700;color:#1C2B3A;text-align:right;letter-spacing:.1em;white-space:nowrap;vertical-align:bottom">GRUPO MORSA</td>
+    </tr>
+  </table>
 </div>
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #C8BFB5;margin-top:28px;padding-top:8px;font-size:7.5pt;color:#9c8e84">
-  <tr>
-    <td>Grupo Morsa · Control Documental · ${esc(d.folio)} · v${d.version}</td>
-    <td style="text-align:right">Generado el ${d.generadoEl}</td>
-  </tr>
-</table>
+<!-- ═══ PIE DE PÁGINA — aparece en CADA página en Word ═══ -->
+<div style="mso-element:footer" id="f1">
+  <table width="100%" cellpadding="4" cellspacing="0" border="0" style="border-top:1pt solid #C8BFB5">
+    <tr>
+      <td style="font-size:7pt;color:#9c8e84">Elaboró: ${dash(d.respElab)} &nbsp;·&nbsp; Autorizó: ${dash(d.autorizadoPor)} &nbsp;·&nbsp; Vigente: ${dash(d.fechaAutorizacion)} – ${dash(d.fechaVencimiento)}</td>
+      <td style="font-size:7.5pt;color:#9c8e84;text-align:right;white-space:nowrap">
+        Pág.&nbsp;<span style="mso-field-code:PAGE">&nbsp;</span>&nbsp;/&nbsp;<span style="mso-field-code:NUMPAGES">&nbsp;</span>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="font-size:7pt;color:#9c8e84">Grupo Morsa &nbsp;·&nbsp; Control Documental &nbsp;·&nbsp; Uso Interno &nbsp;·&nbsp; Generado el ${d.generadoEl}</td>
+    </tr>
+  </table>
+</div>
+<!-- ═══ CUERPO DEL DOCUMENTO ═══ -->
+<div class="Section1">
+${TB}
+${SECS}
+${SIGNS}
+${HIST}
+</div>
 </body></html>`;
   }
 
-  // PDF — abre en ventana nueva y lanza diálogo de impresión
+  // PDF — encabezado/pie via @page margin boxes (Chrome 131+)
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><title>${esc(d.folio)} · ${esc(d.nombre)}</title>
-<style>${sharedCSS}</style></head>
+<style>
+${css}
+@media print{
+  @page{
+    size:letter;
+    margin:34mm 18mm 28mm;
+    @top-left{
+      content:"${CV_folio}\\A ${CV_ptitle}";
+      white-space:pre;
+      font-family:'Courier New',monospace;
+      font-size:7.5pt;font-weight:bold;color:#9a6070;
+      vertical-align:bottom
+    }
+    @top-right{
+      content:"GRUPO MORSA";
+      font-size:9.5pt;font-weight:bold;
+      color:#1C2B3A;letter-spacing:.1em;
+      vertical-align:bottom
+    }
+    @bottom-left{
+      content:"Elaboró: ${CV_elab}  ·  Autorizó: ${CV_auth}  ·  Vigente: ${CV_vigFrom} – ${CV_vigTo}";
+      font-size:7pt;color:#9c8e84;vertical-align:top
+    }
+    @bottom-right{
+      content:"Pág. " counter(page) " / " counter(pages);
+      font-size:8pt;color:#9c8e84;vertical-align:top
+    }
+  }
+  body{font-size:9.5pt}
+  .sec{page-break-inside:avoid}
+  .sign-t{page-break-inside:avoid}
+}
+@media screen{
+  body{max-width:900px;margin:0 auto;padding:24px 32px 48px}
+}
+</style></head>
 <body>
-<div class="print-header">
-  <div><span class="ph-folio">${esc(d.folio)}</span><span class="ph-title">${esc(d.nombre)}</span></div>
-  <div class="ph-right">GRUPO MORSA</div>
-</div>
-<div class="print-footer">
-  <span>Grupo Morsa · Control Documental · ${esc(d.folio)} · v${d.version}</span>
-  <span>Generado el ${d.generadoEl}</span>
-</div>
-<div class="screen-header">
-  <div class="sh-brand">Grupo Morsa · Control Documental · Política Organizacional</div>
-  <div class="sh-folio">${esc(d.folio)}</div>
-  <div class="sh-nom">${esc(d.nombre)}</div>
-</div>
-<div class="id-strip">
-  <div class="ii"><span class="il">Dirección</span><span class="iv">${esc(d.dir)}</span></div>
-  <div class="ii"><span class="il">Área</span><span class="iv">${esc(d.area)}</span></div>
-  <div class="ii"><span class="il">Departamento</span><span class="iv">${esc(d.dept)}</span></div>
-  <div class="ii"><span class="il">Actividad</span><span class="iv">${esc(d.act)}</span></div>
-</div>
-<div class="pw">
-  <h1>${esc(d.nombre)}</h1>
-  <table class="ctrl" cellpadding="0" cellspacing="0">
-    ${r4('Folio',d.folio,'Versión',`v${d.version}`)}
-    ${r4('Estado',d.status,'Vigencia',d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—')}
-    ${r4('Fecha Autorización',d.fechaAutorizacion,'Vencimiento',d.fechaVencimiento)}
-    ${r4('Dir. Responsable',d.respDir,'Elaboró',d.respElab)}
-    ${r4('Autorizó',d.autorizadoPor,'Colaboradores',d.colaboradores||'—')}
-    ${has(d.numReglas)?r4('# de Reglas',d.numReglas,'',''):''}
-  </table>
-  <div class="divider"></div>
-  ${sec('Propósito y Objetivo',d.objeto)}
-  ${sec('Alcance',d.alcance)}
-  ${sec('Definiciones',d.definiciones)}
-  ${sec('Lineamientos y Reglas',d.contenido)}
-  ${sec('Sanciones por Incumplimiento',d.sanciones)}
-  ${sec('Excepciones',d.excepciones)}
-  ${sec('Canal de Comunicación',d.canal)}
-  ${sec('Esquema de Capacitación',d.capacitacion)}
-  ${sec('Directrices y Valores Asociados',d.directrices)}
-  <div class="divider"></div>
-  <div class="sign-title">Control de Aprobaciones</div>
-  <div class="sign-row">
-    <div class="sign-box"><div class="s-line"></div><div class="s-role">Elaboró</div><div class="s-name">${esc(d.respElab)||'___________________________'}</div></div>
-    <div class="sign-box"><div class="s-line"></div><div class="s-role">Revisó</div><div class="s-name">___________________________</div></div>
-    <div class="sign-box"><div class="s-line"></div><div class="s-role">Autorizó</div><div class="s-name">${esc(d.autorizadoPor)||'___________________________'}</div></div>
-  </div>
-</div>
+${TB}
+${SECS}
+${SIGNS}
+${HIST}
 </body></html>`;
 }
 
