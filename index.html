@@ -2583,9 +2583,8 @@ async function generatePDF() {
         .order('created_at', { ascending: true });
       versHist = data || [];
     }
-    const versionNum = versHist.length > 0
-      ? Math.max(...versHist.map(v => v.version)) + 1
-      : (parseInt(d.version) || 1);
+    // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
+    const versionNum = parseInt(d.version) || 1;
 
     // Paleta
     const NAVY='#1C2B3A', MAUVE='#9A6070', GRAY='#9C8E84';
@@ -2729,13 +2728,14 @@ async function generatePDF() {
       const storagePath = `${d.politicaId}/${fileName}`;
       await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob,
         { contentType:'application/pdf', upsert:true });
+      // Reemplazar registro previo del mismo tipo para esta versión (evitar duplicados al regenerar)
+      await sb.from('pol_versiones').delete()
+        .eq('politica_id', d.politicaId).eq('version', versionNum).ilike('nombre_archivo', '%.pdf');
       await sb.from('pol_versiones').insert({
         politica_id: d.politicaId, version: versionNum, folio: d.folio,
         fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
         elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
       });
-      await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
-      if (politicaActual) politicaActual.version = versionNum;
       loadCatalogo();
     }
 
@@ -2765,9 +2765,8 @@ async function _generateWordCore(d) {
         .order('created_at', { ascending: true });
       versiones = vData || [];
     }
-    const versionNum = versiones.length > 0
-      ? Math.max(...versiones.map(v => v.version)) + 1
-      : (parseInt(d.version) || 1);
+    // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
+    const versionNum = parseInt(d.version) || 1;
 
     // ── Paleta ──────────────────────────────────────────────────────────────
     const NAVY='1C2B3A', MAUVE='9A6070', GRAY='9C8E84';
@@ -2991,8 +2990,11 @@ async function _generateWordCore(d) {
         storagePath, blob,
         { contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert:true }
       );
-      if (upErr) console.error('[Word] Storage upload error:', upErr.message);
+      if (upErr) { console.error('[Word] Storage upload error:', upErr.message); }
 
+      // Reemplazar registro previo del mismo tipo para esta versión (evitar duplicados al regenerar)
+      await sb.from('pol_versiones').delete()
+        .eq('politica_id', d.politicaId).eq('version', versionNum).ilike('nombre_archivo', '%.docx');
       const { error: insErr } = await sb.from('pol_versiones').insert({
         politica_id: d.politicaId, version: versionNum, folio: d.folio,
         fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
@@ -3000,10 +3002,7 @@ async function _generateWordCore(d) {
       });
       if (insErr) {
         console.error('[Word] pol_versiones insert error:', insErr.message);
-        alert('Word generado pero no se registró en el repositorio: ' + insErr.message);
       } else {
-        await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
-        if (politicaActual) politicaActual.version = versionNum;
         loadCatalogo();
       }
     }
