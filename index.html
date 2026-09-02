@@ -1422,14 +1422,16 @@ async function loadRepositorio() {
   // Render con filtros reactivos
   window._repoData = enriched;
   window.renderRepo = function() {
-    const ftipo  = document.getElementById('repo-ftipo')?.value  || '';
-    const fdir   = document.getElementById('repo-fdir')?.value   || '';
-    const farch  = document.getElementById('repo-farch')?.value  || '';
-    const fsrch  = (document.getElementById('repo-search')?.value || '').toLowerCase();
+    const ftipo    = document.getElementById('repo-ftipo')?.value    || '';
+    const farch    = document.getElementById('repo-farch')?.value    || '';
+    const festatus = document.getElementById('repo-festatus')?.value || '';
+    const fdir     = document.getElementById('repo-fdir')?.value     || '';
+    const fsrch    = (document.getElementById('repo-search')?.value  || '').toLowerCase();
 
     const filtered = enriched.filter(e => {
-      if (ftipo && e.cat.tipo_documento !== ftipo) return false;
-      if (fdir  && e.dir.id !== fdir) return false;
+      if (ftipo    && e.cat.tipo_documento !== ftipo) return false;
+      if (festatus && effectiveStatus(e.pol) !== festatus) return false;
+      if (fdir     && e.dir.id !== fdir) return false;
       if (farch) {
         const isPdf = (e.v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
         if (farch === 'pdf' && !isPdf) return false;
@@ -1464,6 +1466,7 @@ async function loadRepositorio() {
         <td style="padding:6px 8px;font-size:11px">${e.dept.nombre}</td>
         <td style="padding:6px 8px"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600">${e.cat.nombre||e.act.nombre}</span><span style="font-family:var(--ff-mono);font-size:10px;color:var(--fog)">${e.cat.codigo_documento||''}</span></div></td>
         <td style="padding:6px 8px;text-align:center">${tipoDocBadge(e.cat.tipo_documento)}</td>
+        <td style="padding:6px 8px;text-align:center">${badge(effectiveStatus(e.pol))}</td>
         <td style="padding:6px 8px;text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:11px;color:var(--ember-deep)">v${e.v.version}</td>
         <td style="padding:6px 8px;text-align:center">${tipoArchBadge(e.v.nombre_archivo)}</td>
         <td style="padding:6px 8px;font-size:10px;color:var(--fog);white-space:nowrap">${fmtDT(e.v.created_at)}</td>
@@ -1489,6 +1492,14 @@ async function loadRepositorio() {
         <option value="word">Solo Word</option>
         <option value="pdf">Solo PDF</option>
       </select>
+      <select id="repo-festatus" class="cat-filter-select" onchange="renderRepo()">
+        <option value="">Todos los estatus</option>
+        <option value="borrador">Borrador</option>
+        <option value="en_revision">En Revisión</option>
+        <option value="autorizado">Autorizado</option>
+        <option value="publicado">Publicado</option>
+        <option value="vencido">Vencido</option>
+      </select>
       <select id="repo-fdir" class="cat-filter-select" onchange="renderRepo()">
         <option value="">Todas las Direcciones</option>${dirOpts}
       </select>
@@ -1504,6 +1515,7 @@ async function loadRepositorio() {
         <th>Departamento</th>
         <th>Documento</th>
         <th style="text-align:center">Tipo Doc</th>
+        <th style="text-align:center">Estatus</th>
         <th style="text-align:center;white-space:nowrap">Ver.</th>
         <th style="text-align:center;white-space:nowrap">Archivo</th>
         <th style="white-space:nowrap">Fecha</th>
