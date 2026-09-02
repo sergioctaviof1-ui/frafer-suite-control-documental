@@ -632,6 +632,8 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span id="pol-badge"></span>
         <button id="btn-cerrar-pol" class="btn" style="display:none;background:transparent;border:1px solid rgba(192,136,152,.4);color:var(--ember-glow);font-size:12px;padding:6px 12px" onclick="clearCurrentPolitica()">× Cerrar</button>
+        <button id="btn-adjuntar" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="document.getElementById('input-adjuntar').click()" title="Adjuntar documento Word o PDF existente">Adjuntar</button>
+        <input type="file" id="input-adjuntar" style="display:none" accept=".pdf,.doc,.docx" onchange="handleAdjunto(this)">
         <button id="btn-gen-pdf" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generatePDF()" title="Generar PDF de esta política">PDF</button>
         <button id="btn-gen-word" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generateWord()" title="Descargar plantilla Word editable">Word</button>
         <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
@@ -655,6 +657,13 @@ input,textarea,select{font-family:inherit}
     <div class="doc-lifecycle">
       <div class="doc-lifecycle-label">Ciclo de Vida</div>
       <div class="flow-row" id="status-flow"></div>
+    </div>
+
+    <!-- BANNER: Documento adjunto -->
+    <div id="doc-adjunto-banner" style="display:none;padding:8px 40px;background:#EAF4EE;border-bottom:1px solid #5A9E7230;align-items:center;gap:10px">
+      <span style="font-size:10px;font-family:var(--ff-mono);letter-spacing:.06em;text-transform:uppercase;color:#2D6B47">Documento adjunto</span>
+      <a id="doc-adjunto-link" href="#" target="_blank" style="font-size:11px;color:var(--ember-deep);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px" id="doc-adjunto-nombre">—</a>
+      <button onclick="removeAdjunto()" style="margin-left:auto;font-size:10px;color:var(--fog);background:none;border:none;cursor:pointer;font-family:var(--ff-mono)">× Eliminar</button>
     </div>
 
     <!-- TABS -->
@@ -1400,8 +1409,10 @@ async function openPolitica(catalogoId, polId) {
   if (btnC) btnC.style.display = '';
   const btnPDF  = document.getElementById('btn-gen-pdf');
   const btnWord = document.getElementById('btn-gen-word');
+  const btnAdj  = document.getElementById('btn-adjuntar');
   if (btnPDF)  btnPDF.style.display  = '';
   if (btnWord) btnWord.style.display = '';
+  if (btnAdj)  btnAdj.style.display  = '';
 
   const cat = catalogo.find(c=>c.id===catalogoId);
   document.getElementById('pol-form-title').textContent = cat ? cat.nombre : 'Política';
@@ -1514,6 +1525,8 @@ function fillPoliticaForm(pol) {
   // auto-calc vencimiento
   document.getElementById('pol-vigencia-meses')?.addEventListener('input', calcVencimiento);
   document.getElementById('pol-fecha-inicio')?.addEventListener('input', calcVencimiento);
+  // Mostrar documento adjunto si existe
+  renderDocAdjunto();
 }
 
 function calcVencimiento() {
@@ -1810,8 +1823,13 @@ function clearCurrentPolitica() {
   document.getElementById('btn-cerrar-pol').style.display = 'none';
   const bPDF = document.getElementById('btn-gen-pdf');
   const bWord = document.getElementById('btn-gen-word');
+  const bAdj  = document.getElementById('btn-adjuntar');
   if (bPDF)  bPDF.style.display  = 'none';
   if (bWord) bWord.style.display = 'none';
+  if (bAdj)  bAdj.style.display  = 'none';
+  // Ocultar banner de adjunto
+  const banner = document.getElementById('doc-adjunto-banner');
+  if (banner) banner.style.display = 'none';
   // Limpiar strip y ciclo de vida
   document.getElementById('status-flow').innerHTML = '';
   ['pol-ident-dir','pol-ident-area','pol-ident-dept','pol-ident-act'].forEach(id => {
@@ -1857,90 +1875,159 @@ function _getDocData() {
 }
 
 function _buildDocHTML(d, forWord) {
-  const sec = (titulo, contenido) => contenido?.trim()
-    ? `<div class="sec"><div class="sec-title">${titulo}</div><div class="sec-body">${contenido.replace(/\n/g,'<br>')}</div></div>`
-    : '';
-  const row = (lbl, val) => `<tr><td class="ct-lbl">${lbl}</td><td class="ct-val">${val||'—'}</td></tr>`;
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nl  = s => esc(s||'').replace(/\n/g,'<br>');
+  const has = s => (s||'').trim().length > 0;
+  let n = 0;
+  const sec = (title, body) => !has(body) ? '' :
+    `<div class="sec"><h2>${++n}. ${title.toUpperCase()}</h2><div class="sb">${nl(body)}</div></div>`;
+  const r4 = (l1,v1,l2,v2) =>
+    `<tr><td class="ctl">${l1}</td><td class="ctv">${esc(v1)||'—'}</td>`+
+    `<td class="ctl">${l2||''}</td><td class="ctv">${esc(v2)||''}</td></tr>`;
 
-  return `<!DOCTYPE html>
-<html${forWord ? " xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'" : ''}>
-<head>
-<meta charset="UTF-8">
-<title>${d.folio} · ${d.nombre}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#1a1a1a;background:#fff;max-width:820px;margin:0 auto;padding:${forWord?'0':'32px 40px'}}
-  .doc-header{background:#1C2B3A;color:#fff;padding:20px 28px 16px;margin-bottom:0;page-break-inside:avoid}
-  .dh-brand{font-size:9pt;letter-spacing:.18em;text-transform:uppercase;color:#E0B8C8;margin-bottom:4px;font-family:Arial,sans-serif}
-  .dh-tipo{font-size:8pt;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);font-family:Arial,sans-serif}
-  .dh-folio{font-family:'Courier New',monospace;font-size:18pt;font-weight:700;color:#E0B8C8;letter-spacing:.08em;margin:10px 0 4px}
-  .dh-nombre{font-size:14pt;color:#fff;font-weight:400;line-height:1.35}
-  .ident-strip{display:flex;gap:0;background:#f5f0eb;border:1px solid #c8bfb5;margin-bottom:0;page-break-inside:avoid}
-  .ident-item{flex:1;padding:8px 12px;border-right:1px solid #c8bfb5;min-width:0}
-  .ident-item:last-child{border-right:none}
-  .ident-lbl{font-size:7pt;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;font-family:Arial,sans-serif;margin-bottom:2px}
-  .ident-val{font-size:9pt;color:#2a2826;font-weight:600;font-family:Arial,sans-serif;word-break:break-word}
-  .ctrl-table{width:100%;border-collapse:collapse;margin-bottom:0;page-break-inside:avoid;font-family:Arial,sans-serif;font-size:9pt}
-  .ctrl-table td{padding:6px 10px;border:1px solid #c8bfb5}
-  .ct-lbl{background:#f5f0eb;width:25%;font-weight:700;color:#3c3632;font-size:8pt;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
-  .ct-val{color:#2a2826}
-  .sec{margin:16px 0;page-break-inside:avoid}
-  .sec-title{font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9a6070;font-family:Arial,sans-serif;margin-bottom:6px;padding-bottom:4px;border-bottom:1.5px solid #E0B8C8}
-  .sec-body{font-size:10.5pt;line-height:1.65;color:#2a2826}
-  .divider{height:1px;background:#c8bfb5;margin:20px 0}
-  .footer{margin-top:32px;padding-top:12px;border-top:1px solid #c8bfb5;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;font-size:8pt;color:#9c8e84;page-break-inside:avoid}
-  .sign-row{display:flex;gap:32px;margin-top:24px;page-break-inside:avoid}
-  .sign-box{flex:1;text-align:center;padding-top:32px;border-top:1px solid #9c8e84;font-family:Arial,sans-serif;font-size:8pt;color:#5a5450}
-  @media print{body{padding:0}@page{margin:18mm 20mm}}
-</style>
-</head>
+  const sharedCSS = `*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#1a1a1a;background:#fff;line-height:1.5}
+h1{font-size:13.5pt;font-weight:700;color:#1C2B3A;margin:0 0 14px;line-height:1.3;border-bottom:3px solid #1C2B3A;padding-bottom:8px}
+h2{font-size:9.5pt;font-weight:700;letter-spacing:.04em;margin:16px 0 5px;padding-bottom:3px;border-bottom:1.5px solid #1C2B3A;color:#1C2B3A;page-break-after:avoid}
+.sb{font-size:10pt;margin-top:6px;line-height:1.7}
+.sec{margin-bottom:12px;page-break-inside:avoid}
+.ctrl{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:9pt;page-break-inside:avoid}
+.ctl{background:#F0E8DC;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:5px 9px;border:1px solid #C8BFB5;font-size:8pt;color:#3c3632;width:22%;white-space:nowrap;vertical-align:top}
+.ctv{padding:5px 9px;border:1px solid #C8BFB5;font-size:9.5pt;vertical-align:top}
+.divider{height:1px;background:#C8BFB5;margin:18px 0}
+.sign-title{font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;margin-bottom:18px;padding-bottom:4px;border-bottom:1px solid #C8BFB5}
+.sign-row{display:flex;gap:24px;margin-top:4px}
+.sign-box{flex:1;text-align:center}
+.s-line{height:1px;background:#9c8e84;margin:44px 0 8px}
+.s-role{font-size:8pt;text-transform:uppercase;letter-spacing:.06em;color:#9c8e84;font-weight:700}
+.s-name{font-size:9.5pt;font-weight:700;color:#1C2B3A;margin-top:3px}
+.print-header,.print-footer{display:none}
+.screen-header{background:#1C2B3A;padding:20px 36px 16px}
+.sh-brand{font-size:7.5pt;letter-spacing:.18em;text-transform:uppercase;color:#E0B8C8;margin-bottom:4px}
+.sh-folio{font-family:'Courier New',monospace;font-size:18pt;font-weight:700;color:#E0B8C8;letter-spacing:.06em;margin-bottom:4px}
+.sh-nom{font-size:12pt;color:#fff;line-height:1.3}
+.id-strip{display:flex;background:#F0E8DC;border-bottom:1px solid #C8BFB5}
+.ii{flex:1;padding:7px 14px;border-right:1px solid #C8BFB5;font-size:8.5pt}
+.ii:last-child{border-right:none}
+.il{font-size:6.5pt;letter-spacing:.1em;text-transform:uppercase;color:#9c8e84;display:block;margin-bottom:2px}
+.iv{font-weight:600;color:#1C2B3A}
+.pw{padding:24px 36px 40px;max-width:780px;margin:0 auto}
+@media print{
+  @page{size:letter;margin:30mm 18mm 20mm}
+  .screen-header,.id-strip{display:none!important}
+  .pw{padding:0;max-width:none}
+  .print-header{display:flex!important;position:fixed;top:0;left:0;right:0;height:26mm;background:#fff;padding:5mm 18mm 4mm;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #1C2B3A}
+  .print-footer{display:flex!important;position:fixed;bottom:0;left:0;right:0;height:16mm;background:#fff;padding:0 18mm;align-items:center;justify-content:space-between;font-size:7.5pt;color:#9c8e84;border-top:1px solid #C8BFB5}
+  .ph-folio{font-family:'Courier New',monospace;font-size:8pt;color:#9a6070;font-weight:700;letter-spacing:.08em;display:block}
+  .ph-title{font-size:8.5pt;font-weight:600;color:#1C2B3A;display:block}
+  .ph-right{font-size:9.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#1C2B3A;white-space:nowrap}
+}`;
+
+  if (forWord) {
+    return `<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset="UTF-8"><title>${esc(d.folio)}</title>
+<style>${sharedCSS}body{padding:20mm 20mm 15mm}</style></head>
 <body>
-<div class="doc-header">
-  <div class="dh-brand">Grupo Morsa · Control Documental</div>
-  <div class="dh-tipo">Política Organizacional</div>
-  <div class="dh-folio">${d.folio}</div>
-  <div class="dh-nombre">${d.nombre}</div>
-</div>
-<div class="ident-strip">
-  <div class="ident-item"><div class="ident-lbl">Dirección</div><div class="ident-val">${d.dir}</div></div>
-  <div class="ident-item"><div class="ident-lbl">Área</div><div class="ident-val">${d.area}</div></div>
-  <div class="ident-item"><div class="ident-lbl">Departamento</div><div class="ident-val">${d.dept}</div></div>
-  <div class="ident-item"><div class="ident-lbl">Actividad</div><div class="ident-val">${d.act}</div></div>
-</div>
-<table class="ctrl-table">
-  ${row('Versión', `v${d.version}`)}
-  ${row('Estado', d.status)}
-  ${row('Fecha de Autorización', d.fechaAutorizacion)}
-  ${row('Fecha de Vencimiento', d.fechaVencimiento)}
-  ${row('Vigencia', d.vigenciaMeses ? `${d.vigenciaMeses} meses` : '—')}
-  ${row('# de Reglas', d.numReglas || '—')}
-  ${row('Dirección Responsable', d.respDir)}
-  ${row('Elaboró', d.respElab)}
-  ${row('Autorizó', d.autorizadoPor)}
-  ${d.colaboradores ? row('Colaboradores', d.colaboradores) : ''}
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:2px solid #1C2B3A;margin-bottom:20px;padding-bottom:10px">
+<tr>
+  <td style="vertical-align:bottom">
+    <div style="font-family:'Courier New',monospace;font-size:8pt;color:#9a6070;font-weight:700;letter-spacing:.08em">${esc(d.folio)}</div>
+    <div style="font-size:9pt;font-weight:600;color:#1C2B3A">${esc(d.nombre)}</div>
+  </td>
+  <td style="text-align:right;font-size:10pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#1C2B3A;white-space:nowrap;padding-left:20px;vertical-align:bottom">GRUPO MORSA</td>
+</tr>
+<tr><td colspan="2" style="font-size:7.5pt;color:#9c8e84;padding-top:2px">Control Documental · Política Organizacional</td></tr>
+</table>
+<h1>${esc(d.nombre)}</h1>
+<table class="ctrl" cellpadding="0" cellspacing="0">
+  ${r4('Folio',d.folio,'Versión',`v${d.version}`)}
+  ${r4('Estado',d.status,'Vigencia',d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—')}
+  ${r4('Fecha Autorización',d.fechaAutorizacion,'Vencimiento',d.fechaVencimiento)}
+  ${r4('Dir. Responsable',d.respDir,'Elaboró',d.respElab)}
+  ${r4('Autorizó',d.autorizadoPor,'Colaboradores',d.colaboradores||'—')}
+  ${has(d.numReglas)?r4('# de Reglas',d.numReglas,'',''):''}
 </table>
 <div class="divider"></div>
-${sec('Objetivo de la Política', d.objeto)}
-${sec('Alcance', d.alcance)}
-${sec('Definiciones', d.definiciones)}
-${sec('Reglas y Lineamientos', d.contenido)}
-${sec('Sanciones', d.sanciones)}
-${sec('Excepciones', d.excepciones)}
-${sec('Canal de Comunicación', d.canal)}
-${sec('Esquema de Capacitación', d.capacitacion)}
-${sec('Directrices y Valores Asociados', d.directrices)}
+${sec('Propósito y Objetivo',d.objeto)}
+${sec('Alcance',d.alcance)}
+${sec('Definiciones',d.definiciones)}
+${sec('Lineamientos y Reglas',d.contenido)}
+${sec('Sanciones por Incumplimiento',d.sanciones)}
+${sec('Excepciones',d.excepciones)}
+${sec('Canal de Comunicación',d.canal)}
+${sec('Esquema de Capacitación',d.capacitacion)}
+${sec('Directrices y Valores Asociados',d.directrices)}
 <div class="divider"></div>
+<div class="sign-title">Control de Aprobaciones</div>
 <div class="sign-row">
-  <div class="sign-box">Elaboró<br><strong>${d.respElab||'_______________________'}</strong></div>
-  <div class="sign-box">Revisó<br><strong>_______________________</strong></div>
-  <div class="sign-box">Autorizó<br><strong>${d.autorizadoPor||'_______________________'}</strong></div>
+  <div class="sign-box"><div class="s-line"></div><div class="s-role">Elaboró</div><div class="s-name">${esc(d.respElab)||'___________________________'}</div></div>
+  <div class="sign-box"><div class="s-line"></div><div class="s-role">Revisó</div><div class="s-name">___________________________</div></div>
+  <div class="sign-box"><div class="s-line"></div><div class="s-role">Autorizó</div><div class="s-name">${esc(d.autorizadoPor)||'___________________________'}</div></div>
 </div>
-<div class="footer">
-  <span>${d.folio} · v${d.version}</span>
-  <span>Generado el ${d.generadoEl} · Frafer Suite Control Documental</span>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #C8BFB5;margin-top:28px;padding-top:8px;font-size:7.5pt;color:#9c8e84">
+  <tr>
+    <td>Grupo Morsa · Control Documental · ${esc(d.folio)} · v${d.version}</td>
+    <td style="text-align:right">Generado el ${d.generadoEl}</td>
+  </tr>
+</table>
+</body></html>`;
+  }
+
+  // PDF — abre en ventana nueva y lanza diálogo de impresión
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>${esc(d.folio)} · ${esc(d.nombre)}</title>
+<style>${sharedCSS}</style></head>
+<body>
+<div class="print-header">
+  <div><span class="ph-folio">${esc(d.folio)}</span><span class="ph-title">${esc(d.nombre)}</span></div>
+  <div class="ph-right">GRUPO MORSA</div>
 </div>
-</body>
-</html>`;
+<div class="print-footer">
+  <span>Grupo Morsa · Control Documental · ${esc(d.folio)} · v${d.version}</span>
+  <span>Generado el ${d.generadoEl}</span>
+</div>
+<div class="screen-header">
+  <div class="sh-brand">Grupo Morsa · Control Documental · Política Organizacional</div>
+  <div class="sh-folio">${esc(d.folio)}</div>
+  <div class="sh-nom">${esc(d.nombre)}</div>
+</div>
+<div class="id-strip">
+  <div class="ii"><span class="il">Dirección</span><span class="iv">${esc(d.dir)}</span></div>
+  <div class="ii"><span class="il">Área</span><span class="iv">${esc(d.area)}</span></div>
+  <div class="ii"><span class="il">Departamento</span><span class="iv">${esc(d.dept)}</span></div>
+  <div class="ii"><span class="il">Actividad</span><span class="iv">${esc(d.act)}</span></div>
+</div>
+<div class="pw">
+  <h1>${esc(d.nombre)}</h1>
+  <table class="ctrl" cellpadding="0" cellspacing="0">
+    ${r4('Folio',d.folio,'Versión',`v${d.version}`)}
+    ${r4('Estado',d.status,'Vigencia',d.vigenciaMeses?`${d.vigenciaMeses} meses`:'—')}
+    ${r4('Fecha Autorización',d.fechaAutorizacion,'Vencimiento',d.fechaVencimiento)}
+    ${r4('Dir. Responsable',d.respDir,'Elaboró',d.respElab)}
+    ${r4('Autorizó',d.autorizadoPor,'Colaboradores',d.colaboradores||'—')}
+    ${has(d.numReglas)?r4('# de Reglas',d.numReglas,'',''):''}
+  </table>
+  <div class="divider"></div>
+  ${sec('Propósito y Objetivo',d.objeto)}
+  ${sec('Alcance',d.alcance)}
+  ${sec('Definiciones',d.definiciones)}
+  ${sec('Lineamientos y Reglas',d.contenido)}
+  ${sec('Sanciones por Incumplimiento',d.sanciones)}
+  ${sec('Excepciones',d.excepciones)}
+  ${sec('Canal de Comunicación',d.canal)}
+  ${sec('Esquema de Capacitación',d.capacitacion)}
+  ${sec('Directrices y Valores Asociados',d.directrices)}
+  <div class="divider"></div>
+  <div class="sign-title">Control de Aprobaciones</div>
+  <div class="sign-row">
+    <div class="sign-box"><div class="s-line"></div><div class="s-role">Elaboró</div><div class="s-name">${esc(d.respElab)||'___________________________'}</div></div>
+    <div class="sign-box"><div class="s-line"></div><div class="s-role">Revisó</div><div class="s-name">___________________________</div></div>
+    <div class="sign-box"><div class="s-line"></div><div class="s-role">Autorizó</div><div class="s-name">${esc(d.autorizadoPor)||'___________________________'}</div></div>
+  </div>
+</div>
+</body></html>`;
 }
 
 function generatePDF() {
@@ -1970,6 +2057,76 @@ function generateWord() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ── ADJUNTAR DOCUMENTO ────────────────────────────────────────────────────────
+function renderDocAdjunto() {
+  const banner  = document.getElementById('doc-adjunto-banner');
+  const link    = document.getElementById('doc-adjunto-link');
+  if (!banner || !link) return;
+  const url     = politicaActual?.documento_adjunto_url;
+  const nombre  = politicaActual?.documento_adjunto_nombre;
+  if (url) {
+    banner.style.display = 'flex';
+    link.href = url;
+    link.textContent = nombre || 'Ver documento';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function handleAdjunto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  if (!politicaActual?.id) {
+    alert('Guarda la política primero para poder adjuntar un documento.');
+    return;
+  }
+  const ext  = file.name.split('.').pop().toLowerCase();
+  const path = `${politicaActual.id}/v${politicaActual.version}_${Date.now()}.${ext}`;
+  const eEl  = document.getElementById('pol-error');
+  const sEl  = document.getElementById('pol-success');
+
+  // Subir a Supabase Storage (bucket: politicas-docs)
+  const { error: upErr } = await sb.storage.from('politicas-docs').upload(path, file, { upsert: true });
+  if (upErr) {
+    eEl.textContent = 'Error al subir el archivo: ' + upErr.message;
+    eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
+    return;
+  }
+
+  // Generar URL firmada (1 hora)
+  const { data: signed } = await sb.storage.from('politicas-docs').createSignedUrl(path, 3600);
+  const signedUrl = signed?.signedUrl || '';
+
+  // Guardar path + nombre en BD
+  const { error: dbErr } = await sb.from('pol_politicas').update({
+    documento_adjunto_url:    path,
+    documento_adjunto_nombre: file.name
+  }).eq('id', politicaActual.id);
+
+  if (dbErr) {
+    eEl.textContent = 'Error al registrar el documento: ' + dbErr.message;
+    eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
+    return;
+  }
+
+  politicaActual.documento_adjunto_url    = signedUrl || path;
+  politicaActual.documento_adjunto_nombre = file.name;
+  renderDocAdjunto();
+  sEl.textContent = 'Documento adjunto guardado.';
+  sEl.classList.add('show'); setTimeout(() => sEl.classList.remove('show'), 2500);
+}
+
+async function removeAdjunto() {
+  if (!politicaActual?.id) return;
+  await sb.from('pol_politicas').update({
+    documento_adjunto_url: null, documento_adjunto_nombre: null
+  }).eq('id', politicaActual.id);
+  politicaActual.documento_adjunto_url    = null;
+  politicaActual.documento_adjunto_nombre = null;
+  renderDocAdjunto();
 }
 
 // ── MODALES ────────────────────────────────────────────────────────────────────
