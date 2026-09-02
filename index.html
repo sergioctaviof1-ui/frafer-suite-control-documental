@@ -2382,8 +2382,8 @@ async function generatePDF() {
               {text:'Control Documental  ·  Política Organizacional',color:MAUVE,fontSize:6,margin:[6,0,0,8]}
             ], fillColor:NAVY },
           { stack:[
-              {text:dk(d.folio),bold:true,color:MAUVE,fontSize:13,font:'Courier',alignment:'right',margin:[0,8,6,2]},
-              {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Courier'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
+              {text:dk(d.folio),bold:true,color:MAUVE,fontSize:13,font:'Roboto',alignment:'right',margin:[0,8,6,2]},
+              {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Roboto'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
             ], fillColor:CREAM }
         ],
         [{text:dk(d.nombre),bold:true,color:NAVY,fontSize:12,colSpan:2,margin:[6,8,6,4],fillColor:CREAM},{}],
@@ -2435,7 +2435,7 @@ async function generatePDF() {
       pageSize:'LETTER', pageMargins:[72,72,54,72],
       header:(currentPage) => ({
         table:{ widths:['30%','42%','28%'], body:[[
-          {text:dk(d.folio),bold:true,color:MAUVE,font:'Courier',fontSize:7.5,margin:[4,4,0,4]},
+          {text:dk(d.folio),bold:true,color:MAUVE,font:'Roboto',fontSize:7.5,margin:[4,4,0,4]},
           {text:String(d.nombre||'').slice(0,50),alignment:'center',color:NAVY,fontSize:7,margin:[0,4,0,4]},
           {text:'GRUPO MORSA',bold:true,alignment:'right',color:NAVY,fontSize:8.5,margin:[0,4,4,4]}
         ]]},
@@ -2477,7 +2477,8 @@ async function generatePDF() {
     window.pdfMake.createPdf(dd).download(fileName);
 
   } catch(e) {
-    alert('Error al generar PDF: ' + e.message);
+    console.error('[generatePDF]', e);
+    alert('Error al generar PDF: ' + (e.message || String(e)));
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'PDF'; }
   }
