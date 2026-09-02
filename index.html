@@ -354,6 +354,7 @@ input,textarea,select{font-family:inherit}
     <button class="nav-btn active" onclick="showView('dashboard')" data-view="dashboard">Dashboard</button>
     <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo</button>
     <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar Política</button>
+    <button class="nav-btn" onclick="showView('repositorio')" data-view="repositorio">Repositorio</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -813,6 +814,17 @@ input,textarea,select{font-family:inherit}
     <div id="maestro-container"><div class="loading">Cargando catálogo maestro…</div></div>
   </div>
 
+  <!-- VIEW: REPOSITORIO -->
+  <div class="view" id="view-repositorio">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Repositorio de Documentos</h1>
+        <p>Todos los documentos generados y adjuntados · Ordenados por estructura organizacional</p>
+      </div>
+    </div>
+    <div id="repo-container"><div class="loading">Cargando repositorio…</div></div>
+  </div>
+
   <!-- VIEW: ADMIN -->
   <div class="view" id="view-admin">
     <div class="page-header">
@@ -900,10 +912,11 @@ function showView(name) {
   document.querySelectorAll('.nav-btn[data-view]').forEach(b => {
     if (b.dataset.view === name) b.classList.add('active');
   });
-  if (name === 'dashboard') loadDashboard();
-  if (name === 'catalogo')  loadCatalogo();
-  if (name === 'maestro')   loadMaestro();
-  if (name === 'admin')     loadAdmin();
+  if (name === 'dashboard')   loadDashboard();
+  if (name === 'catalogo')    loadCatalogo();
+  if (name === 'repositorio') loadRepositorio();
+  if (name === 'maestro')     loadMaestro();
+  if (name === 'admin')       loadAdmin();
 }
 
 function switchTab(btn, panelId) {
@@ -1327,6 +1340,181 @@ async function repairExistingFolios() {
   // Upsert en lote (un solo viaje de red en vez de N seriales)
   await sb.from('pol_catalogo').upsert(toFix, { onConflict: 'id' });
   return toFix.length;
+}
+
+// ── REPOSITORIO DE DOCUMENTOS ─────────────────────────────────────────────────
+async function loadRepositorio() {
+  const container = document.getElementById('repo-container');
+  container.innerHTML = '<div class="loading">Cargando repositorio…</div>';
+
+  // Cargar datos en paralelo
+  const [{ data: versData }, { data: dirsData }, { data: areasData },
+         { data: deptos }, { data: acts }, { data: cats }, { data: pols }] = await Promise.all([
+    sb.from('pol_versiones').select('*').order('created_at', { ascending: false }),
+    sb.from('pol_direcciones').select('*').eq('activa', true).order('orden'),
+    sb.from('pol_areas').select('*').eq('activa', true).order('orden'),
+    sb.from('pol_departamentos').select('*').eq('activo', true).order('orden'),
+    sb.from('pol_actividades').select('*').eq('activa', true),
+    sb.from('pol_catalogo').select('*').eq('activo', true),
+    sb.from('pol_politicas').select('id,catalogo_id,status,fecha_vencimiento,version')
+  ]);
+
+  const dirs  = dirsData  || [];
+  const areas = areasData || [];
+  const depts = deptos    || [];
+  const atvs  = acts      || [];
+  const ctlg  = cats      || [];
+  const plcs  = pols      || [];
+  const vers  = versData  || [];
+
+  // Mapas rápidos
+  const dirMap  = Object.fromEntries(dirs.map(d  => [d.id,  d]));
+  const areaMap = Object.fromEntries(areas.map(a  => [a.id,  a]));
+  const deptMap = Object.fromEntries(depts.map(d  => [d.id,  d]));
+  const actvMap = Object.fromEntries(atvs.map(a   => [a.id,  a]));
+  const catMap  = Object.fromEntries(ctlg.map(c   => [c.id,  c]));
+  const polMap  = Object.fromEntries(plcs.map(p   => [p.id,  p]));
+  const polByCat= Object.fromEntries(plcs.map(p   => [p.catalogo_id, p]));
+
+  // Enriquecer cada versión con su jerarquía organizacional
+  const enriched = vers.map(v => {
+    const pol  = polMap[v.politica_id];
+    if (!pol) return null;
+    const cat  = catMap[pol.catalogo_id];
+    if (!cat) return null;
+    const act  = actvMap[cat.actividad_id];
+    if (!act) return null;
+    const dept = deptMap[act.departamento_id];
+    if (!dept) return null;
+    const area = areaMap[dept.area_id];
+    if (!area) return null;
+    const dir  = dirMap[area.direccion_id];
+    if (!dir) return null;
+    return { v, pol, cat, act, dept, area, dir };
+  }).filter(Boolean);
+
+  // Ordenar: dir.orden → area.numero → dept.codigo → act.codigo → created_at DESC
+  enriched.sort((a, b) => {
+    if (a.dir.orden !== b.dir.orden) return a.dir.orden - b.dir.orden;
+    const an = (a.area.numero||'').localeCompare(b.area.numero||'', undefined, {numeric:true});
+    if (an) return an;
+    const dn = (a.dept.codigo||'').localeCompare(b.dept.codigo||'', undefined, {numeric:true});
+    if (dn) return dn;
+    const acn = (a.act.codigo||'').localeCompare(b.act.codigo||'', undefined, {numeric:true});
+    if (acn) return acn;
+    return new Date(b.v.created_at) - new Date(a.v.created_at);
+  });
+
+  // Helpers
+  const fmtDT = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const tipoDocBadge = t => {
+    const map = { PLT:'Política', PRC:'Proceso', PRD:'Procedimiento' };
+    const col = { PLT:'var(--ember-deep)', PRC:'var(--blue)', PRD:'var(--green)' };
+    return `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:${col[t]||'var(--fog)'};background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:1px 6px">${map[t]||t}</span>`;
+  };
+  const tipoArchBadge = nombre => {
+    const isPdf = (nombre||'').toLowerCase().endsWith('.pdf');
+    return isPdf
+      ? `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:1px 6px">📄 PDF</span>`
+      : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 6px">📝 Word</span>`;
+  };
+
+  // Render con filtros reactivos
+  window._repoData = enriched;
+  window.renderRepo = function() {
+    const ftipo  = document.getElementById('repo-ftipo')?.value  || '';
+    const fdir   = document.getElementById('repo-fdir')?.value   || '';
+    const farch  = document.getElementById('repo-farch')?.value  || '';
+    const fsrch  = (document.getElementById('repo-search')?.value || '').toLowerCase();
+
+    const filtered = enriched.filter(e => {
+      if (ftipo && e.cat.tipo_documento !== ftipo) return false;
+      if (fdir  && e.dir.id !== fdir) return false;
+      if (farch) {
+        const isPdf = (e.v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
+        if (farch === 'pdf' && !isPdf) return false;
+        if (farch === 'word' && isPdf) return false;
+      }
+      if (fsrch) {
+        const hay = [e.cat.codigo_documento||'', e.cat.nombre||'', e.dir.nombre||'',
+                     e.area.nombre||'', e.dept.nombre||'', e.act.nombre||'',
+                     e.v.elaboro||'', e.v.autorizo||''].join(' ').toLowerCase();
+        if (!hay.includes(fsrch)) return false;
+      }
+      return true;
+    });
+
+    document.getElementById('repo-count').textContent = `${filtered.length} documento${filtered.length!==1?'s':''}`;
+
+    if (!filtered.length) {
+      document.getElementById('repo-tbody').innerHTML =
+        `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--fog)">Sin documentos</td></tr>`;
+      return;
+    }
+
+    document.getElementById('repo-tbody').innerHTML = filtered.map((e, i) => {
+      const dlBtn = e.v.url_storage
+        ? `<button onclick="downloadVersion('${e.v.url_storage}','${(e.v.nombre_archivo||'doc').replace(/'/g,'')}',this)"
+             style="font-size:10px;background:none;border:1px solid var(--border);border-radius:4px;padding:2px 10px;cursor:pointer;color:var(--text);font-family:var(--ff-mono);white-space:nowrap">↓ Descargar</button>`
+        : '—';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:6px 8px;font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right">${i+1}</td>
+        <td style="padding:6px 8px;white-space:nowrap"><span style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);margin-right:4px">${e.dir.codigo}</span><span style="font-size:11px">${e.dir.nombre}</span></td>
+        <td style="padding:6px 8px;white-space:nowrap"><span style="font-size:10px;font-family:var(--ff-mono);color:var(--fog);margin-right:4px">${e.area.numero}</span><span style="font-size:11px">${e.area.nombre}</span></td>
+        <td style="padding:6px 8px;font-size:11px">${e.dept.nombre}</td>
+        <td style="padding:6px 8px"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600">${e.cat.nombre||e.act.nombre}</span><span style="font-family:var(--ff-mono);font-size:10px;color:var(--fog)">${e.cat.codigo_documento||''}</span></div></td>
+        <td style="padding:6px 8px;text-align:center">${tipoDocBadge(e.cat.tipo_documento)}</td>
+        <td style="padding:6px 8px;text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:11px;color:var(--ember-deep)">v${e.v.version}</td>
+        <td style="padding:6px 8px;text-align:center">${tipoArchBadge(e.v.nombre_archivo)}</td>
+        <td style="padding:6px 8px;font-size:10px;color:var(--fog);white-space:nowrap">${fmtDT(e.v.created_at)}</td>
+        <td style="padding:6px 8px;font-size:11px">${e.v.elaboro||'—'}</td>
+        <td style="padding:6px 8px;text-align:center">${dlBtn}</td>
+      </tr>`;
+    }).join('');
+  };
+
+  // Opciones de Dirección para el filtro
+  const dirOpts = dirs.map(d => `<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      <select id="repo-ftipo" class="cat-filter-select" onchange="renderRepo()">
+        <option value="">Todos los tipos</option>
+        <option value="PLT">Políticas</option>
+        <option value="PRC">Procesos</option>
+        <option value="PRD">Procedimientos</option>
+      </select>
+      <select id="repo-farch" class="cat-filter-select" onchange="renderRepo()">
+        <option value="">Word y PDF</option>
+        <option value="word">Solo Word</option>
+        <option value="pdf">Solo PDF</option>
+      </select>
+      <select id="repo-fdir" class="cat-filter-select" onchange="renderRepo()">
+        <option value="">Todas las Direcciones</option>${dirOpts}
+      </select>
+      <input id="repo-search" class="cat-search" placeholder="Buscar folio, política, área, elaboró…" oninput="renderRepo()">
+      <span id="repo-count" style="font-size:11px;color:var(--fog);white-space:nowrap;margin-left:auto"></span>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="cat-table" style="min-width:1100px">
+      <thead><tr>
+        <th style="width:36px;text-align:right">#</th>
+        <th>Dirección</th>
+        <th>Área</th>
+        <th>Departamento</th>
+        <th>Documento</th>
+        <th style="text-align:center">Tipo Doc</th>
+        <th style="text-align:center;white-space:nowrap">Ver.</th>
+        <th style="text-align:center;white-space:nowrap">Archivo</th>
+        <th style="white-space:nowrap">Fecha</th>
+        <th>Elaboró</th>
+        <th style="text-align:center">Descargar</th>
+      </tr></thead>
+      <tbody id="repo-tbody"></tbody>
+    </table>
+    </div>`;
+
+  renderRepo();
 }
 
 // ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
