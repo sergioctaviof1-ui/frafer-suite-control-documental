@@ -1380,33 +1380,33 @@ async function loadRepositorio() {
   const polMap  = Object.fromEntries(plcs.map(p   => [p.id,  p]));
   const polByCat= Object.fromEntries(plcs.map(p   => [p.catalogo_id, p]));
 
-  // Enriquecer cada versión con su jerarquía organizacional
-  const enriched = vers.map(v => {
-    const pol  = polMap[v.politica_id];
-    if (!pol) return null;
-    const cat  = catMap[pol.catalogo_id];
-    if (!cat) return null;
-    const act  = actvMap[cat.actividad_id];
-    if (!act) return null;
-    const dept = deptMap[act.departamento_id];
-    if (!dept) return null;
-    const area = areaMap[dept.area_id];
-    if (!area) return null;
-    const dir  = dirMap[area.direccion_id];
-    if (!dir) return null;
-    return { v, pol, cat, act, dept, area, dir };
+  // Agrupar por política: una entrada con latest Word + latest PDF
+  const polDocs = {};
+  vers.forEach(v => {
+    if (!polDocs[v.politica_id]) polDocs[v.politica_id] = { word: null, pdf: null };
+    const isPdf = (v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
+    if (isPdf  && !polDocs[v.politica_id].pdf)  polDocs[v.politica_id].pdf  = v;
+    if (!isPdf && !polDocs[v.politica_id].word) polDocs[v.politica_id].word = v;
+  });
+
+  const enriched = Object.entries(polDocs).map(([polId, docs]) => {
+    const pol  = polMap[polId];  if (!pol)  return null;
+    const cat  = catMap[pol.catalogo_id]; if (!cat)  return null;
+    const act  = actvMap[cat.actividad_id]; if (!act) return null;
+    const dept = deptMap[act.departamento_id]; if (!dept) return null;
+    const area = areaMap[dept.area_id]; if (!area) return null;
+    const dir  = dirMap[area.direccion_id]; if (!dir) return null;
+    return { pol, cat, act, dept, area, dir, word: docs.word, pdf: docs.pdf };
   }).filter(Boolean);
 
-  // Ordenar: dir.orden → area.numero → dept.codigo → act.codigo → created_at DESC
+  // Ordenar: dir.orden → area.numero → dept.codigo → act.codigo
   enriched.sort((a, b) => {
     if (a.dir.orden !== b.dir.orden) return a.dir.orden - b.dir.orden;
     const an = (a.area.numero||'').localeCompare(b.area.numero||'', undefined, {numeric:true});
     if (an) return an;
     const dn = (a.dept.codigo||'').localeCompare(b.dept.codigo||'', undefined, {numeric:true});
     if (dn) return dn;
-    const acn = (a.act.codigo||'').localeCompare(b.act.codigo||'', undefined, {numeric:true});
-    if (acn) return acn;
-    return new Date(b.v.created_at) - new Date(a.v.created_at);
+    return (a.act.codigo||'').localeCompare(b.act.codigo||'', undefined, {numeric:true});
   });
 
   // Helpers
@@ -1448,33 +1448,38 @@ async function loadRepositorio() {
       if (festatus  && effectiveStatus(e.pol) !== festatus) return false;
       if (fvigencia && vigState(e.pol) !== fvigencia) return false;
       if (fdir      && e.dir.id !== fdir) return false;
-      if (farch) {
-        const isPdf = (e.v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
-        if (farch === 'pdf' && !isPdf) return false;
-        if (farch === 'word' && isPdf) return false;
-      }
+      if (farch === 'word' && !e.word) return false;
+      if (farch === 'pdf'  && !e.pdf)  return false;
       if (fsrch) {
         const hay = [e.cat.codigo_documento||'', e.cat.nombre||'', e.dir.nombre||'',
                      e.area.nombre||'', e.dept.nombre||'', e.act.nombre||'',
-                     e.v.elaboro||'', e.v.autorizo||''].join(' ').toLowerCase();
+                     e.word?.elaboro||'', e.pdf?.elaboro||''].join(' ').toLowerCase();
         if (!hay.includes(fsrch)) return false;
       }
       return true;
     });
 
-    document.getElementById('repo-count').textContent = `${filtered.length} documento${filtered.length!==1?'s':''}`;
+    document.getElementById('repo-count').textContent = `${filtered.length} política${filtered.length!==1?'s':''}`;
 
     if (!filtered.length) {
       document.getElementById('repo-tbody').innerHTML =
-        `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--fog)">Sin documentos</td></tr>`;
+        `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--fog)">Sin documentos</td></tr>`;
       return;
     }
 
+    const mkChipWord = v => v
+      ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'doc').replace(/'/g,'')}',this)"
+           style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+           📝 v${v.version}</button>`
+      : `<span style="font-size:10px;color:var(--stone)">—</span>`;
+    const mkChipPDF = v => v
+      ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'doc').replace(/'/g,'')}',this)"
+           style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+           📄 v${v.version}</button>`
+      : `<span style="font-size:10px;color:var(--stone)">—</span>`;
+
     document.getElementById('repo-tbody').innerHTML = filtered.map((e, i) => {
-      const dlBtn = e.v.url_storage
-        ? `<button onclick="downloadVersion('${e.v.url_storage}','${(e.v.nombre_archivo||'doc').replace(/'/g,'')}',this)"
-             style="font-size:10px;background:none;border:1px solid var(--border);border-radius:4px;padding:2px 10px;cursor:pointer;color:var(--text);font-family:var(--ff-mono);white-space:nowrap">↓ Descargar</button>`
-        : '—';
+      const elaboro = (e.word || e.pdf)?.elaboro || '—';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 8px;font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right">${i+1}</td>
         <td style="padding:6px 8px;white-space:nowrap"><span style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);margin-right:4px">${e.dir.codigo}</span><span style="font-size:11px">${e.dir.nombre}</span></td>
@@ -1483,12 +1488,9 @@ async function loadRepositorio() {
         <td style="padding:6px 8px"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:600">${e.cat.nombre||e.act.nombre}</span><span style="font-family:var(--ff-mono);font-size:10px;color:var(--fog)">${e.cat.codigo_documento||''}</span></div></td>
         <td style="padding:6px 8px;text-align:center">${tipoDocBadge(e.cat.tipo_documento)}</td>
         <td style="padding:6px 8px;text-align:center">${badge(effectiveStatus(e.pol))}</td>
-        <td style="padding:6px 8px;text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:11px;color:var(--ember-deep)">v${e.v.version}</td>
-        <td style="padding:6px 8px;text-align:center">${tipoArchBadge(e.v.nombre_archivo)}</td>
-        <td style="padding:6px 8px;font-size:10px;color:var(--fog);white-space:nowrap">${fmtDT(e.v.created_at)}</td>
-        <td style="padding:6px 8px;font-size:11px">${e.v.elaboro||'—'}</td>
+        <td style="padding:6px 8px;text-align:center">${mkChipWord(e.word)}</td>
+        <td style="padding:6px 8px;text-align:center">${mkChipPDF(e.pdf)}</td>
         <td style="padding:6px 8px;white-space:nowrap">${_vigenciaTag(e.pol)}</td>
-        <td style="padding:6px 8px;text-align:center">${dlBtn}</td>
       </tr>`;
     }).join('');
   };
@@ -1538,14 +1540,11 @@ async function loadRepositorio() {
         <th>Área</th>
         <th>Departamento</th>
         <th>Documento</th>
-        <th style="text-align:center">Tipo Doc</th>
+        <th style="text-align:center">Tipo</th>
         <th style="text-align:center">Estatus</th>
-        <th style="text-align:center;white-space:nowrap">Ver.</th>
-        <th style="text-align:center;white-space:nowrap">Archivo</th>
-        <th style="white-space:nowrap">Fecha</th>
-        <th>Elaboró</th>
+        <th style="text-align:center">📝 Word</th>
+        <th style="text-align:center">📄 PDF</th>
         <th style="white-space:nowrap">Vigencia</th>
-        <th style="text-align:center">Descargar</th>
       </tr></thead>
       <tbody id="repo-tbody"></tbody>
     </table>
