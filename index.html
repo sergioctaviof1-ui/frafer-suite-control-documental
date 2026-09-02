@@ -2360,7 +2360,6 @@ async function generatePDF() {
     let sNum = 0;
     const mkSec = (title, body) => {
       const has = body?.trim();
-      if (!has && !d.isTemplate) return [];
       sNum++;
       const lines = has ? body.split('\n') : ['[ Completar este campo ]'];
       return [
@@ -2422,7 +2421,7 @@ async function generatePDF() {
         [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:NAVY},{},{},{},{},{}],
         ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'].map(h=>({text:h,bold:true,color:GRAY,fontSize:6.5,alignment:'center',fillColor:CREAM,margin:[3,3,3,3]})),
         ...histRows.map((row,ri)=>{ const last=ri===histRows.length-1; return row.map((v,i)=>({
-          text:v, fontSize:8, bold:i===0||last, font:i===0?'Courier':'Roboto',
+          text:v, fontSize:8, bold:i===0||last, font:'Roboto',
           color:last&&i===0?GREEN:'#1a1a1a', fillColor:last?'#EAF4EE':WHITE,
           alignment:i<3?'center':'left', margin:[3,3,3,3]
         }));})
@@ -2582,7 +2581,6 @@ async function _generateWordCore(d) {
     let sNum=0;
     const mkSec = (title, body) => {
       const hasContent = body?.trim();
-      if (!hasContent && !d.isTemplate) return [];
       sNum++;
       const lines = hasContent ? body.split('\n') : ['[ Completar este campo ]'];
       const isPlaceholder = !hasContent;
