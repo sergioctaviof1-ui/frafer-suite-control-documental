@@ -1995,51 +1995,152 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
 </table>`;
 
   if (forWord) {
-    // WORD — encabezado/pie via mso-element con propiedades completas requeridas por Word
-    return `<!DOCTYPE html>
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head><meta charset="UTF-8"><title>${esc(d.folio)}</title>
-<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml>
-<style>
-${css}
-@page Section1{
-  size:216mm 279mm;
-  margin:25.4mm 19mm 25.4mm 19mm;
-  mso-header-margin:14mm;
-  mso-footer-margin:12mm;
-  mso-header:h1;
-  mso-footer:f1;
-  mso-paper-source:0;
-}
-div.Section1{page:Section1;}
-body{padding:0;margin:0;}
-p.MsoHeader{
-  margin:0;padding:0 0 5pt 0;
-  border-bottom:1.5pt solid #1C2B3A;
-  tab-stops:center 9.0cm right 18.0cm;
-  mso-tab-count:2;
-}
-p.MsoFooter{
-  margin:0;padding:4pt 0 0 0;
-  border-top:1pt solid #C8BFB5;
-  tab-stops:right 18.0cm;
-  mso-tab-count:1;
-}
-</style></head>
-<body>
-<div style='mso-element:header;mso-element-frame-width:0pt;mso-element-wrap:around;mso-element-anchor-vertical:top-margin-area;mso-element-anchor-horizontal:margin;mso-element-left:center;mso-element-top:0cm' id=h1>
-  <p class=MsoHeader><b><span style='font-family:"Courier New",monospace;font-size:8pt;color:#9a6070'>${esc(d.folio)}</span></b>	<span style='font-size:8pt;color:#1C2B3A;font-weight:600'>${esc(trunc(d.nombre||'',42))}</span>	<b><span style='font-size:9pt;color:#1C2B3A'>GRUPO MORSA</span></b></p>
-</div>
-<div style='mso-element:footer;mso-element-frame-width:0pt;mso-element-wrap:around;mso-element-anchor-vertical:bottom-margin-area;mso-element-anchor-horizontal:margin;mso-element-left:center;mso-element-top:0cm' id=f1>
-  <p class=MsoFooter><span style='font-size:7pt;color:#9c8e84'>Elaboró: ${dash(d.respElab)}&nbsp;·&nbsp;Autorizó: ${dash(d.autorizadoPor)}&nbsp;·&nbsp;Vigente: ${dash(d.fechaAutorizacion)}–${dash(d.fechaVencimiento)}</span>	<span style='font-size:7.5pt;color:#9c8e84'>Pág.&nbsp;<span style='mso-field-code:" PAGE \* MERGEFORMAT "'><span style='mso-no-proof:yes'>1</span></span>&nbsp;/&nbsp;<span style='mso-field-code:" NUMPAGES \* MERGEFORMAT "'><span style='mso-no-proof:yes'>1</span></span></span></p>
-</div>
-<div class="Section1">
-${TB}
-${SECS}
-${SIGNS}
+    // ── RTF nativo — encabezado/pie se repiten en CADA página ──────────────
+    // Codificador RTF: escapa \ { } y caracteres no-ASCII
+    const rt = s => (s||'')
+      .replace(/\\/g,'\\\\').replace(/\{/g,'\\{').replace(/\}/g,'\\}')
+      .replace(/[^\x20-\x7e]/g, c => {
+        const n = c.charCodeAt(0);
+        return n < 256 ? `\\'${n.toString(16).padStart(2,'0')}` : `\\u${n}?`;
+      });
+    const dr  = s => rt(has(s) ? s : '\u2014');
+    const lr  = s => rt(s||'').replace(/\r?\n/g, '\\line ');
+
+    // Geometría: papel carta con márgenes L=1440 R=1080 twips (1 twip=1/1440")
+    const TW  = 9720;                          // ancho de texto en twips
+    const H   = Math.round(TW * 0.50);
+    const Q   = Math.round(TW * 0.25);
+    const Q3  = Math.round(TW * 0.75);
+    const W3a = Math.round(TW / 3);
+    const W3b = Math.round(TW * 2 / 3);
+
+    // Bordes y celdas (colores: 1=navy 4=crema 5=borde 6=verde 7=blanco)
+    const B   = (ci,w=10) => `\\brdrs\\brdrw${w}\\brdrclr${ci}`;
+    const BD  = (ci,w=10) => `\\clbrdrt${B(ci,w)}\\clbrdrl${B(ci,w)}\\clbrdrb${B(ci,w)}\\clbrdrr${B(ci,w)}`;
+    const NC  = x => `${BD(1,18)}\\clcbpat1\\cellx${x}`;   // navy
+    const CC  = x => `${BD(1,15)}\\clcbpat4\\cellx${x}`;   // cream borde grueso
+    const LC  = x => `${BD(5, 8)}\\clcbpat4\\cellx${x}`;   // etiqueta (cream)
+    const VC  = x => `${BD(5, 8)}\\cellx${x}`;              // valor (blanco)
+    const GC  = x => `${BD(5, 8)}\\clcbpat6\\cellx${x}`;   // verde
+
+    // Fila de control: [etiqueta | valor | etiqueta | valor]
+    const cr = (l1,v1,l2,v2) =>
+      `\\trowd\\trgaph54${LC(Q)}${VC(H)}${LC(Q3)}${VC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs16\\cf3\\b ${rt(l1||'')}\\b0\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs19\\cf0 ${dr(v1)}\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs16\\cf3\\b ${rt(l2||'')}\\b0\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs19\\cf0 ${dr(v2)}\\cell\\row\n`;
+
+    // Sección: barra navy + cuerpo párrafo
+    let sn_r = 0;
+    const sr = (title, body) => {
+      if (!has(body)) return '';
+      return `\\trowd\\trgaph54${NC(TW)}` +
+        `\\pard\\intbl\\ql\\f1\\fs18\\cf7\\b  ${++sn_r}. ${rt(title.toUpperCase())}\\b0\\cell\\row\n` +
+        `\\pard\\plain\\f1\\fs20\\li120\\ri120\\sb80\\sa120\\cf0 ${lr(body)}\\par\n` +
+        `\\pard\\plain\\sb20\\par\n`;
+    };
+
+    // Separador de grupo (subtítulo gris + línea)
+    const grp = t =>
+      `\\pard\\plain\\sb200\\sa40\\f1\\fs15\\cf3\\b\\caps ${rt(t)}\\b0\\caps0\\par\n` +
+      `\\pard\\plain\\brdrb\\brdrs\\brdrw8\\brdrclr5\\f1\\fs4  \\par\n\\pard\\plain\\par\n`;
+
+    // Bloque de título
+    const TB_R =
+      // Fila 1: [GRUPO MORSA (navy) | Folio (cream)]
+      `\\trowd\\trgaph54${NC(Math.round(TW*0.62))}${CC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs22\\cf7\\b  GRUPO MORSA\\b0\\par` +
+      `\\pard\\intbl\\ql\\f1\\fs13\\cf2  Control Documental \\u183? Pol\\u237?tica Organizacional\\cell` +
+      `\\pard\\intbl\\qr\\f2\\fs28\\cf2\\b ${rt(d.folio)}\\b0\\par` +
+      `\\pard\\intbl\\qr\\f1\\fs14\\cf3 Versi\\u243?n ${rt(String(d.version))} \\u183? Uso Interno\\cell\\row\n` +
+      // Fila 2: Nombre completo (cream, ancho total)
+      `\\trowd\\trgaph54${CC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs26\\cf1\\b  ${rt(d.nombre)}\\b0\\par` +
+      `\\pard\\intbl\\ql\\f1\\fs13\\cf3  ${rt(d.dir)}\\cell\\row\n` +
+      // Filas de control
+      cr('ESTADO', d.status, 'DIRECCI\u00d3N RESPONSABLE', d.respDir) +
+      cr('VIGENCIA', d.vigenciaMeses ? d.vigenciaMeses + ' meses' : null, 'ELABOR\u00d3', d.respElab) +
+      cr('FECHA AUTORIZACI\u00d3N', d.fechaAutorizacion, 'AUTORIZ\u00d3', d.autorizadoPor) +
+      cr('VIGENTE HASTA', d.fechaVencimiento, 'COLABORADORES', d.colaboradores || null) +
+      (has(d.numReglas) ? cr('# DE REGLAS', String(d.numReglas), '', '') : '') +
+      // Franja jerarquía (verde)
+      `\\trowd\\trgaph54${GC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs15\\cf7  ${rt(d.dir)} \\u8250? ${rt(d.area)} \\u8250? ${rt(d.dept)} \\u8250? ${rt(d.act)}\\cell\\row\n`;
+
+    // Tabla de firmas
+    const SIGS =
+      `\\trowd\\trgaph54${NC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs18\\cf7\\b  CONTROL DE APROBACIONES\\b0\\cell\\row\n` +
+      `\\trowd\\trgaph54${LC(W3a)}${LC(W3b)}${LC(TW)}` +
+      `\\pard\\intbl\\qc\\f1\\fs16\\cf3\\b ELABOR\\'d3\\b0\\cell\\pard\\intbl\\qc\\f1\\fs16\\cf3\\b REVIS\\'d3\\b0\\cell\\pard\\intbl\\qc\\f1\\fs16\\cf3\\b AUTORIZ\\'d3\\b0\\cell\\row\n` +
+      `\\trowd\\trgaph54${VC(W3a)}${VC(W3b)}${VC(TW)}` +
+      `\\pard\\intbl\\f1\\fs20 \\par\\pard\\intbl\\par\\pard\\intbl\\par\\pard\\intbl\\par\\cell` +
+      `\\pard\\intbl\\f1\\fs20 \\par\\pard\\intbl\\par\\pard\\intbl\\par\\pard\\intbl\\par\\cell` +
+      `\\pard\\intbl\\f1\\fs20 \\par\\pard\\intbl\\par\\pard\\intbl\\par\\pard\\intbl\\par\\cell\\row\n` +
+      `\\trowd\\trgaph54${VC(W3a)}${VC(W3b)}${VC(TW)}` +
+      `\\pard\\intbl\\qc\\f1\\fs19\\b ${dr(d.respElab)}\\b0\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs19\\b ___________________________\\b0\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs19\\b ${dr(d.autorizadoPor)}\\b0\\cell\\row\n` +
+      `\\trowd\\trgaph54${VC(W3a)}${VC(W3b)}${VC(TW)}` +
+      `\\pard\\intbl\\qc\\f1\\fs14\\cf3 Nombre y Firma\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs14\\cf3 Nombre y Firma\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs14\\cf3 Nombre y Firma\\cell\\row\n`;
+
+    // Historial
+    const hx = [0.10,0.28,0.47,0.60,0.80,1.00].map(f=>Math.round(TW*f));
+    const HIST =
+      `\\trowd\\trgaph54${NC(TW)}` +
+      `\\pard\\intbl\\ql\\f1\\fs18\\cf7\\b  HISTORIAL DE REVISIONES\\b0\\cell\\row\n` +
+      `\\trowd\\trgaph54${hx.map(x=>LC(x)).join('')}` +
+      ['Ver.','Estado','Fecha Aut.','Vigencia','Elabor\u00f3','Autoriz\u00f3']
+        .map(l=>`\\pard\\intbl\\qc\\f1\\fs15\\cf3\\b ${rt(l)}\\b0\\cell`).join('')+`\\row\n` +
+      `\\trowd\\trgaph54${hx.map(x=>VC(x)).join('')}` +
+      `\\pard\\intbl\\qc\\f2\\fs18\\b ${rt(String(d.version))}\\b0\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs18 ${rt(d.status)}\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs18 ${dr(d.fechaAutorizacion)}\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs18 ${d.vigenciaMeses?rt(d.vigenciaMeses+' meses'):'\u2014'}\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs18 ${dr(d.respElab)}\\cell` +
+      `\\pard\\intbl\\ql\\f1\\fs18 ${dr(d.autorizadoPor)}\\cell\\row\n`;
+
+    return `{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat
+{\\fonttbl{\\f0\\froman Times New Roman;}{\\f1\\fswiss Arial;}{\\f2\\fmodern Courier New;}}
+{\\colortbl;\\red28\\green43\\blue58;\\red154\\green96\\blue112;\\red156\\green142\\blue132;\\red240\\green232\\blue220;\\red200\\green191\\blue181;\\red45\\green107\\blue71;\\red255\\green255\\blue255;}
+{\\*\\generator Frafer Suite Control Documental;}
+
+{\\header
+\\pard\\plain\\f1\\fs16\\tqc\\tx${H}\\tqr\\tx${TW}
+{\\b\\f2\\fs17\\cf2 ${rt(d.folio)}}\\tab{\\f1\\fs16\\cf1 ${rt(trunc(d.nombre||'',46))}}\\tab{\\b\\f1\\fs19 GRUPO MORSA}\\par
+\\pard\\plain\\brdrb\\brdrs\\brdrw18\\brdrclr1\\f1\\fs4  \\par}
+
+{\\footer
+\\pard\\plain\\brdrb\\brdrs\\brdrw8\\brdrclr5\\f1\\fs4  \\par
+\\pard\\plain\\f1\\fs13\\cf3\\tqr\\tx${TW}
+Elabor\\'f3: ${dr(d.respElab)} \\u183? Autoriz\\'f3: ${dr(d.autorizadoPor)} \\u183? Vigente: ${dr(d.fechaAutorizacion)} \\u8211? ${dr(d.fechaVencimiento)}\\tab
+P\\'e1g. {\\field{\\*\\fldinst{ PAGE  \\\\* MERGEFORMAT }}{\\fldrslt{1}}} / {\\field{\\*\\fldinst{ NUMPAGES  \\\\* MERGEFORMAT }}{\\fldrslt{1}}}\\par
+{\\f1\\fs11\\cf3 Grupo Morsa \\u183? Control Documental \\u183? Uso Interno \\u183? Generado el ${rt(d.generadoEl)}}\\par}
+
+\\paperw12240\\paperh15840\\margl1440\\margr1080\\margt1440\\margb1440
+\\headery720\\footery720\\widowctrl\\hyphauto0
+
+${TB_R}
+\\pard\\plain\\sb80\\par
+${grp('Contenido de la Pol\u00edtica')}
+${sr('Prop\u00f3sito y Objetivo', d.objeto)}
+${sr('Alcance', d.alcance)}
+${sr('Definiciones', d.definiciones)}
+${sr('Lineamientos y Reglas', d.contenido)}
+${sr('Sanciones por Incumplimiento', d.sanciones)}
+${sr('Excepciones', d.excepciones)}
+${grp('Comunicaci\u00f3n e Implementaci\u00f3n')}
+${sr('Canal de Comunicaci\u00f3n', d.canal)}
+${sr('Esquema de Capacitaci\u00f3n', d.capacitacion)}
+${sr('Directrices y Valores Asociados', d.directrices)}
+\\pard\\plain\\sb200\\par
+${SIGS}
+\\pard\\plain\\sb200\\par
 ${HIST}
-</div>
-</body></html>`;
+}`;
   }
 
   // PDF — encabezado/pie via @page margin boxes (Chrome 131+)
@@ -2104,19 +2205,40 @@ function generatePDF() {
   setTimeout(() => { try { w.focus(); w.print(); } catch(e){} }, 800);
 }
 
-function generateWord() {
+async function generateWord() {
   const d = _getDocData();
   if (!d) { alert('Selecciona una política primero.'); return; }
-  const html = _buildDocHTML(d, true);
-  const blob = new Blob(['﻿', html], { type: 'application/msword;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${d.folio}_v${d.version}.doc`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const btn = document.getElementById('btn-gen-word');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch(`${SB_URL}/functions/v1/generate-word-policy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+        'apikey': SB_ANON,
+      },
+      body: JSON.stringify(d),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${d.folio}_v${d.version}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Error al generar Word: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Word'; }
+  }
 }
 
 // ── ADJUNTAR DOCUMENTO ────────────────────────────────────────────────────────
