@@ -113,6 +113,9 @@ input,textarea,select{font-family:inherit}
 .badge-publicado{color:var(--green);background:#4a8c6a10;border:1px solid #4a8c6a30}.badge-publicado::before{background:var(--green)}
 .badge-vencido{color:var(--red);background:#b8505010;border:1px solid #b8505030}.badge-vencido::before{background:var(--red)}
 
+/* REPOSITORIO — override: thead no-sticky dentro de overflow-x:auto */
+#view-repositorio .cat-table th{position:relative;top:auto;z-index:1}
+
 /* CATÁLOGO — TABLA FLAT */
 .cat-summary{display:flex;gap:32px;padding:4px 0 20px;flex-wrap:wrap;border-bottom:1px solid var(--stone);margin-bottom:16px}
 .cat-stat{display:flex;flex-direction:column;gap:3px}
