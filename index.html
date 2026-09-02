@@ -900,8 +900,9 @@ const SB_URL  = 'https://lygpotmaneqgewjcetzw.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5Z3BvdG1hbmVxZ2V3amNldHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTA3MjYsImV4cCI6MjEwMzQyNjcyNn0.0nIHvEuH6AKRymb_IjlxS_zfYTw8aXhGxUTxYUorNbM';
 
 
+const _storage = (() => { try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return localStorage; } catch(e) { return sessionStorage; } })();
 const sb = supabase.createClient(SB_URL, SB_ANON, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storage: _storage }
 });
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
