@@ -1995,7 +1995,7 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
 </table>`;
 
   if (forWord) {
-    // WORD — encabezado y pie via mso-element:header/footer
+    // WORD — encabezado/pie via mso-element con propiedades completas requeridas por Word
     return `<!DOCTYPE html>
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head><meta charset="UTF-8"><title>${esc(d.folio)}</title>
@@ -2003,39 +2003,36 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
 <style>
 ${css}
 @page Section1{
-  size:216mm 279mm;margin:25.4mm 19mm 25.4mm 19mm;
-  mso-header-margin:14mm;mso-footer-margin:12mm;
-  mso-header:h1;mso-footer:f1;mso-paper-source:0
+  size:216mm 279mm;
+  margin:25.4mm 19mm 25.4mm 19mm;
+  mso-header-margin:14mm;
+  mso-footer-margin:12mm;
+  mso-header:h1;
+  mso-footer:f1;
+  mso-paper-source:0;
 }
-div.Section1{page:Section1}
-body{padding:0;margin:0}
+div.Section1{page:Section1;}
+body{padding:0;margin:0;}
+p.MsoHeader{
+  margin:0;padding:0 0 5pt 0;
+  border-bottom:1.5pt solid #1C2B3A;
+  tab-stops:center 9.0cm right 18.0cm;
+  mso-tab-count:2;
+}
+p.MsoFooter{
+  margin:0;padding:4pt 0 0 0;
+  border-top:1pt solid #C8BFB5;
+  tab-stops:right 18.0cm;
+  mso-tab-count:1;
+}
 </style></head>
 <body>
-<!-- ═══ ENCABEZADO — aparece en CADA página en Word ═══ -->
-<div style="mso-element:header" id="h1">
-  <table width="100%" cellpadding="4" cellspacing="0" border="0" style="border-bottom:1.5pt solid #1C2B3A">
-    <tr>
-      <td style="font-family:'Courier New',monospace;font-size:8pt;font-weight:bold;color:#9a6070;vertical-align:bottom">${esc(d.folio)}</td>
-      <td style="font-size:8pt;color:#1C2B3A;font-weight:600;text-align:center;vertical-align:bottom">${esc(trunc(d.nombre||'',52))}</td>
-      <td style="font-size:9pt;font-weight:700;color:#1C2B3A;text-align:right;letter-spacing:.1em;white-space:nowrap;vertical-align:bottom">GRUPO MORSA</td>
-    </tr>
-  </table>
+<div style='mso-element:header;mso-element-frame-width:0pt;mso-element-wrap:around;mso-element-anchor-vertical:top-margin-area;mso-element-anchor-horizontal:margin;mso-element-left:center;mso-element-top:0cm' id=h1>
+  <p class=MsoHeader><b><span style='font-family:"Courier New",monospace;font-size:8pt;color:#9a6070'>${esc(d.folio)}</span></b>	<span style='font-size:8pt;color:#1C2B3A;font-weight:600'>${esc(trunc(d.nombre||'',42))}</span>	<b><span style='font-size:9pt;color:#1C2B3A'>GRUPO MORSA</span></b></p>
 </div>
-<!-- ═══ PIE DE PÁGINA — aparece en CADA página en Word ═══ -->
-<div style="mso-element:footer" id="f1">
-  <table width="100%" cellpadding="4" cellspacing="0" border="0" style="border-top:1pt solid #C8BFB5">
-    <tr>
-      <td style="font-size:7pt;color:#9c8e84">Elaboró: ${dash(d.respElab)} &nbsp;·&nbsp; Autorizó: ${dash(d.autorizadoPor)} &nbsp;·&nbsp; Vigente: ${dash(d.fechaAutorizacion)} – ${dash(d.fechaVencimiento)}</td>
-      <td style="font-size:7.5pt;color:#9c8e84;text-align:right;white-space:nowrap">
-        Pág.&nbsp;<span style="mso-field-code:PAGE">&nbsp;</span>&nbsp;/&nbsp;<span style="mso-field-code:NUMPAGES">&nbsp;</span>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2" style="font-size:7pt;color:#9c8e84">Grupo Morsa &nbsp;·&nbsp; Control Documental &nbsp;·&nbsp; Uso Interno &nbsp;·&nbsp; Generado el ${d.generadoEl}</td>
-    </tr>
-  </table>
+<div style='mso-element:footer;mso-element-frame-width:0pt;mso-element-wrap:around;mso-element-anchor-vertical:bottom-margin-area;mso-element-anchor-horizontal:margin;mso-element-left:center;mso-element-top:0cm' id=f1>
+  <p class=MsoFooter><span style='font-size:7pt;color:#9c8e84'>Elaboró: ${dash(d.respElab)}&nbsp;·&nbsp;Autorizó: ${dash(d.autorizadoPor)}&nbsp;·&nbsp;Vigente: ${dash(d.fechaAutorizacion)}–${dash(d.fechaVencimiento)}</span>	<span style='font-size:7.5pt;color:#9c8e84'>Pág.&nbsp;<span style='mso-field-code:" PAGE \* MERGEFORMAT "'><span style='mso-no-proof:yes'>1</span></span>&nbsp;/&nbsp;<span style='mso-field-code:" NUMPAGES \* MERGEFORMAT "'><span style='mso-no-proof:yes'>1</span></span></span></p>
 </div>
-<!-- ═══ CUERPO DEL DOCUMENTO ═══ -->
 <div class="Section1">
 ${TB}
 ${SECS}
