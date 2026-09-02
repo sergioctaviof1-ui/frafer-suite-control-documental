@@ -1732,21 +1732,28 @@ async function loadHistorial(polId) {
       <thead><tr style="border-bottom:2px solid var(--border)">
         <th style="text-align:center;padding:5px 6px;color:var(--muted);font-weight:600;white-space:nowrap">Ver.</th>
         <th style="text-align:left;padding:5px 6px;color:var(--muted);font-weight:600">Fecha y Hora</th>
+        <th style="text-align:center;padding:5px 6px;color:var(--muted);font-weight:600">Tipo</th>
         <th style="text-align:left;padding:5px 6px;color:var(--muted);font-weight:600">Fuente</th>
         <th style="text-align:left;padding:5px 6px;color:var(--muted);font-weight:600">Elaboró</th>
-        <th style="text-align:center;padding:5px 6px;color:var(--muted);font-weight:600">Archivo</th>
+        <th style="text-align:center;padding:5px 6px;color:var(--muted);font-weight:600">Descargar</th>
       </tr></thead><tbody>`;
     versData.forEach((v, idx) => {
       const rowBg = idx === 0 ? 'background:var(--linen)' : '';
+      const isPdf = (v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
+      const tipoChip = isPdf
+        ? `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:1px 7px;white-space:nowrap">📄 PDF</span>`
+        : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 7px;white-space:nowrap">📝 Word</span>`;
+      const dlBtn = v.url_storage
+        ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'documento').replace(/'/g,'')}',this)"
+             style="font-size:10px;background:none;border:1px solid var(--border);border-radius:4px;padding:2px 10px;cursor:pointer;color:var(--text);font-family:var(--ff-mono)">↓ Descargar</button>`
+        : '—';
       repo += `<tr style="border-bottom:1px solid var(--border);${rowBg}">
         <td style="padding:6px;text-align:center;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep)">v${v.version}</td>
         <td style="padding:6px;color:var(--text);white-space:nowrap">${fmtDT(v.created_at)}</td>
+        <td style="padding:6px;text-align:center">${tipoChip}</td>
         <td style="padding:6px;color:var(--muted)">${v.fuente === 'adjuntado' ? '📎 Adjuntado' : '⬇ Generado'}</td>
         <td style="padding:6px;color:var(--text)">${v.elaboro || '—'}</td>
-        <td style="padding:6px;text-align:center">${v.url_storage
-          ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'documento').replace(/'/g,'')}',this)"
-               style="font-size:10px;background:none;border:1px solid var(--border);border-radius:4px;padding:2px 10px;cursor:pointer;color:var(--text);font-family:var(--ff-mono)">↓ Descargar</button>`
-          : '—'}</td>
+        <td style="padding:6px;text-align:center">${dlBtn}</td>
       </tr>`;
     });
     repo += `</tbody></table>`;
