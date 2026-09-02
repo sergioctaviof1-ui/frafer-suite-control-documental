@@ -1120,9 +1120,13 @@ async function loadCatalogo() {
       latestPols[p.catalogo_id] = p;
   });
 
-  // Última versión de documento por politica_id (primera coincidencia = mayor versión)
-  const latestVers = {};
-  (versData||[]).forEach(v => { if (!latestVers[v.politica_id]) latestVers[v.politica_id] = v; });
+  // Última versión por tipo de archivo (versData ya viene ordenado DESC por version)
+  const latestVersDocx = {}, latestVersPDF = {};
+  (versData||[]).forEach(v => {
+    const isPdf = (v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
+    if (isPdf  && !latestVersPDF[v.politica_id])  latestVersPDF[v.politica_id]  = v;
+    if (!isPdf && !latestVersDocx[v.politica_id]) latestVersDocx[v.politica_id] = v;
+  });
 
   // Construir filas planas: una fila por actividad
   const rows = [];
@@ -1183,8 +1187,9 @@ async function loadCatalogo() {
     </table>`;
 
   // Guardar acceso global para onclick de botones del catálogo
-  window._catRowMap = Object.fromEntries(rows.filter(r=>r.cat).map(r=>[r.cat.id, r]));
-  window._latestVers = latestVers;
+  window._catRowMap    = Object.fromEntries(rows.filter(r=>r.cat).map(r=>[r.cat.id, r]));
+  window._latestVersDocx = latestVersDocx;
+  window._latestVersPDF  = latestVersPDF;
 
   window.renderCatTable = function() {
     const fDir    = document.getElementById('cat-fdir')?.value    || '';
@@ -1200,22 +1205,27 @@ async function loadCatalogo() {
       return true;
     });
     const tbody = filtered.map((r,i) => {
-      const lv = r.pol ? latestVers[r.pol.id] : null;
+      const lvDocx = r.pol ? latestVersDocx[r.pol.id] : null;
+      const lvPDF  = r.pol ? latestVersPDF[r.pol.id]  : null;
       const vtag = r.pol ? _vigenciaTag(r.pol) : '';
+      const chipWord = lvDocx
+        ? `<button onclick="downloadVersion('${lvDocx.url_storage}','${(lvDocx.nombre_archivo||'doc').replace(/'/g,"\\'")}',this)"
+             style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+             📝 Word v${lvDocx.version}</button>`
+        : r.cat
+          ? `<button onclick="generateWordFromCatalogo('${r.cat.id}')"
+               style="font-size:10px;font-family:var(--ff-mono);color:var(--fog);background:none;border:1px dashed var(--stone);border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+               📝 Word</button>`
+          : '';
+      const chipPDF = lvPDF
+        ? `<button onclick="downloadVersion('${lvPDF.url_storage}','${(lvPDF.nombre_archivo||'doc').replace(/'/g,"\\'")}',this)"
+             style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+             📄 PDF v${lvPDF.version}</button>`
+        : '';
       const docCell = !r.cat ? '—'
-        : lv
-          ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-               <button onclick="downloadVersion('${lv.url_storage}','${(lv.nombre_archivo||'documento').replace(/'/g,'')}',this)"
-                 style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:2px 10px;cursor:pointer;white-space:nowrap">
-                 📄 v${lv.version}</button>
-               <button onclick="generateWordFromCatalogo('${r.cat.id}')"
-                 style="font-size:9px;font-family:var(--ff-mono);color:var(--fog);background:none;border:none;cursor:pointer;padding:0">+ Nueva versión</button>
-             </div>`
-          : r.cat
-            ? `<button onclick="generateWordFromCatalogo('${r.cat.id}')"
-                 style="font-size:10px;font-family:var(--ff-mono);color:var(--fog);background:none;border:1px dashed var(--stone);border-radius:4px;padding:2px 10px;cursor:pointer;white-space:nowrap">
-                 ⬇ Generar</button>`
-            : '—';
+        : `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+             ${chipWord}${chipPDF}
+           </div>`;
       return `<tr>
         <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
         <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
@@ -2471,9 +2481,32 @@ async function generatePDF() {
       defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 }
     };
 
-    // Descargar directamente sin diálogo
+    // Obtener blob para descargar Y subir a Storage
     const fileName = `${d.folio}_v${versionNum}.pdf`;
-    window.pdfMake.createPdf(dd).download(fileName);
+    const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
+
+    // Descarga directa al navegador
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const a = document.createElement('a');
+    a.href = blobUrl; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+
+    // Subir a Storage + registrar en pol_versiones
+    if (d.politicaId) {
+      const storagePath = `${d.politicaId}/${fileName}`;
+      await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob,
+        { contentType:'application/pdf', upsert:true });
+      await sb.from('pol_versiones').insert({
+        politica_id: d.politicaId, version: versionNum, folio: d.folio,
+        fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
+        elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
+      });
+      await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
+      if (politicaActual) politicaActual.version = versionNum;
+      loadCatalogo();
+    }
 
   } catch(e) {
     console.error('[generatePDF]', e);
