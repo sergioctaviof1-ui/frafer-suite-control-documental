@@ -2211,18 +2211,13 @@ async function generateWord() {
   const btn = document.getElementById('btn-gen-word');
   if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
   try {
-    // Cargar librería docx desde CDN la primera vez
-    if (!window.docx) {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/docx@8/build/index.js';
-        s.onload = res; s.onerror = () => rej(new Error('No se pudo cargar docx'));
-        document.head.appendChild(s);
-      });
+    // Cargar librería docx via ESM (lazy, solo primera vez)
+    if (!window._docxLib) {
+      window._docxLib = await import('https://esm.sh/docx@8');
     }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
             Header, Footer, AlignmentType, BorderStyle, ShadingType,
-            VerticalAlign, WidthType, HeightRule, PageNumber } = window.docx;
+            VerticalAlign, WidthType, HeightRule, PageNumber } = window._docxLib;
 
     // ── Paleta ──────────────────────────────────────────────────────────────
     const NAVY='1C2B3A', MAUVE='9A6070', GRAY='9C8E84';
