@@ -358,6 +358,7 @@ input,textarea,select{font-family:inherit}
     <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo</button>
     <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar Política</button>
     <button class="nav-btn" onclick="showView('repositorio')" data-view="repositorio">Repositorio</button>
+    <button class="nav-btn" onclick="showView('entrevista-dg')" data-view="entrevista-dg" style="color:var(--ember-deep);font-weight:700">Entrevista DG</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -828,6 +829,35 @@ input,textarea,select{font-family:inherit}
     <div id="repo-container"><div class="loading">Cargando repositorio…</div></div>
   </div>
 
+  <!-- VIEW: ENTREVISTA DIRECCIÓN GENERAL -->
+  <div class="view" id="view-entrevista-dg">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>Entrevista · Dirección General</h1>
+        <p>Levantamiento de Políticas Corporativas · Grupo Morsa</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="edg-save-status" style="font-size:11px;color:var(--fog)"></span>
+        <button onclick="saveEntrevistaDG()" class="btn btn-primary" id="btn-edg-save">Guardar</button>
+      </div>
+    </div>
+
+    <!-- FICHA DE IDENTIFICACIÓN -->
+    <div style="background:var(--navy);color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">ENTREVISTADO</label><input id="edg-entrevistado" placeholder="Nombre completo" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
+      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">CARGO</label><input id="edg-cargo" placeholder="Director General" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
+      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">FECHA</label><input id="edg-fecha" type="date" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
+      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">CONSULTORES</label><input id="edg-consultores" placeholder="Frafer Consulting" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
+    </div>
+
+    <!-- RUTA DE CONVERSACIÓN -->
+    <div style="background:var(--linen);border:1px solid var(--border);border-radius:8px;padding:12px 20px;margin-bottom:24px;text-align:center">
+      <span style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.05em">VISIÓN → PREOCUPACIONES → RIESGOS → COMPORTAMIENTOS → DECISIONES → CONTROL → PRIORIDADES</span>
+    </div>
+
+    <div id="edg-container" style="display:flex;flex-direction:column;gap:28px"></div>
+  </div>
+
   <!-- VIEW: ADMIN -->
   <div class="view" id="view-admin">
     <div class="page-header">
@@ -918,8 +948,9 @@ function showView(name) {
   });
   if (name === 'dashboard')   loadDashboard();
   if (name === 'catalogo')    loadCatalogo();
-  if (name === 'repositorio') loadRepositorio();
-  if (name === 'maestro')     loadMaestro();
+  if (name === 'repositorio')   loadRepositorio();
+  if (name === 'entrevista-dg') loadEntrevistaDG();
+  if (name === 'maestro')       loadMaestro();
   if (name === 'admin')       loadAdmin();
 }
 
@@ -3716,6 +3747,204 @@ async function initApp() {
   alignBrandWidth();
   window.addEventListener('resize', alignBrandWidth);
 })();
+
+// ── ENTREVISTA DIRECCIÓN GENERAL ──────────────────────────────────────────────
+
+const EDG_SECTIONS = [
+  { id:'s3', titulo:'3. Visión y Expectativas del Proyecto', preguntas:[
+    '¿Qué espera obtener al finalizar este proyecto?',
+    '¿Por qué considera importante formalizar las políticas de Grupo Morsa en este momento?',
+    '¿Qué problema o problemas debería resolver este proyecto?',
+    '¿Qué tendría que cambiar en la organización para que dentro de seis meses usted diga: "valió la pena hacer este trabajo"?',
+    '¿Busca principalmente orden, control, delegación, profesionalización, crecimiento, reducción de riesgos o una combinación de estos objetivos?',
+    '¿Qué no quisiera que sucediera como consecuencia de formalizar las políticas? Por ejemplo: burocracia, lentitud o pérdida de autonomía.'
+  ]},
+  { id:'s4', titulo:'4. Visión del Negocio', preguntas:[
+    '¿Cómo visualiza a Grupo Morsa en tres y cinco años?',
+    '¿Cuáles son las prioridades estratégicas del negocio?',
+    '¿Dónde espera el mayor crecimiento?',
+    '¿Qué cambios anticipa en tamaño, estructura, sucursales, personal o complejidad operativa?',
+    '¿Qué capacidades necesita desarrollar la organización para llegar ahí?',
+    '¿Qué cosas funcionan hoy gracias a determinadas personas y deberían funcionar gracias a procesos y criterios institucionales?',
+    'Si Grupo Morsa duplicara su tamaño mañana, ¿qué se rompería primero?'
+  ]},
+  { id:'s5', titulo:'5. Preocupaciones y Diagnóstico desde Dirección General', preguntas:[
+    '¿Dónde observa actualmente mayor desorden?',
+    '¿En qué áreas siente que existe demasiada discrecionalidad?',
+    '¿Qué decisiones llegan hoy hasta Dirección General que no deberían llegar?',
+    '¿Qué decisiones se toman en niveles inferiores que usted considera que deberían escalarse?',
+    '¿Dónde existen criterios diferentes dependiendo de quién toma la decisión?',
+    '¿Qué errores se repiten con mayor frecuencia?',
+    '¿Qué situaciones generan más conflictos entre áreas?',
+    '¿Dónde observa falta de seguimiento o rendición de cuentas?',
+    '¿En qué temas depende demasiado la organización del conocimiento o experiencia de determinadas personas?',
+    '¿Qué situaciones le han hecho pensar: "esto debería estar reglamentado"?'
+  ]},
+  { id:'s6', titulo:'6. Riesgos', preguntas:[
+    '¿Cuáles considera que son hoy los principales riesgos de Grupo Morsa?',
+    '¿Dónde considera que la empresa está más expuesta: dinero, inventarios, compras, crédito, personal, clientes, proveedores, autorizaciones, información u otros temas?',
+    '¿Qué riesgos han crecido conforme ha crecido la organización?',
+    '¿Qué situaciones podrían generar una pérdida económica importante?',
+    '¿Qué situaciones podrían afectar la reputación o relación con clientes y proveedores?',
+    '¿Qué riesgos considera insuficientemente controlados actualmente?',
+    '¿Qué excepciones o prácticas informales representan un riesgo para la organización?'
+  ]},
+  { id:'s7', titulo:'7. Comportamientos y Cultura Esperada', preguntas:[
+    '¿Qué comportamientos quiere fomentar en Grupo Morsa?',
+    '¿Qué comportamientos no deberían tolerarse?',
+    '¿Qué valores de Grupo Morsa deben reflejarse en las políticas?',
+    '¿Cómo quiere que los líderes ejerzan la autoridad?',
+    '¿Qué significa para usted rendición de cuentas?',
+    '¿Qué balance quiere entre confianza y control?',
+    '¿Qué prácticas actuales considera que forman parte de la cultura y deben preservarse?',
+    '¿Qué prácticas deberían desaparecer?',
+    '¿Qué debería poder esperar cualquier colaborador de su jefe?',
+    '¿Qué debería poder esperar Grupo Morsa de cualquier colaborador?'
+  ]},
+  { id:'s8', titulo:'8. Decisiones y Niveles de Autoridad', preguntas:[
+    '¿Qué decisiones deben estar reservadas exclusivamente a Dirección General?',
+    '¿Qué decisiones deberían poder tomar los directores?',
+    '¿Qué decisiones deberían tomar gerentes y responsables sin pedir autorización?',
+    '¿Qué montos económicos deberían determinar diferentes niveles de autorización?',
+    '¿Dónde considera que actualmente existe exceso de autorización?',
+    '¿Dónde considera que falta control?',
+    '¿Qué decisiones requieren una segunda autorización?',
+    '¿Qué excepciones nunca deberían autorizarse verbalmente?',
+    '¿Qué decisiones deberían quedar documentadas obligatoriamente?',
+    '¿En qué temas considera necesaria una Matriz de Facultades y Niveles de Autorización?'
+  ]},
+  { id:'s9', titulo:'9. Control, Delegación y Seguimiento', preguntas:[
+    '¿Qué significa para usted "delegar con control"?',
+    '¿Qué información necesita recibir para sentirse cómodo delegando?',
+    '¿Qué indicadores considera indispensables para Dirección General?',
+    '¿Con qué periodicidad debería recibir información para supervisar sin intervenir en la operación cotidiana?',
+    '¿Dónde siente que hoy falta evidencia o documentación para saber quién autorizó o decidió algo?',
+    '¿Qué controles considera indispensables y cuáles podrían simplificarse?',
+    '¿Cómo debería gestionarse una excepción a una política?',
+    '¿Quién debería tener autoridad para aprobar excepciones y cómo deberían documentarse?'
+  ]},
+  { id:'s10', titulo:'10. Prioridades de Dirección General', preguntas:[
+    'Si solamente pudiéramos corregir cinco cosas con este proyecto, ¿cuáles elegiría?',
+    '¿Qué tres riesgos actuales de Grupo Morsa son los que más le preocupan?',
+    '¿Qué decisiones o problemas le están quitando tiempo a Dirección General que deberían resolverse en otro nivel?',
+    '¿Qué cosas funcionan hoy por confianza, costumbre o porque "siempre se han hecho así", pero deberían institucionalizarse?',
+    'Cuando terminemos este proyecto, ¿qué debería ser diferente en la manera en que Grupo Morsa toma decisiones y opera?',
+    '¿Qué áreas o procesos considera prioritarios para las siguientes entrevistas?',
+    '¿Hay algún tema sensible o crítico que considere indispensable abordar durante el levantamiento?'
+  ]},
+  { id:'s11', titulo:'11. Síntesis Posterior a la Entrevista', preguntas:[
+    'Principales expectativas de Dirección General',
+    'Cinco prioridades identificadas',
+    'Principales riesgos',
+    'Decisiones que deben delegarse',
+    'Decisiones que deben mantenerse en Dirección General',
+    'Controles que deben fortalecerse',
+    'Prácticas que deben institucionalizarse',
+    'Políticas o temas que requieren atención prioritaria',
+    'Áreas / personas a entrevistar a continuación',
+    'Hallazgos adicionales'
+  ]},
+  { id:'s12', titulo:'12. Hipótesis de Trabajo', preguntas:[
+    'Redacta en una sola frase la hipótesis central del proyecto. Ej: "Grupo Morsa necesita institucionalizar sus criterios de decisión para reducir dependencia de personas, establecer responsabilidades y niveles de autoridad, proteger los recursos y permitir crecer manteniendo control sin generar burocracia innecesaria."'
+  ]}
+];
+
+let _edgId = null;
+let _edgSaveTimer = null;
+
+async function loadEntrevistaDG() {
+  const container = document.getElementById('edg-container');
+  container.innerHTML = '<div class="loading">Cargando…</div>';
+
+  const { data } = await sb.from('pol_entrevista_dg')
+    .select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+  _edgId = data?.id || null;
+  const resp = data?.respuestas || {};
+
+  // Ficha
+  if (data) {
+    document.getElementById('edg-entrevistado').value  = data.entrevistado || '';
+    document.getElementById('edg-cargo').value         = data.cargo        || '';
+    document.getElementById('edg-fecha').value         = data.fecha        || '';
+    document.getElementById('edg-consultores').value   = data.consultores  || '';
+  } else {
+    document.getElementById('edg-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('edg-consultores').value = 'Frafer Consulting';
+  }
+
+  // Render secciones
+  container.innerHTML = EDG_SECTIONS.map(sec => {
+    const isS11 = sec.id === 's11';
+    const isS12 = sec.id === 's12';
+    const rows  = isS12 ? 5 : isS11 ? 4 : 3;
+    const qs = sec.preguntas.map((q, qi) => {
+      const key = `${sec.id}_${qi+1}`;
+      const val = (resp[key] || '').replace(/"/g, '&quot;');
+      const prefix = (isS11 || isS12) ? '' : `<span style="font-family:var(--ff-mono);font-size:11px;color:var(--ember-deep);margin-right:6px">${qi+1}.</span>`;
+      return `<div style="margin-bottom:14px">
+        <p style="font-size:12px;font-weight:600;color:var(--navy);margin:0 0 6px">${prefix}${q}</p>
+        <textarea id="edg-${key}" rows="${rows}" oninput="_edgAutoSave()"
+          placeholder="Notas / evidencia…"
+          style="width:100%;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;font-family:var(--ff-body);background:var(--linen);color:var(--ink);line-height:1.5">${resp[key]||''}</textarea>
+      </div>`;
+    }).join('');
+    const sStyle = isS11
+      ? 'background:var(--navy);color:#fff;'
+      : isS12
+      ? 'background:var(--ember-deep);color:#fff;'
+      : 'background:var(--linen);color:var(--navy);border:1px solid var(--border);';
+    return `<div style="border-radius:10px;overflow:hidden">
+      <div style="${sStyle}padding:12px 18px;font-size:13px;font-weight:700;letter-spacing:.03em">${sec.titulo}</div>
+      <div style="padding:16px 18px;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px">${qs}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('edg-save-status').textContent = data ? `Última vez guardado: ${new Date(data.updated_at).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}` : 'Sin guardar';
+}
+
+function _edgAutoSave() {
+  clearTimeout(_edgSaveTimer);
+  _edgSaveTimer = setTimeout(saveEntrevistaDG, 2500);
+}
+
+async function saveEntrevistaDG() {
+  clearTimeout(_edgSaveTimer);
+  const statusEl = document.getElementById('edg-save-status');
+  statusEl.textContent = 'Guardando…';
+
+  const respuestas = {};
+  EDG_SECTIONS.forEach(sec => {
+    sec.preguntas.forEach((_, qi) => {
+      const key = `${sec.id}_${qi+1}`;
+      const el = document.getElementById(`edg-${key}`);
+      if (el && el.value.trim()) respuestas[key] = el.value.trim();
+    });
+  });
+
+  const payload = {
+    entrevistado: document.getElementById('edg-entrevistado').value || null,
+    cargo:        document.getElementById('edg-cargo').value        || null,
+    fecha:        document.getElementById('edg-fecha').value        || null,
+    consultores:  document.getElementById('edg-consultores').value  || null,
+    respuestas
+  };
+
+  let error;
+  if (_edgId) {
+    ({ error } = await sb.from('pol_entrevista_dg').update(payload).eq('id', _edgId));
+  } else {
+    const { data, error: e } = await sb.from('pol_entrevista_dg').insert(payload).select('id').single();
+    error = e;
+    if (data) _edgId = data.id;
+  }
+
+  if (error) {
+    statusEl.textContent = 'Error al guardar: ' + error.message;
+  } else {
+    statusEl.textContent = '✓ Guardado · ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  }
+}
 
 </script>
 </body>
