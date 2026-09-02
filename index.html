@@ -1425,16 +1425,28 @@ async function loadRepositorio() {
   // Render con filtros reactivos
   window._repoData = enriched;
   window.renderRepo = function() {
-    const ftipo    = document.getElementById('repo-ftipo')?.value    || '';
-    const farch    = document.getElementById('repo-farch')?.value    || '';
-    const festatus = document.getElementById('repo-festatus')?.value || '';
-    const fdir     = document.getElementById('repo-fdir')?.value     || '';
-    const fsrch    = (document.getElementById('repo-search')?.value  || '').toLowerCase();
+    const ftipo     = document.getElementById('repo-ftipo')?.value     || '';
+    const farch     = document.getElementById('repo-farch')?.value     || '';
+    const festatus  = document.getElementById('repo-festatus')?.value  || '';
+    const fvigencia = document.getElementById('repo-fvigencia')?.value || '';
+    const fdir      = document.getElementById('repo-fdir')?.value      || '';
+    const fsrch     = (document.getElementById('repo-search')?.value   || '').toLowerCase();
+
+    const vigState = pol => {
+      if (!pol?.fecha_vencimiento) return 'sin_fecha';
+      const hoy  = new Date(); hoy.setHours(0,0,0,0);
+      const venc = new Date(pol.fecha_vencimiento + 'T00:00:00');
+      const dias = Math.round((venc - hoy) / 86400000);
+      if (dias < 0)   return 'vencida';
+      if (dias <= 30) return 'por_vencer';
+      return 'vigente';
+    };
 
     const filtered = enriched.filter(e => {
-      if (ftipo    && e.cat.tipo_documento !== ftipo) return false;
-      if (festatus && effectiveStatus(e.pol) !== festatus) return false;
-      if (fdir     && e.dir.id !== fdir) return false;
+      if (ftipo     && e.cat.tipo_documento !== ftipo) return false;
+      if (festatus  && effectiveStatus(e.pol) !== festatus) return false;
+      if (fvigencia && vigState(e.pol) !== fvigencia) return false;
+      if (fdir      && e.dir.id !== fdir) return false;
       if (farch) {
         const isPdf = (e.v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
         if (farch === 'pdf' && !isPdf) return false;
@@ -1474,6 +1486,7 @@ async function loadRepositorio() {
         <td style="padding:6px 8px;text-align:center">${tipoArchBadge(e.v.nombre_archivo)}</td>
         <td style="padding:6px 8px;font-size:10px;color:var(--fog);white-space:nowrap">${fmtDT(e.v.created_at)}</td>
         <td style="padding:6px 8px;font-size:11px">${e.v.elaboro||'—'}</td>
+        <td style="padding:6px 8px;white-space:nowrap">${_vigenciaTag(e.pol)}</td>
         <td style="padding:6px 8px;text-align:center">${dlBtn}</td>
       </tr>`;
     }).join('');
@@ -1503,6 +1516,13 @@ async function loadRepositorio() {
         <option value="publicado">Publicado</option>
         <option value="vencido">Vencido</option>
       </select>
+      <select id="repo-fvigencia" class="cat-filter-select" onchange="renderRepo()">
+        <option value="">Toda la vigencia</option>
+        <option value="vigente">🟢 Vigente</option>
+        <option value="por_vencer">🟡 Por Vencer</option>
+        <option value="vencida">🔴 Vencida</option>
+        <option value="sin_fecha">Sin fecha</option>
+      </select>
       <select id="repo-fdir" class="cat-filter-select" onchange="renderRepo()">
         <option value="">Todas las Direcciones</option>${dirOpts}
       </select>
@@ -1523,6 +1543,7 @@ async function loadRepositorio() {
         <th style="text-align:center;white-space:nowrap">Archivo</th>
         <th style="white-space:nowrap">Fecha</th>
         <th>Elaboró</th>
+        <th style="white-space:nowrap">Vigencia</th>
         <th style="text-align:center">Descargar</th>
       </tr></thead>
       <tbody id="repo-tbody"></tbody>
@@ -2966,17 +2987,16 @@ async function _generateWordCore(d) {
       const storagePath = `${d.politicaId}/${fileName}`;
       const { error: upErr } = await sb.storage.from('politicas-docs').upload(
         storagePath, blob,
-        { contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert:false }
+        { contentType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert:true }
       );
-      if (!upErr) {
-        await sb.from('pol_versiones').insert({
-          politica_id: d.politicaId, version: versionNum, folio: d.folio,
-          fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
-          elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
-        });
-        await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
-        if (politicaActual) politicaActual.version = versionNum;
-      }
+      await sb.from('pol_versiones').insert({
+        politica_id: d.politicaId, version: versionNum, folio: d.folio,
+        fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
+        elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
+      });
+      await sb.from('pol_politicas').update({ version: versionNum }).eq('id', d.politicaId);
+      if (politicaActual) politicaActual.version = versionNum;
+      loadCatalogo();
     }
 
 }
