@@ -691,8 +691,16 @@ input,textarea,select{font-family:inherit}
           <div class="form-group full"><label>Alcance</label><textarea id="pol-alcance" rows="3" placeholder="A quién aplica · áreas · sucursales · excepciones de alcance"></textarea></div>
         </div>
         <div class="form-section">
+          <div class="form-section-title">Marco Normativo y Referencias</div>
+          <div class="form-group full"><textarea id="pol-marco-normativo" rows="3" placeholder="Leyes, normas, reglamentos aplicables · Políticas relacionadas · Estándares (ISO, NOM, etc.)"></textarea></div>
+        </div>
+        <div class="form-section">
           <div class="form-section-title">Definiciones</div>
           <div class="form-group full"><textarea id="pol-definiciones" rows="4" placeholder="Glosario de términos clave (uno por línea o formato libre)"></textarea></div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">Responsabilidades</div>
+          <div class="form-group full"><textarea id="pol-responsabilidades" rows="4" placeholder="Por rol o puesto: quién emite, quién cumple, quién supervisa, quién sanciona"></textarea></div>
         </div>
         <div class="form-section">
           <div class="form-section-title" style="display:flex;align-items:center;justify-content:space-between">
@@ -716,6 +724,10 @@ input,textarea,select{font-family:inherit}
           <div class="form-group full"><textarea id="pol-excepciones" rows="3" placeholder="Casos o situaciones fuera del alcance de esta política"></textarea></div>
         </div>
         <div class="form-section">
+          <div class="form-section-title">Controles y Monitoreo</div>
+          <div class="form-group full"><textarea id="pol-controles-cumplimiento" rows="3" placeholder="Indicadores de cumplimiento · Frecuencia de auditoría · Responsable de medición · Evidencias requeridas"></textarea></div>
+        </div>
+        <div class="form-section">
           <div class="form-section-title">Responsables</div>
           <div class="form-grid">
             <div class="form-group"><label>Dirección Responsable</label><input id="pol-resp-dir" placeholder="Ej: Dirección de Recursos Humanos"></div>
@@ -727,9 +739,9 @@ input,textarea,select{font-family:inherit}
         <div class="form-section">
           <div class="form-section-title">Comunicación y Capacitación</div>
           <div class="form-grid">
-            <div class="form-group"><label>Canal de Comunicación</label><input id="pol-canal-comunicacion" placeholder="Ej: Intranet, correo, reunión divisional"></div>
-            <div class="form-group"><label>Esquema de Capacitación</label><input id="pol-esquema-capacitacion" placeholder="Ej: Taller anual, inducción"></div>
-            <div class="form-group full"><label>Directrices y Valores Asociados</label><input id="pol-directrices-valores" placeholder="Ej: Integridad, Responsabilidad Social"></div>
+            <div class="form-group full"><label>Canal de Comunicación</label><textarea id="pol-canal-comunicacion" rows="2" placeholder="Ej: Intranet, correo corporativo, reunión divisional, Teams"></textarea></div>
+            <div class="form-group full"><label>Esquema de Capacitación</label><textarea id="pol-esquema-capacitacion" rows="2" placeholder="Ej: Taller anual obligatorio, módulo de inducción, e-learning"></textarea></div>
+            <div class="form-group full"><label>Directrices y Valores Asociados</label><textarea id="pol-directrices-valores" rows="2" placeholder="Ej: Integridad, Responsabilidad Social, Excelencia Operativa"></textarea></div>
           </div>
         </div>
         <div class="form-section">
@@ -1514,7 +1526,8 @@ async function openPolitica(catalogoId, polId) {
 }
 
 function fillPoliticaForm(pol) {
-  const fields = ['objeto','alcance','definiciones','contenido','sanciones','excepciones',
+  const fields = ['objeto','alcance','marco_normativo','definiciones','responsabilidades',
+    'contenido','controles_cumplimiento','sanciones','excepciones',
     'canal_comunicacion','esquema_capacitacion','directrices_valores',
     'levantado_por','revisado_por','autorizado_por'];
   fields.forEach(f => {
@@ -1584,8 +1597,11 @@ async function savePolitica() {
   const payload = {
     objeto:                   document.getElementById('pol-objeto').value,
     alcance:                  document.getElementById('pol-alcance').value,
+    marco_normativo:          document.getElementById('pol-marco-normativo').value,
     definiciones:             document.getElementById('pol-definiciones').value,
+    responsabilidades:        document.getElementById('pol-responsabilidades').value,
     contenido:                document.getElementById('pol-contenido').value,
+    controles_cumplimiento:   document.getElementById('pol-controles-cumplimiento').value,
     sanciones:                document.getElementById('pol-sanciones').value,
     excepciones:              document.getElementById('pol-excepciones').value,
     num_reglas:               parseInt(document.getElementById('pol-num-reglas').value)||null,
@@ -1957,8 +1973,11 @@ function _getDocData() {
     act:              t('pol-ident-act'),
     objeto:           g('pol-objeto'),
     alcance:          g('pol-alcance'),
+    marcoNormativo:   g('pol-marco-normativo'),
     definiciones:     g('pol-definiciones'),
+    responsabilidades:g('pol-responsabilidades'),
     contenido:        g('pol-contenido'),
+    controles:        g('pol-controles-cumplimiento'),
     sanciones:        g('pol-sanciones'),
     excepciones:      g('pol-excepciones'),
     numReglas:        g('pol-num-reglas'),
@@ -2408,12 +2427,16 @@ async function _generateWordCore(d) {
 
     let sNum=0;
     const mkSec = (title, body) => {
-      if (!body?.trim()) return [];
+      const hasContent = body?.trim();
+      if (!hasContent && !d.isTemplate) return [];
       sNum++;
+      const lines = hasContent ? body.split('\n') : ['[ Completar este campo ]'];
+      const isPlaceholder = !hasContent;
       return [
         new Table({ width:{size:TW,type:WidthType.DXA}, rows:[navyBar(`${sNum}. ${title.toUpperCase()}`)] }),
-        ...body.split('\n').map(line => new Paragraph({ spacing:{before:0,after:60}, indent:{left:120,right:120},
-          children:[new TextRun({text:line,font:'Calibri',size:20,color:'1a1a1a'})] })),
+        ...lines.map(line => new Paragraph({ spacing:{before:0,after:60}, indent:{left:120,right:120},
+          children:[new TextRun({text:line,font:'Calibri',size:20,
+            color: isPlaceholder ? GRAY : '1a1a1a', italics: isPlaceholder})] })),
         new Paragraph({ spacing:{before:100,after:0}, text:'' }),
       ];
     };
@@ -2513,16 +2536,19 @@ async function _generateWordCore(d) {
           titleTable,
           new Paragraph({spacing:{before:160,after:0},text:''}),
           grpLabel('Contenido de la Política'),
-          ...mkSec('Propósito y Objetivo',        d.objeto),
-          ...mkSec('Alcance',                     d.alcance),
-          ...mkSec('Definiciones',                d.definiciones),
-          ...mkSec('Lineamientos y Reglas',       d.contenido),
-          ...mkSec('Sanciones por Incumplimiento',d.sanciones),
-          ...mkSec('Excepciones',                 d.excepciones),
+          ...mkSec('Propósito y Objetivo',              d.objeto),
+          ...mkSec('Alcance',                           d.alcance),
+          ...mkSec('Marco Normativo y Referencias',     d.marcoNormativo),
+          ...mkSec('Definiciones y Terminología',       d.definiciones),
+          ...mkSec('Responsabilidades',                 d.responsabilidades),
+          ...mkSec('Lineamientos y Reglas',             d.contenido),
+          ...mkSec('Controles y Monitoreo',             d.controles),
+          ...mkSec('Sanciones por Incumplimiento',      d.sanciones),
+          ...mkSec('Excepciones y Casos Especiales',    d.excepciones),
           grpLabel('Comunicación e Implementación'),
-          ...mkSec('Canal de Comunicación',        d.canal),
-          ...mkSec('Esquema de Capacitación',      d.capacitacion),
-          ...mkSec('Directrices y Valores Asociados', d.directrices),
+          ...mkSec('Canal de Comunicación',             d.canal),
+          ...mkSec('Esquema de Capacitación',           d.capacitacion),
+          ...mkSec('Directrices y Valores Asociados',   d.directrices),
           new Paragraph({spacing:{before:280,after:0},text:''}),
           sigTable,
           new Paragraph({spacing:{before:280,after:0},text:''}),
@@ -2598,7 +2624,8 @@ async function generateWordFromCatalogo(catId) {
     version: r.pol?.version || 1,
     status:  r.pol ? (STATUS_LABEL[r.pol.status] || r.pol.status) : 'En Catálogo',
     generadoEl: new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),
-    politicaId: r.pol?.id || null
+    politicaId: r.pol?.id || null,
+    isTemplate: true
   };
 
   // Usar el mismo generador que DOCUMENTAR POLÍTICA
