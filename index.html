@@ -1479,7 +1479,10 @@ async function loadRepositorio() {
       : `<span style="font-size:10px;color:var(--stone)">—</span>`;
 
     document.getElementById('repo-tbody').innerHTML = filtered.map((e, i) => {
-      const elaboro = (e.word || e.pdf)?.elaboro || '—';
+      const lastDoc = [e.word?.created_at, e.pdf?.created_at].filter(Boolean).sort().pop();
+      const fmtLastDoc = lastDoc
+        ? new Date(lastDoc).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})
+        : '—';
       return `<tr style="border-bottom:1px solid var(--border)">
         <td style="padding:6px 8px;font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right">${i+1}</td>
         <td style="padding:6px 8px;white-space:nowrap"><span style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);margin-right:4px">${e.dir.codigo}</span><span style="font-size:11px">${e.dir.nombre}</span></td>
@@ -1490,6 +1493,7 @@ async function loadRepositorio() {
         <td style="padding:6px 8px;text-align:center">${badge(effectiveStatus(e.pol))}</td>
         <td style="padding:6px 8px;text-align:center">${mkChipWord(e.word)}</td>
         <td style="padding:6px 8px;text-align:center">${mkChipPDF(e.pdf)}</td>
+        <td style="padding:6px 8px;white-space:nowrap;font-size:10px;color:var(--fog)">${fmtLastDoc}</td>
         <td style="padding:6px 8px;white-space:nowrap">${_vigenciaTag(e.pol)}</td>
       </tr>`;
     }).join('');
@@ -1544,6 +1548,7 @@ async function loadRepositorio() {
         <th style="text-align:center">Estatus</th>
         <th style="text-align:center">📝 Word</th>
         <th style="text-align:center">📄 PDF</th>
+        <th style="white-space:nowrap">Últ. Versión</th>
         <th style="white-space:nowrap">Vigencia</th>
       </tr></thead>
       <tbody id="repo-tbody"></tbody>
@@ -1919,15 +1924,16 @@ async function advanceStatus(polId, newStatus) {
 }
 
 function _vigenciaTag(pol) {
-  if (!pol?.fecha_vencimiento) return '';
+  if (!pol?.fecha_vencimiento) return '<span style="font-size:10px;color:var(--fog)">Sin fecha</span>';
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const venc = new Date(pol.fecha_vencimiento + 'T00:00:00');
   const dias = Math.round((venc - hoy) / 86400000);
+  const fmtV = venc.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
   if (dias < 0)
-    return `<span style="background:#FDECEA;color:#C0392B;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">VENCIDA · ${Math.abs(dias)}d</span>`;
+    return `<div style="display:flex;flex-direction:column;gap:2px"><span style="background:#FDECEA;color:#C0392B;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">VENCIDA · ${Math.abs(dias)}d</span><span style="font-size:9px;color:var(--fog)">${fmtV}</span></div>`;
   if (dias <= 30)
-    return `<span style="background:#FEF9E7;color:#B7770D;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">POR VENCER · ${dias}d</span>`;
-  return `<span style="background:#EAF4EE;color:#2D6B47;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">VIGENTE · ${dias}d</span>`;
+    return `<div style="display:flex;flex-direction:column;gap:2px"><span style="background:#FEF9E7;color:#B7770D;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">POR VENCER · ${dias}d</span><span style="font-size:9px;color:var(--fog)">${fmtV}</span></div>`;
+  return `<div style="display:flex;flex-direction:column;gap:2px"><span style="background:#EAF4EE;color:#2D6B47;font-size:10px;font-family:var(--ff-mono);padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em">VIGENTE · ${dias}d</span><span style="font-size:9px;color:var(--fog)">${fmtV}</span></div>`;
 }
 
 async function loadHistorial(polId) {
