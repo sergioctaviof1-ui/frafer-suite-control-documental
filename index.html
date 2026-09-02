@@ -1090,13 +1090,14 @@ async function loadEstructuraBase() {
 
 async function loadCatalogo() {
   document.getElementById('tree-container').innerHTML = '<div class="loading">Cargando catálogo…</div>';
-  const [{ data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }, { data: pols }] = await Promise.all([
+  const [{ data: dirsData }, { data: areasData }, { data: deptos }, { data: acts }, { data: cats }, { data: pols }, { data: versData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').eq('activa',true).order('orden'),
     sb.from('pol_areas').select('*').eq('activa',true).order('orden'),
     sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
     sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
-    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at')
+    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at,fecha_vencimiento'),
+    sb.from('pol_versiones').select('politica_id,version,url_storage,nombre_archivo').order('version', { ascending: false })
   ]);
   direcciones = dirsData||[]; areas = areasData||[];
   departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
@@ -1106,6 +1107,10 @@ async function loadCatalogo() {
     if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
       latestPols[p.catalogo_id] = p;
   });
+
+  // Última versión de documento por politica_id (primera coincidencia = mayor versión)
+  const latestVers = {};
+  (versData||[]).forEach(v => { if (!latestVers[v.politica_id]) latestVers[v.politica_id] = v; });
 
   // Construir filas planas: una fila por actividad
   const rows = [];
@@ -1160,10 +1165,14 @@ async function loadCatalogo() {
     </div>
     <table class="cat-table">
       <thead><tr>
-        <th style="width:40px;text-align:right">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th><th style="white-space:nowrap">Últ. Actualización</th><th style="width:110px"></th>
+        <th style="width:40px;text-align:right">#</th><th>Dirección</th><th>Área</th><th>Departamento</th><th>Actividad</th><th>Folio PLT</th><th>Estatus</th><th style="white-space:nowrap">Últ. Act.</th><th style="text-align:center;white-space:nowrap">Documento</th><th style="width:100px"></th>
       </tr></thead>
       <tbody id="cat-tbody"></tbody>
     </table>`;
+
+  // Guardar acceso global para onclick de botones del catálogo
+  window._catRowMap = Object.fromEntries(rows.filter(r=>r.cat).map(r=>[r.cat.id, r]));
+  window._latestVers = latestVers;
 
   window.renderCatTable = function() {
     const fDir    = document.getElementById('cat-fdir')?.value    || '';
@@ -1178,23 +1187,42 @@ async function loadCatalogo() {
       }
       return true;
     });
-    const tbody = filtered.map((r,i) => `<tr>
-      <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
-      <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
-      <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
-      <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
-      <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
-      <td>${r.cat
-        ? `<div style="display:flex;flex-direction:column;gap:2px"><span class="cat-folio">${r.cat.codigo_documento}</span><span style="font-size:10px;color:var(--fog)">${r.cat.nombre||''}</span></div>`
-        : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
-      }</td>
-      <td>${r.pol ? badge(effectiveStatus(r.pol)) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
-      <td style="font-size:10px;color:var(--fog);white-space:nowrap">${r.pol?.updated_at ? new Date(r.pol.updated_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
-      <td style="text-align:center">${r.cat
-        ? `<button class="btn-accion ${r.pol ? 'btn-accion-update' : 'btn-accion-iniciar'}" onclick="openPolitica('${r.cat.id}',${r.pol ? `'${r.pol.id}'` : 'null'})">${r.pol ? 'Actualizar' : 'Iniciar'}</button>`
-        : ''
-      }</td>
-    </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
+    const tbody = filtered.map((r,i) => {
+      const lv = r.pol ? latestVers[r.pol.id] : null;
+      const vtag = r.pol ? _vigenciaTag(r.pol) : '';
+      const docCell = !r.cat ? '—'
+        : lv
+          ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+               <button onclick="downloadVersion('${lv.url_storage}','${(lv.nombre_archivo||'documento').replace(/'/g,'')}',this)"
+                 style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:2px 10px;cursor:pointer;white-space:nowrap">
+                 📄 v${lv.version}</button>
+               <button onclick="generateWordFromCatalogo('${r.cat.id}')"
+                 style="font-size:9px;font-family:var(--ff-mono);color:var(--fog);background:none;border:none;cursor:pointer;padding:0">+ Nueva versión</button>
+             </div>`
+          : r.cat
+            ? `<button onclick="generateWordFromCatalogo('${r.cat.id}')"
+                 style="font-size:10px;font-family:var(--ff-mono);color:var(--fog);background:none;border:1px dashed var(--stone);border-radius:4px;padding:2px 10px;cursor:pointer;white-space:nowrap">
+                 ⬇ Generar</button>`
+            : '—';
+      return `<tr>
+        <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
+        <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
+        <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
+        <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
+        <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
+        <td>${r.cat
+          ? `<div style="display:flex;flex-direction:column;gap:2px"><span class="cat-folio">${r.cat.codigo_documento}</span><span style="font-size:10px;color:var(--fog)">${r.cat.nombre||''}</span></div>`
+          : `<span style="font-family:var(--ff-mono);font-size:10px;color:var(--stone);letter-spacing:.04em">${r.proposed}</span>`
+        }</td>
+        <td>${r.pol ? badge(effectiveStatus(r.pol)) : '<span style="font-size:10px;color:var(--stone)">En Catálogo</span>'}</td>
+        <td style="font-size:10px;color:var(--fog);white-space:nowrap">${r.pol?.updated_at ? new Date(r.pol.updated_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</td>
+        <td style="text-align:center">${docCell}</td>
+        <td style="text-align:center">${r.cat
+          ? `<button class="btn-accion ${r.pol ? 'btn-accion-update' : 'btn-accion-iniciar'}" onclick="openPolitica('${r.cat.id}',${r.pol ? `'${r.pol.id}'` : 'null'})">${r.pol ? 'Actualizar' : 'Iniciar'}</button>`
+          : ''
+        }</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--fog)">Sin resultados</td></tr>`;
     document.getElementById('cat-tbody').innerHTML = tbody;
     document.getElementById('cat-count').textContent = `${filtered.length} de ${total}`;
   };
@@ -2283,12 +2311,7 @@ function generatePDF() {
   setTimeout(() => { try { w.focus(); w.print(); } catch(e){} }, 800);
 }
 
-async function generateWord() {
-  const d = _getDocData();
-  if (!d) { alert('Selecciona una política primero.'); return; }
-  const btn = document.getElementById('btn-gen-word');
-  if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
-  try {
+async function _generateWordCore(d) {
     // Cargar librería docx via ESM (lazy, solo primera vez)
     if (!window._docxLib) {
       window._docxLib = await import('https://esm.sh/docx@8');
@@ -2296,6 +2319,19 @@ async function generateWord() {
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
             Header, Footer, AlignmentType, BorderStyle, ShadingType,
             VerticalAlign, WidthType, HeightRule, PageNumber } = window._docxLib;
+
+    // ── Versión: calcular PRIMERO para usar en todo el documento ────────────
+    let versiones = [];
+    if (d.politicaId) {
+      const { data: vData } = await sb.from('pol_versiones')
+        .select('version,fuente,created_at,elaboro,autorizo')
+        .eq('politica_id', d.politicaId)
+        .order('created_at', { ascending: true });
+      versiones = vData || [];
+    }
+    const versionNum = versiones.length > 0
+      ? Math.max(...versiones.map(v => v.version)) + 1
+      : (parseInt(d.version) || 1);
 
     // ── Paleta ──────────────────────────────────────────────────────────────
     const NAVY='1C2B3A', MAUVE='9A6070', GRAY='9C8E84';
@@ -2393,7 +2429,11 @@ async function generateWord() {
         new TableCell({ columnSpan:2, width:{size:Math.round(TW*.38),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN, verticalAlign:VerticalAlign.CENTER,
           children:[
             new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:60},children:[new TextRun({text:`${dk(d.folio)}  `,bold:true,color:MAUVE,font:'Courier New',size:26})]}),
-            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{after:60},children:[new TextRun({text:`Versión ${d.version}  ·  Uso Interno  `,color:GRAY,font:'Calibri',size:14})]}),
+            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{after:60},children:[
+              new TextRun({text:`Versión `,color:GRAY,font:'Calibri',size:20}),
+              new TextRun({text:`${versionNum}`,bold:true,color:NAVY,font:'Courier New',size:24}),
+              new TextRun({text:`  ·  Uso Interno  `,color:GRAY,font:'Calibri',size:16}),
+            ]}),
           ]}),
       ]}),
       new TableRow({ children:[new TableCell({ columnSpan:4, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN,
@@ -2431,19 +2471,7 @@ async function generateWord() {
         children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:t,color:GRAY,font:'Calibri',size:14})]})]})) }),
     ]});
 
-    // ── CONTROL DE CAMBIOS (multi-versión desde BD) ──────────────────────────
-    // Consultar versiones previas registradas
-    let versiones = [];
-    if (d.politicaId) {
-      const { data: vData } = await sb.from('pol_versiones')
-        .select('version,fuente,created_at,elaboro,autorizo')
-        .eq('politica_id', d.politicaId)
-        .order('created_at', { ascending: true });
-      versiones = vData || [];
-    }
-    const versionNum = versiones.length > 0
-      ? Math.max(...versiones.map(v => v.version)) + 1
-      : (parseInt(d.version) || 1);
+    // ── CONTROL DE CAMBIOS (multi-versión — versiones y versionNum ya calculados) ──
 
     const hW2 = [.07,.20,.12,.13,.24,.24].map(f=>Math.round(TW*f));
     const hCols = ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'];
@@ -2530,10 +2558,58 @@ async function generateWord() {
       }
     }
 
+}
+
+async function generateWord() {
+  const d = _getDocData();
+  if (!d) { alert('Selecciona una política primero.'); return; }
+  const btn = document.getElementById('btn-gen-word');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
+  try {
+    await _generateWordCore(d);
   } catch(e) {
     alert('Error al generar Word: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Word'; }
+  }
+}
+
+// ── GENERAR WORD DESDE CATÁLOGO ───────────────────────────────────────────────
+async function generateWordFromCatalogo(catId) {
+  const r = window._catRowMap?.[catId];
+  if (!r) { alert('No se encontró la política en el catálogo.'); return; }
+
+  // Construir objeto de datos con campos de origen, contenido en blanco
+  const fmtDate = s => s ? new Date(s+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const d = {
+    folio:            r.cat?.codigo_documento || r.proposed,
+    nombre:           r.cat?.nombre || r.act.nombre,
+    dir:              r.dir.nombre,
+    area:             r.area.nombre,
+    dept:             r.dept.nombre,
+    act:              r.act.nombre,
+    objeto:'', alcance:'', definiciones:'', contenido:'',
+    sanciones:'', excepciones:'', numReglas:'',
+    respDir:'', respElab:'', autorizadoPor:'', colaboradores:'',
+    canal:'', capacitacion:'', directrices:'',
+    vigenciaMeses:'',
+    fechaAutorizacion: fmtDate(r.pol?.fecha_inicio_vigencia),
+    fechaVencimiento:  fmtDate(r.pol?.fecha_vencimiento),
+    version: r.pol?.version || 1,
+    status:  r.pol ? (STATUS_LABEL[r.pol.status] || r.pol.status) : 'En Catálogo',
+    generadoEl: new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),
+    politicaId: r.pol?.id || null
+  };
+
+  // Usar el mismo generador que DOCUMENTAR POLÍTICA
+  const savedPol = politicaActual;
+  politicaActual = r.pol || { id: null, version: d.version, fecha_vencimiento: null };
+  try {
+    await _generateWordCore(d);
+  } finally {
+    politicaActual = savedPol;
+    // Refrescar catálogo para mostrar la nueva versión en la columna Documento
+    loadCatalogo();
   }
 }
 
