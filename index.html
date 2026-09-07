@@ -871,7 +871,7 @@ input,textarea,select{font-family:inherit}
 
     <!-- BLOQUE 1: PROPÓSITO -->
     <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">
-      <div style="background:#1C5AA8;padding:12px 20px">
+      <div style="background:var(--navy);padding:12px 20px">
         <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.02em">1. Propósito de la Entrevista</span>
       </div>
       <div style="padding:18px 20px;background:var(--bg);font-size:13px;color:var(--ink);line-height:1.7">
@@ -882,7 +882,7 @@ input,textarea,select{font-family:inherit}
 
     <!-- BLOQUE 2: RUTA DE CONVERSACIÓN -->
     <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:28px">
-      <div style="background:#1C5AA8;padding:12px 20px">
+      <div style="background:var(--navy);padding:12px 20px">
         <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.02em">2. Ruta de Conversación</span>
       </div>
       <div style="padding:20px;background:var(--bg)">
@@ -1307,7 +1307,7 @@ async function loadCatalogo() {
       const vtag = r.pol ? _vigenciaTag(r.pol) : '';
       const chipWord = lvDocx
         ? `<button onclick="downloadVersion('${lvDocx.url_storage}','${(lvDocx.nombre_archivo||'doc').replace(/'/g,"\\'")}',this)"
-             style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+             style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--navy);background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
              📝 Word v${lvDocx.version}</button>`
         : r.cat
           ? `<button onclick="generateWordFromCatalogo('${r.cat.id}')"
@@ -1500,7 +1500,7 @@ async function loadRepositorio() {
     const isPdf = (nombre||'').toLowerCase().endsWith('.pdf');
     return isPdf
       ? `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:1px 6px">📄 PDF</span>`
-      : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 6px">📝 Word</span>`;
+      : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--navy);background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 6px">📝 Word</span>`;
   };
 
   // Render con filtros reactivos
@@ -1549,7 +1549,7 @@ async function loadRepositorio() {
 
     const mkChipWord = v => v
       ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'doc').replace(/'/g,'')}',this)"
-           style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
+           style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--navy);background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
            📝 v${v.version}</button>`
       : `<span style="font-size:10px;color:var(--stone)">—</span>`;
     const mkChipPDF = v => v
@@ -2065,7 +2065,7 @@ async function loadHistorial(polId) {
       const isPdf = (v.nombre_archivo||'').toLowerCase().endsWith('.pdf');
       const tipoChip = isPdf
         ? `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--ember-deep);background:var(--linen);border:1px solid var(--stone);border-radius:4px;padding:1px 7px;white-space:nowrap">📄 PDF</span>`
-        : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:#1C5AA8;background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 7px;white-space:nowrap">📝 Word</span>`;
+        : `<span style="font-size:9px;font-family:var(--ff-mono);font-weight:700;color:var(--navy);background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:1px 7px;white-space:nowrap">📝 Word</span>`;
       const dlBtn = v.url_storage
         ? `<button onclick="downloadVersion('${v.url_storage}','${(v.nombre_archivo||'documento').replace(/'/g,'')}',this)"
              style="font-size:10px;background:none;border:1px solid var(--border);border-radius:4px;padding:2px 10px;cursor:pointer;color:var(--text);font-family:var(--ff-mono)">↓ Descargar</button>`
@@ -3942,7 +3942,7 @@ async function loadEntrevistaDG() {
       ? 'background:var(--navy);color:#fff;'
       : isS12
       ? 'background:#9A6070;color:#fff;'
-      : 'background:#1C5AA8;color:#fff;';
+      : 'background:var(--navy);color:#fff;';
     return `<div style="border-radius:10px;overflow:hidden">
       <div style="${sStyle}padding:12px 18px;font-size:13px;font-weight:700;letter-spacing:.03em">${sec.titulo}</div>
       <div style="padding:16px 18px;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px">${qs}</div>
