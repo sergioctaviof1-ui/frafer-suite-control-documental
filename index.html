@@ -831,31 +831,80 @@ input,textarea,select{font-family:inherit}
 
   <!-- VIEW: ENTREVISTA DIRECCIÓN GENERAL -->
   <div class="view" id="view-entrevista-dg">
-    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div>
-        <h1>Entrevista · Dirección General</h1>
-        <p>Levantamiento de Políticas Corporativas · Grupo Morsa</p>
+
+    <!-- PORTADA INSTITUCIONAL -->
+    <div style="background:var(--navy);border-radius:12px;padding:32px 36px;margin-bottom:24px;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.45);margin-bottom:12px">FRAFER CONSULTING · GRUPO MORSA</div>
+          <h1 style="font-size:22px;font-weight:800;color:#fff;margin:0 0 4px;letter-spacing:.01em">Guía de Entrevista · Dirección General</h1>
+          <p style="font-size:13px;color:rgba(255,255,255,.55);margin:0">Levantamiento de Políticas Corporativas</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="edg-save-status" style="font-size:10px;color:rgba(255,255,255,.45)"></span>
+            <button onclick="saveEntrevistaDG()" class="btn btn-primary" id="btn-edg-save" style="font-size:11px;padding:6px 16px">Guardar</button>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span id="edg-save-status" style="font-size:11px;color:var(--fog)"></span>
-        <button onclick="saveEntrevistaDG()" class="btn btn-primary" id="btn-edg-save">Guardar</button>
+
+      <!-- FICHA DE IDENTIFICACIÓN -->
+      <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding-top:20px;border-top:1px solid rgba(255,255,255,.12)">
+        <div>
+          <label style="font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);display:block;margin-bottom:5px">ENTREVISTADO</label>
+          <input id="edg-entrevistado" placeholder="Nombre completo" oninput="_edgAutoSave()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#fff;padding:7px 10px;width:100%;font-size:12px;font-family:var(--ff-body)">
+        </div>
+        <div>
+          <label style="font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);display:block;margin-bottom:5px">CARGO</label>
+          <input id="edg-cargo" placeholder="Director General" oninput="_edgAutoSave()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#fff;padding:7px 10px;width:100%;font-size:12px;font-family:var(--ff-body)">
+        </div>
+        <div>
+          <label style="font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);display:block;margin-bottom:5px">FECHA</label>
+          <input id="edg-fecha" type="date" oninput="_edgAutoSave()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#fff;padding:7px 10px;width:100%;font-size:12px;font-family:var(--ff-body)">
+        </div>
+        <div>
+          <label style="font-size:9px;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);display:block;margin-bottom:5px">CONSULTORES</label>
+          <input id="edg-consultores" placeholder="Frafer Consulting" oninput="_edgAutoSave()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:5px;color:#fff;padding:7px 10px;width:100%;font-size:12px;font-family:var(--ff-body)">
+        </div>
       </div>
     </div>
 
-    <!-- FICHA DE IDENTIFICACIÓN -->
-    <div style="background:var(--navy);color:#fff;border-radius:8px;padding:16px 20px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
-      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">ENTREVISTADO</label><input id="edg-entrevistado" placeholder="Nombre completo" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
-      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">CARGO</label><input id="edg-cargo" placeholder="Director General" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
-      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">FECHA</label><input id="edg-fecha" type="date" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
-      <div><label style="font-size:10px;opacity:.6;letter-spacing:.08em;display:block;margin-bottom:4px">CONSULTORES</label><input id="edg-consultores" placeholder="Frafer Consulting" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:#fff;padding:6px 10px;width:100%;font-size:12px"></div>
+    <!-- BLOQUE 1: PROPÓSITO -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px">
+      <div style="background:#1C5AA8;padding:12px 20px">
+        <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.02em">1. Propósito de la Entrevista</span>
+      </div>
+      <div style="padding:18px 20px;background:var(--bg);font-size:13px;color:var(--ink);line-height:1.7">
+        <p style="margin:0 0 10px">Comprender la visión de Dirección General sobre el futuro de Grupo Morsa, sus expectativas del proyecto, los principales riesgos y áreas de oportunidad de la organización, y los criterios que deberán orientar el diseño del <strong>Manual Corporativo de Políticas</strong>.</p>
+        <p style="margin:0;color:var(--fog)">La entrevista busca identificar principios y prioridades de gobierno; no pretende todavía revisar política por política. El detalle funcional se profundizará posteriormente con los responsables de cada área.</p>
+      </div>
     </div>
 
-    <!-- RUTA DE CONVERSACIÓN -->
-    <div style="background:var(--linen);border:1px solid var(--border);border-radius:8px;padding:12px 20px;margin-bottom:24px;text-align:center">
-      <span style="font-size:11px;font-weight:700;color:var(--navy);letter-spacing:.05em">VISIÓN → PREOCUPACIONES → RIESGOS → COMPORTAMIENTOS → DECISIONES → CONTROL → PRIORIDADES</span>
+    <!-- BLOQUE 2: RUTA DE CONVERSACIÓN -->
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:28px">
+      <div style="background:#1C5AA8;padding:12px 20px">
+        <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:.02em">2. Ruta de Conversación</span>
+      </div>
+      <div style="padding:20px;background:var(--bg)">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:center">
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">VISIÓN</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">PREOCUPACIONES</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">RIESGOS</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">COMPORTAMIENTOS</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">DECISIONES</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">CONTROL</span>
+          <span style="color:var(--fog);font-size:16px;font-weight:300">→</span>
+          <span style="background:var(--navy);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 14px;border-radius:20px">PRIORIDADES</span>
+        </div>
+      </div>
     </div>
 
-    <div id="edg-container" style="display:flex;flex-direction:column;gap:28px"></div>
+    <div id="edg-container" style="display:flex;flex-direction:column;gap:24px"></div>
   </div>
 
   <!-- VIEW: ADMIN -->
@@ -3892,8 +3941,8 @@ async function loadEntrevistaDG() {
     const sStyle = isS11
       ? 'background:var(--navy);color:#fff;'
       : isS12
-      ? 'background:var(--ember-deep);color:#fff;'
-      : 'background:var(--linen);color:var(--navy);border:1px solid var(--border);';
+      ? 'background:#9A6070;color:#fff;'
+      : 'background:#1C5AA8;color:#fff;';
     return `<div style="border-radius:10px;overflow:hidden">
       <div style="${sStyle}padding:12px 18px;font-size:13px;font-weight:700;letter-spacing:.03em">${sec.titulo}</div>
       <div style="padding:16px 18px;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px">${qs}</div>
