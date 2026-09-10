@@ -4058,6 +4058,7 @@ async function loadBaselineStats() {
       <table style="width:100%;border-collapse:collapse;font-size:11px">
         <thead>
           <tr style="background:var(--navy)">
+            <th style="padding:8px 10px;text-align:right;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">#</th>
             <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Dir</th>
             <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Área</th>
             <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Departamento</th>
@@ -4069,6 +4070,7 @@ async function loadBaselineStats() {
         <tbody>
           ${rows.map((r,i) => `
             <tr style="background:${i%2===0?'#FDF9F5':'var(--linen)'}">
+              <td style="padding:6px 10px;text-align:right;font-family:var(--ff-mono);font-size:9px;color:var(--fog);white-space:nowrap">${i+1}</td>
               <td style="padding:6px 10px;white-space:nowrap"><span style="font-family:var(--ff-mono);font-size:9px;font-weight:600;color:var(--navy)">${r.dir_codigo}</span></td>
               <td style="padding:6px 10px;white-space:nowrap;color:var(--dust);font-size:11px">${r.area_num} · ${r.area_nombre}</td>
               <td style="padding:6px 10px;white-space:nowrap;color:var(--dust);font-size:11px">${r.dept_codigo} · ${r.dept_nombre}</td>
