@@ -4165,9 +4165,13 @@ async function exportBaselineExcel() {
   const btn = document.getElementById('btn-export-baseline');
   if (btn) { btn.disabled = true; btn.textContent = 'Exportando…'; }
 
-  // cargar SheetJS si aún no está disponible
   if (typeof XLSX === 'undefined') {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
   }
 
   const { data: rows, error } = await sb.from('pol_catalogo_baseline')
