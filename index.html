@@ -4185,15 +4185,15 @@ async function exportBaselineExcel() {
   }
 
   const header = [
-    'Snapshot','Fecha','Dir. Código','Dir. Nombre','Dir. Tipo',
+    '#','Snapshot','Fecha','Dir. Código','Dir. Nombre','Dir. Tipo',
     'Área Núm.','Área Nombre',
     'Dept. Código','Dept. Nombre',
     'Act. Código','Act. Nombre',
     'Código PLT','Código PCS','Código PCD',
     'Estado','Notas'
   ];
-  const wsData = [header, ...rows.map(r => [
-    r.snapshot_label, r.snapshot_fecha,
+  const wsData = [header, ...rows.map((r,i) => [
+    i+1, r.snapshot_label, r.snapshot_fecha,
     r.dir_codigo, r.dir_nombre, r.dir_tipo||'',
     r.area_num, r.area_nombre,
     r.dept_codigo, r.dept_nombre,
@@ -4205,7 +4205,7 @@ async function exportBaselineExcel() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [
-    {wch:26},{wch:12},{wch:9},{wch:38},{wch:10},
+    {wch:5},{wch:26},{wch:12},{wch:9},{wch:38},{wch:10},
     {wch:7},{wch:30},
     {wch:11},{wch:38},
     {wch:8},{wch:44},
