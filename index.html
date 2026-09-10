@@ -919,6 +919,7 @@ input,textarea,select{font-family:inherit}
       <button class="tab" onclick="switchTab(this,'atab-depto')">Departamentos</button>
       <button class="tab" onclick="switchTab(this,'atab-actividades')">Actividades</button>
       <button class="tab" onclick="switchTab(this,'atab-estructura')">Estructura</button>
+      <button class="tab" onclick="switchTab(this,'atab-baseline');loadBaselineStats()" style="color:var(--gold);font-weight:600">Baseline</button>
     </div>
 
     <div class="tab-panel active" id="atab-direcciones">
@@ -966,6 +967,30 @@ input,textarea,select{font-family:inherit}
     <div class="tab-panel" id="atab-estructura">
       <div id="estructura-content" style="margin-top:4px">
         <p style="color:var(--fog);font-size:12px;padding:24px">Selecciona esta pestaña para cargar la estructura.</p>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="atab-baseline">
+      <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:28px 32px">
+        <div style="margin-bottom:20px">
+          <div style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Auditoría de estructura</div>
+          <h3 style="font-family:var(--ff-display);font-size:22px;font-weight:400;color:var(--ink);margin-bottom:6px">Catálogo Baseline · Propuesta Inicial</h3>
+          <p style="font-size:12px;color:var(--dust);line-height:1.6;max-width:620px">Snapshot congelado del catálogo actual como línea base de referencia. Permite auditar qué cambió al evolucionar la estructura: qué unidades subieron de nivel, qué actividades se movieron o desaparecieron, qué es nuevo.</p>
+        </div>
+        <div style="background:var(--gold-mist);border:1px solid #A8885830;border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 16px;font-size:12px;color:var(--dust);margin-bottom:24px;line-height:1.6">
+          <strong style="color:var(--ink)">Flujo de uso:</strong>
+          1. Presiona <strong>Guardar Baseline</strong> una sola vez — congela el catálogo en Supabase.
+          &nbsp;·&nbsp;
+          2. Exporta a Excel como entregable de referencia.
+          &nbsp;·&nbsp;
+          3. Conforme avance el levantamiento, actualiza el campo <strong>Estado</strong> de cada actividad: <em>propuesta · conservada · movida · eliminada · nueva</em>.
+        </div>
+        <div id="baseline-stats" style="font-family:var(--ff-mono);font-size:11px;color:var(--fog);margin-bottom:20px;padding:10px 14px;background:var(--linen);border-radius:6px;border:1px solid var(--stone)">Cargando…</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <button id="btn-save-baseline" class="btn btn-primary" onclick="saveBaselineToDB()">Guardar Baseline v1.0</button>
+          <button id="btn-export-baseline" class="btn" onclick="exportBaselineExcel()" style="background:var(--navy);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📥 Exportar a Excel</button>
+        </div>
+        <div id="baseline-status" style="margin-top:14px;font-size:12px;color:var(--ember-deep);font-family:var(--ff-mono)"></div>
       </div>
     </div>
 
@@ -3993,6 +4018,158 @@ async function saveEntrevistaDG() {
   } else {
     statusEl.textContent = '✓ Guardado · ' + new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
   }
+}
+
+// ── CATÁLOGO BASELINE ──────────────────────────────────────────────────────────
+
+async function loadBaselineStats() {
+  const el = document.getElementById('baseline-stats');
+  if (!el) return;
+  const { count, error } = await sb.from('pol_catalogo_baseline')
+    .select('id', { count: 'exact', head: true });
+  if (error) { el.textContent = 'Error al leer baseline.'; return; }
+  if (!count) {
+    el.textContent = 'Sin baseline guardado aún — el catálogo actual tiene ' + (actividades.length || '?') + ' actividades listas para congelar.';
+    return;
+  }
+  // contar por estado
+  const { data: estados } = await sb.from('pol_catalogo_baseline')
+    .select('estado').eq('snapshot_label','v1.0 — Propuesta Inicial');
+  const counts = {};
+  (estados||[]).forEach(r => { counts[r.estado] = (counts[r.estado]||0) + 1; });
+  const resumen = Object.entries(counts).map(([k,v])=>`${v} ${k}`).join(' · ');
+  el.textContent = `${count} actividades · ${resumen} · última actualización: v1.0 — Propuesta Inicial`;
+}
+
+async function saveBaselineToDB() {
+  const btn = document.getElementById('btn-save-baseline');
+  const statusEl = document.getElementById('baseline-status');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+  // verificar si ya existe
+  const { count } = await sb.from('pol_catalogo_baseline')
+    .select('id', { count: 'exact', head: true })
+    .eq('snapshot_label', 'v1.0 — Propuesta Inicial');
+  if (count > 0) {
+    if (!confirm(`Ya existe un baseline v1.0 con ${count} registros.\n¿Deseas reemplazarlo? (se borrarán los registros actuales)`)) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Guardar Baseline v1.0'; }
+      return;
+    }
+    await sb.from('pol_catalogo_baseline').delete().eq('snapshot_label','v1.0 — Propuesta Inicial');
+  }
+
+  // cargar toda la jerarquía
+  const [{ data: dirs }, { data: areasList }, { data: depts }, { data: acts }, { data: cats }] = await Promise.all([
+    sb.from('pol_direcciones').select('*').eq('activa', true).order('orden'),
+    sb.from('pol_areas').select('*').eq('activa', true).order('orden'),
+    sb.from('pol_departamentos').select('*').eq('activo', true).order('orden'),
+    sb.from('pol_actividades').select('*').eq('activa', true),
+    sb.from('pol_catalogo').select('*').eq('activo', true)
+  ]);
+
+  const dirById  = Object.fromEntries((dirs||[]).map(d=>[d.id,d]));
+  const areaById = Object.fromEntries((areasList||[]).map(a=>[a.id,a]));
+  const deptById = Object.fromEntries((depts||[]).map(d=>[d.id,d]));
+
+  const rows = [];
+  (acts||[]).forEach(act => {
+    const dept = deptById[act.departamento_id]; if (!dept) return;
+    const area = areaById[dept.area_id];         if (!area) return;
+    const dir  = dirById[area.direccion_id];      if (!dir)  return;
+    const actCats = (cats||[]).filter(c => c.actividad_id === act.id);
+    const plt = actCats.find(c => c.tipo_documento === 'PLT');
+    const pcs = actCats.find(c => c.tipo_documento === 'PCS');
+    const pcd = actCats.find(c => c.tipo_documento === 'PCD');
+    rows.push({
+      snapshot_label: 'v1.0 — Propuesta Inicial',
+      snapshot_fecha: new Date().toISOString().slice(0,10),
+      dir_codigo: dir.codigo,
+      dir_nombre: dir.nombre,
+      dir_tipo:   dir.tipo || null,
+      area_num:   String(area.numero),
+      area_nombre: area.nombre,
+      dept_codigo: dept.codigo || String(dept.orden).padStart(3,'0'),
+      dept_nombre: dept.nombre,
+      dept_orden:  dept.orden || null,
+      act_codigo:  act.codigo || '—',
+      act_nombre:  act.nombre,
+      codigo_plt:  plt?.codigo_documento || null,
+      codigo_pcs:  pcs?.codigo_documento || null,
+      codigo_pcd:  pcd?.codigo_documento || null,
+      estado: 'propuesta'
+    });
+  });
+
+  if (!rows.length) {
+    if (statusEl) statusEl.textContent = 'No hay actividades activas para guardar.';
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar Baseline v1.0'; }
+    return;
+  }
+
+  // insertar en lotes de 50
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += 50) {
+    const { error } = await sb.from('pol_catalogo_baseline').insert(rows.slice(i, i + 50));
+    if (error) { console.error('[Baseline] insert error:', error.message); break; }
+    inserted += Math.min(50, rows.length - i);
+  }
+
+  if (statusEl) statusEl.textContent = `✓ Baseline guardado: ${inserted} actividades · ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}`;
+  if (btn) { btn.disabled = false; btn.textContent = `Baseline guardado (${inserted})`; }
+  loadBaselineStats();
+}
+
+async function exportBaselineExcel() {
+  const btn = document.getElementById('btn-export-baseline');
+  if (btn) { btn.disabled = true; btn.textContent = 'Exportando…'; }
+
+  // cargar SheetJS si aún no está disponible
+  if (typeof XLSX === 'undefined') {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  }
+
+  const { data: rows, error } = await sb.from('pol_catalogo_baseline')
+    .select('*')
+    .order('dir_codigo').order('area_num').order('dept_orden').order('act_codigo');
+
+  if (error || !rows?.length) {
+    alert('No hay datos en el baseline. Primero guarda el baseline.');
+    if (btn) { btn.disabled = false; btn.textContent = '📥 Exportar a Excel'; }
+    return;
+  }
+
+  const header = [
+    'Snapshot','Fecha','Dir. Código','Dir. Nombre','Dir. Tipo',
+    'Área Núm.','Área Nombre',
+    'Dept. Código','Dept. Nombre',
+    'Act. Código','Act. Nombre',
+    'Código PLT','Código PCS','Código PCD',
+    'Estado','Notas'
+  ];
+  const wsData = [header, ...rows.map(r => [
+    r.snapshot_label, r.snapshot_fecha,
+    r.dir_codigo, r.dir_nombre, r.dir_tipo||'',
+    r.area_num, r.area_nombre,
+    r.dept_codigo, r.dept_nombre,
+    r.act_codigo, r.act_nombre,
+    r.codigo_plt||'', r.codigo_pcs||'', r.codigo_pcd||'',
+    r.estado, r.notas||''
+  ])];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:26},{wch:12},{wch:9},{wch:38},{wch:10},
+    {wch:7},{wch:30},
+    {wch:11},{wch:38},
+    {wch:8},{wch:44},
+    {wch:22},{wch:22},{wch:22},
+    {wch:13},{wch:34}
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Baseline v1.0');
+  XLSX.writeFile(wb, `Catalogo_Baseline_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+  if (btn) { btn.disabled = false; btn.textContent = '📥 Exportar a Excel'; }
 }
 
 </script>
