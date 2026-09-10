@@ -991,6 +991,7 @@ input,textarea,select{font-family:inherit}
           <button id="btn-export-baseline" class="btn" onclick="exportBaselineExcel()" style="background:var(--navy);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📥 Exportar a Excel</button>
         </div>
         <div id="baseline-status" style="margin-top:14px;font-size:12px;color:var(--ember-deep);font-family:var(--ff-mono)"></div>
+        <div id="baseline-table-wrap"></div>
       </div>
     </div>
 
@@ -4023,22 +4024,61 @@ async function saveEntrevistaDG() {
 // ── CATÁLOGO BASELINE ──────────────────────────────────────────────────────────
 
 async function loadBaselineStats() {
-  const el = document.getElementById('baseline-stats');
-  if (!el) return;
-  const { count, error } = await sb.from('pol_catalogo_baseline')
-    .select('id', { count: 'exact', head: true });
-  if (error) { el.textContent = 'Error al leer baseline.'; return; }
-  if (!count) {
-    el.textContent = 'Sin baseline guardado aún — el catálogo actual tiene ' + (actividades.length || '?') + ' actividades listas para congelar.';
+  const statsEl = document.getElementById('baseline-stats');
+  const tableEl = document.getElementById('baseline-table-wrap');
+  if (!statsEl) return;
+
+  const { data: rows, error } = await sb.from('pol_catalogo_baseline')
+    .select('*').order('dir_codigo').order('area_num').order('dept_orden').order('act_codigo');
+
+  if (error) { statsEl.textContent = 'Error al leer baseline.'; return; }
+  if (!rows?.length) {
+    statsEl.textContent = 'Sin baseline guardado aún. Presiona "Guardar Baseline v1.0" para congelar el catálogo actual.';
+    if (tableEl) tableEl.innerHTML = '';
     return;
   }
-  // contar por estado
-  const { data: estados } = await sb.from('pol_catalogo_baseline')
-    .select('estado').eq('snapshot_label','v1.0 — Propuesta Inicial');
+
+  // resumen por estado
   const counts = {};
-  (estados||[]).forEach(r => { counts[r.estado] = (counts[r.estado]||0) + 1; });
-  const resumen = Object.entries(counts).map(([k,v])=>`${v} ${k}`).join(' · ');
-  el.textContent = `${count} actividades · ${resumen} · última actualización: v1.0 — Propuesta Inicial`;
+  rows.forEach(r => { counts[r.estado] = (counts[r.estado]||0) + 1; });
+  const estadoColors = { propuesta:'var(--fog)', conservada:'var(--navy)', movida:'var(--gold)', eliminada:'var(--ember-deep)', nueva:'#3a7d44' };
+  const resumen = Object.entries(counts).map(([k,v]) =>
+    `<span style="font-weight:600;color:${estadoColors[k]||'var(--fog)'}">${v} ${k}</span>`
+  ).join(' &nbsp;·&nbsp; ');
+  statsEl.innerHTML = `<strong style="color:var(--ink)">${rows.length} actividades</strong> &nbsp;·&nbsp; ${resumen}`;
+
+  // tabla de datos
+  if (!tableEl) return;
+  const estadoBadge = e => {
+    const c = estadoColors[e]||'var(--fog)';
+    return `<span style="font-family:var(--ff-mono);font-size:8px;padding:2px 7px;border-radius:10px;border:1px solid ${c}30;background:${c}12;color:${c};white-space:nowrap">${e}</span>`;
+  };
+  tableEl.innerHTML = `
+    <div style="overflow-x:auto;margin-top:20px;border:1px solid var(--stone);border-radius:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:var(--navy)">
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Dir</th>
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Área</th>
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Departamento</th>
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow)">Actividad</th>
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow);white-space:nowrap">Código PLT</th>
+            <th style="padding:8px 10px;text-align:left;font-family:var(--ff-mono);font-size:8px;letter-spacing:.1em;color:var(--ember-glow)">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i) => `
+            <tr style="background:${i%2===0?'#FDF9F5':'var(--linen)'}">
+              <td style="padding:6px 10px;white-space:nowrap"><span style="font-family:var(--ff-mono);font-size:9px;font-weight:600;color:var(--navy)">${r.dir_codigo}</span></td>
+              <td style="padding:6px 10px;white-space:nowrap;color:var(--dust);font-size:11px">${r.area_num} · ${r.area_nombre}</td>
+              <td style="padding:6px 10px;white-space:nowrap;color:var(--dust);font-size:11px">${r.dept_codigo} · ${r.dept_nombre}</td>
+              <td style="padding:6px 10px;color:var(--ink);font-size:11px">${r.act_nombre}</td>
+              <td style="padding:6px 10px;font-family:var(--ff-mono);font-size:9px;color:var(--ember-deep);white-space:nowrap">${r.codigo_plt||'—'}</td>
+              <td style="padding:6px 10px">${estadoBadge(r.estado)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 async function saveBaselineToDB() {
@@ -4167,7 +4207,14 @@ async function exportBaselineExcel() {
     {wch:13},{wch:34}
   ];
   XLSX.utils.book_append_sheet(wb, ws, 'Baseline v1.0');
-  XLSX.writeFile(wb, `Catalogo_Baseline_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob  = new Blob([wbout], { type: 'application/octet-stream' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href = url;
+  a.download = `Catalogo_Baseline_${new Date().toISOString().slice(0,10)}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
 
   if (btn) { btn.disabled = false; btn.textContent = '📥 Exportar a Excel'; }
 }
