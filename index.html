@@ -514,6 +514,72 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Reasignar Departamento a Área -->
+<div class="modal-overlay" id="modal-reasignar-depto">
+  <div class="modal" style="max-width:460px">
+    <h3>Reasignar Departamento a Área</h3>
+    <div class="alert alert-error" id="mrdept-error"></div>
+    <input type="hidden" id="mrdept-dept-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Departamento</label>
+      <div id="mrdept-dept-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Asignar a Área</label>
+      <select id="mrdept-area"></select>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveReasignarDepto()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-depto')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Reasignar Actividad a Departamento -->
+<div class="modal-overlay" id="modal-reasignar-act">
+  <div class="modal" style="max-width:460px">
+    <h3>Reasignar Actividad a Departamento</h3>
+    <div class="alert alert-error" id="mract-error"></div>
+    <input type="hidden" id="mract-act-id">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Actividad</label>
+      <div id="mract-act-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Asignar a Departamento</label>
+      <select id="mract-dept"></select>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="saveReasignarAct()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-act')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Confirmar y Congelar División -->
+<div class="modal-overlay" id="modal-confirmar-dir">
+  <div class="modal" style="max-width:500px">
+    <h3 style="color:var(--ember-deep)">Confirmar y Congelar División</h3>
+    <input type="hidden" id="mconfdir-id">
+    <div style="background:#FFF8F0;border:1px solid #C0622030;border-left:4px solid var(--ember-deep);border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:18px">
+      <div style="font-weight:700;color:var(--ember-deep);margin-bottom:8px;font-size:12px;letter-spacing:.05em">⚠ ESTA ACCIÓN NO SE PUEDE DESHACER</div>
+      <div id="mconfdir-resumen" style="font-size:12px;color:var(--ink);line-height:1.8"></div>
+    </div>
+    <div style="font-size:12px;color:var(--dust);margin-bottom:22px;line-height:1.7">
+      Al confirmar esta División:
+      <ul style="margin:8px 0 0 16px;padding:0;color:var(--ink)">
+        <li>La <strong>estructura de árbol</strong> (Áreas → Departamentos → Actividades) queda <strong>congelada</strong>. No podrás reasignar ningún elemento que le pertenezca.</li>
+        <li>Los <strong>códigos de políticas</strong> de esta División quedan generados con la estructura actual y no cambiarán.</li>
+        <li>La División aparecerá como <strong style="color:var(--navy)">CONFIRMADA</strong> en el sistema.</li>
+      </ul>
+    </div>
+    <div class="actions-row">
+      <button class="btn" onclick="saveConfirmarDir()" style="background:var(--ember-deep);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.03em">Confirmar y Congelar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirmar-dir')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Editar nombre genérico -->
 <div class="modal-overlay" id="modal-editar-nombre">
   <div class="modal" style="max-width:420px">
@@ -3554,24 +3620,36 @@ async function loadAdmin() {
       style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer">
       ${activo?'Inactivar':'Activar'}</button>`;
 
+  const dirConfirmada = id => (direcciones.find(d=>d.id===id)||{}).confirmada;
+
   document.getElementById('admin-direcciones-body').innerHTML =
     direcciones.map(d=>`<tr>
       <td><span class="code-tag">${d.codigo}</span></td>
       <td>${d.nombre}</td>
       <td style="font-size:11px;color:var(--muted)">${tipoLabel[d.tipo]||d.tipo}</td>
-      <td><span class="badge ${d.activa?'badge-publicado':'badge-vencido'}">${d.activa?'Activa':'Inactiva'}</span></td>
-      <td style="white-space:nowrap">${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}</td>
+      <td>
+        <span class="badge ${d.activa?'badge-publicado':'badge-vencido'}" style="margin-right:4px">${d.activa?'Activa':'Inactiva'}</span>
+        ${d.confirmada?`<span class="badge" style="background:var(--navy)12;border:1px solid var(--navy)40;color:var(--navy);font-size:8px;padding:2px 7px;border-radius:10px;font-family:var(--ff-mono);letter-spacing:.05em">CONFIRMADA</span>`:''}
+      </td>
+      <td style="white-space:nowrap">
+        ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
+        ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
+      </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
   document.getElementById('admin-areas-body').innerHTML =
     areas.map(a=>{
       const dir = dirById[a.direccion_id];
+      const bloqueada = dir?.confirmada;
       return `<tr>
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
         <td><span class="code-tag">${a.numero}</span></td>
         <td>${a.nombre}</td>
         <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
-        <td style="white-space:nowrap">${accionesBtns('pol_areas',a.id,a.activa,'activa',a.nombre)}</td>
+        <td style="white-space:nowrap">
+          ${accionesBtns('pol_areas',a.id,a.activa,'activa',a.nombre)}
+          ${!bloqueada?`<button onclick="openReasignarArea('${a.id}','${a.direccion_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
+        </td>
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
 
@@ -3581,13 +3659,17 @@ async function loadAdmin() {
     departamentos.map(d=>{
       const area = areaById[d.area_id];
       const dir  = area ? dirById[area.direccion_id] : null;
+      const bloqueada = dir?.confirmada;
       return `<tr>
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
         <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
         <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
         <td>${d.nombre}</td>
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
-        <td style="white-space:nowrap">${accionesBtns('pol_departamentos',d.id,d.activo,'activo',d.nombre)}</td>
+        <td style="white-space:nowrap">
+          ${accionesBtns('pol_departamentos',d.id,d.activo,'activo',d.nombre)}
+          ${!bloqueada?`<button onclick="openReasignarDepto('${d.id}','${d.area_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
+        </td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
 
@@ -3601,6 +3683,7 @@ async function loadAdmin() {
         actividades.filter(a=>a.departamento_id===dept.id)
           .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
           .forEach((act, idx) => {
+            const bloqueada = dir.confirmada;
             actsRows.push(`<tr>
               <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;width:40px">${actNum++}</td>
               <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
@@ -3608,7 +3691,10 @@ async function loadAdmin() {
               <td style="font-size:11px">${dept.nombre}</td>
               <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
               <td>${act.nombre}</td>
-              <td style="white-space:nowrap">${accionesBtns('pol_actividades',act.id,act.activa,'activa',act.nombre)}</td>
+              <td style="white-space:nowrap">
+                ${accionesBtns('pol_actividades',act.id,act.activa,'activa',act.nombre)}
+                ${!bloqueada?`<button onclick="openReasignarAct('${act.id}','${act.departamento_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
+              </td>
             </tr>`);
           });
       });
@@ -3654,6 +3740,84 @@ async function saveReasignarArea() {
   closeModal('modal-reasignar-area');
   await loadAdmin();
   renderEstructura();
+}
+
+// ── REASIGNAR DEPARTAMENTO ─────────────────────────────────────────────────────
+function openReasignarDepto(deptId, areaActualId) {
+  const dept = departamentos.find(d=>d.id===deptId);
+  document.getElementById('mrdept-dept-id').value = deptId;
+  document.getElementById('mrdept-dept-nombre').textContent = dept ? `${dept.codigo||'—'} · ${dept.nombre}` : deptId;
+  document.getElementById('mrdept-area').innerHTML =
+    [...areas].sort((a,b)=>parseInt(a.numero)-parseInt(b.numero)).map(a => {
+      const dir = direcciones.find(d=>d.id===a.direccion_id);
+      return `<option value="${a.id}"${a.id===areaActualId?' selected':''}>${dir?.codigo||''} · ${a.numero} · ${a.nombre}</option>`;
+    }).join('');
+  document.getElementById('mrdept-error').classList.remove('show');
+  document.getElementById('modal-reasignar-depto').classList.add('open');
+}
+
+async function saveReasignarDepto() {
+  const deptId = document.getElementById('mrdept-dept-id').value;
+  const areaId = document.getElementById('mrdept-area').value;
+  const { error } = await sb.from('pol_departamentos').update({ area_id: areaId }).eq('id', deptId);
+  if (error) { showModalError('mrdept-error', error.message); return; }
+  closeModal('modal-reasignar-depto');
+  await loadAdmin();
+  renderEstructura();
+}
+
+// ── REASIGNAR ACTIVIDAD ────────────────────────────────────────────────────────
+function openReasignarAct(actId, deptActualId) {
+  const act = actividades.find(a=>a.id===actId);
+  document.getElementById('mract-act-id').value = actId;
+  document.getElementById('mract-act-nombre').textContent = act ? `${act.codigo||'—'} · ${act.nombre}` : actId;
+  document.getElementById('mract-dept').innerHTML =
+    [...departamentos].sort((a,b)=>a.orden-b.orden).map(d => {
+      const area = areas.find(a=>a.id===d.area_id);
+      const dir  = area ? direcciones.find(x=>x.id===area.direccion_id) : null;
+      return `<option value="${d.id}"${d.id===deptActualId?' selected':''}>${dir?.codigo||''} · ${area?.numero||''} · ${d.nombre}</option>`;
+    }).join('');
+  document.getElementById('mract-error').classList.remove('show');
+  document.getElementById('modal-reasignar-act').classList.add('open');
+}
+
+async function saveReasignarAct() {
+  const actId  = document.getElementById('mract-act-id').value;
+  const deptId = document.getElementById('mract-dept').value;
+  const dept   = departamentos.find(d=>d.id===deptId);
+  const areaId = dept?.area_id || null;
+  const { error } = await sb.from('pol_actividades').update({ departamento_id: deptId, area_id: areaId }).eq('id', actId);
+  if (error) { showModalError('mract-error', error.message); return; }
+  closeModal('modal-reasignar-act');
+  await loadAdmin();
+  renderEstructura();
+}
+
+// ── CONFIRMAR DIVISIÓN ─────────────────────────────────────────────────────────
+function openConfirmarDir(dirId) {
+  const dir      = direcciones.find(d=>d.id===dirId);
+  const dirAreas = areas.filter(a=>a.direccion_id===dirId);
+  const areaIds  = dirAreas.map(a=>a.id);
+  const dirDepts = departamentos.filter(d=>areaIds.includes(d.area_id));
+  const deptIds  = dirDepts.map(d=>d.id);
+  const dirActs  = actividades.filter(a=>deptIds.includes(a.departamento_id));
+  document.getElementById('mconfdir-id').value = dirId;
+  document.getElementById('mconfdir-resumen').innerHTML =
+    `<strong>[${dir.codigo}] ${dir.nombre}</strong><br>
+     ${dirAreas.length} área${dirAreas.length!==1?'s':''} &nbsp;·&nbsp;
+     ${dirDepts.length} departamento${dirDepts.length!==1?'s':''} &nbsp;·&nbsp;
+     ${dirActs.length} actividad${dirActs.length!==1?'es':''}`;
+  document.getElementById('modal-confirmar-dir').classList.add('open');
+}
+
+async function saveConfirmarDir() {
+  const dirId = document.getElementById('mconfdir-id').value;
+  const { error } = await sb.from('pol_direcciones')
+    .update({ confirmada: true, confirmada_at: new Date().toISOString() })
+    .eq('id', dirId);
+  if (error) { alert('Error al confirmar: ' + error.message); return; }
+  closeModal('modal-confirmar-dir');
+  await loadAdmin();
 }
 
 // ── INACTIVAR / EDITAR NOMBRE ─────────────────────────────────────────────────
