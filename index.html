@@ -4258,31 +4258,24 @@ async function generarPDFGobiernoCorporativo() {
 
 // ── CONSULTA DE POLÍTICAS ─────────────────────────────────────────────────────
 
-let _consultaAI = null; // sesión Chrome Built-in AI reutilizable
+const CONSULTA_FN = 'https://lygpotmaneqgewjcetzw.supabase.co/functions/v1/consulta-politicas';
 
 async function loadConsulta() {
   const badge = document.getElementById('consulta-ai-badge');
-  // Detectar Chrome Built-in AI (Prompt API)
-  const LM = window.LanguageModel || window.ai?.languageModel;
-  if (!LM) {
-    badge.textContent = '● Sin IA local';
-    badge.style.color = 'var(--fog)';
-    badge.style.borderColor = 'var(--stone)';
-    return;
-  }
+  // Verificar Edge Function disponible
   try {
-    const availability = await (LM.availability?.() ?? LM.capabilities?.().then(c=>c.available));
-    if (availability === 'no' || availability === 'unavailable') {
+    const res = await fetch(CONSULTA_FN, { method:'OPTIONS' });
+    if (res.ok || res.status === 204) {
+      badge.textContent = '● IA activa';
+      badge.style.color = '#2e7d32';
+      badge.style.borderColor = '#2e7d3266';
+    } else {
       badge.textContent = '● IA no disponible';
       badge.style.color = '#c62828';
       badge.style.borderColor = '#c6282866';
-    } else {
-      badge.textContent = '● IA disponible';
-      badge.style.color = '#2e7d32';
-      badge.style.borderColor = '#2e7d3266';
     }
   } catch(e) {
-    badge.textContent = '● Sin IA local';
+    badge.textContent = '● Sin conexión';
     badge.style.color = 'var(--fog)';
   }
 }
@@ -4348,45 +4341,19 @@ async function enviarConsulta() {
     fuentesDiv.style.display = 'none';
   }
 
-  // Intentar respuesta con Chrome Built-in AI
-  const LM = window.LanguageModel || window.ai?.languageModel;
-  if (LM && politicas?.length) {
-    try {
-      const contexto = politicas.map(p=>`[${p.folio}] ${p.titulo}\nEstatus: ${p.status}\n${p.resumen?'Contenido: '+p.resumen:''}`).join('\n\n---\n\n');
-      const systemPrompt = `Eres el asistente institucional de políticas de Grupo Morsa. Responde ÚNICAMENTE con base en las políticas proporcionadas. Si la información no está en las políticas, indícalo claramente. Cita el folio de la política cuando sea relevante. Responde en español, de forma clara y directa.`;
-
-      if (!_consultaAI) {
-        _consultaAI = await (LM.create?.({systemPrompt}) || LM.create?.({system:systemPrompt}));
-      }
-
-      const prompt = `Políticas relevantes encontradas:\n\n${contexto}\n\nPregunta del usuario: ${pregunta}`;
-      const typingId = _consultaAddMsg('bot', '…', true);
-
-      let respuesta = '';
-      try {
-        const stream = _consultaAI.promptStreaming?.(prompt);
-        if (stream) {
-          for await (const chunk of stream) { respuesta = chunk; _consultaUpdateMsg(typingId, respuesta); }
-        } else {
-          respuesta = await _consultaAI.prompt(prompt);
-          _consultaUpdateMsg(typingId, respuesta);
-        }
-      } catch(e) {
-        // Sesión caducada — reintentar una vez
-        _consultaAI = null;
-        _consultaAI = await (LM.create?.({systemPrompt}) || LM.create?.({system:systemPrompt}));
-        respuesta = await _consultaAI.prompt(prompt);
-        _consultaUpdateMsg(typingId, respuesta);
-      }
-
-    } catch(e) {
-      _consultaAddMsg('bot', `No fue posible generar una respuesta con IA local (${e.message}). Las políticas encontradas están listadas abajo.`);
-    }
-  } else if (!politicas?.length) {
-    _consultaAddMsg('bot', 'No encontré políticas relacionadas con tu pregunta en el repositorio actual. Es posible que aún no estén documentadas o autorizadas.');
-  } else {
-    // Sin IA, solo mostrar lo que encontró
-    _consultaAddMsg('bot', `Encontré ${politicas.length} política(s) relacionada(s). Revisa las fuentes listadas abajo para consultar el contenido completo.`);
+  // Llamar Edge Function — funciona en Edge, Chrome, cualquier browser
+  const typingId = _consultaAddMsg('bot', '…');
+  try {
+    const res = await fetch(CONSULTA_FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: pregunta, policies: politicas })
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    _consultaUpdateMsg(typingId, json.respuesta);
+  } catch(e) {
+    _consultaUpdateMsg(typingId, `No fue posible obtener respuesta: ${(e as Error).message}`);
   }
 
   btn.disabled = false;
