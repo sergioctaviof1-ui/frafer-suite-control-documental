@@ -4259,12 +4259,44 @@ async function generarPDFGobiernoCorporativo() {
 // ── CONSULTA DE POLÍTICAS ─────────────────────────────────────────────────────
 
 const CONSULTA_FN = 'https://lygpotmaneqgewjcetzw.supabase.co/functions/v1/consulta-politicas';
+let _orgContext = '';
 
 async function loadConsulta() {
   const badge = document.getElementById('consulta-ai-badge');
   badge.textContent = '● IA activa';
   badge.style.color = '#2e7d32';
   badge.style.borderColor = '#2e7d3266';
+
+  // Cargar estructura orgánica real desde Supabase (fuente de verdad, no hardcodeado)
+  try {
+    const [{ data: dirs }, { data: areas }, { data: catItems }] = await Promise.all([
+      sb.from('pol_direcciones').select('id,codigo,nombre,tipo').eq('activa', true),
+      sb.from('pol_areas').select('id,numero,nombre,direccion_id').eq('activa', true),
+      sb.from('pol_catalogo').select('area_id').not('area_id', 'is', null)
+    ]);
+    if (dirs && areas) {
+      const countMap = {};
+      (catItems || []).forEach(c => { if (c.area_id) countMap[c.area_id] = (countMap[c.area_id] || 0) + 1; });
+      const labels = { gobierno: 'BLOQUE GOBIERNO', soporte: 'BLOQUE SOPORTE', primaria: 'BLOQUE ACTIVIDADES PRIMARIAS' };
+      let ctx = '';
+      for (const tipo of ['gobierno', 'soporte', 'primaria']) {
+        const dirsBloque = dirs.filter(d => d.tipo === tipo);
+        if (!dirsBloque.length) continue;
+        ctx += `${labels[tipo]}:\n`;
+        for (const dir of dirsBloque) {
+          const da = areas.filter(a => a.direccion_id === dir.id);
+          const total = da.reduce((s, a) => s + (countMap[a.id] || 0), 0);
+          ctx += `  ${dir.codigo} — ${dir.nombre}${total ? ' (' + total + ' docs en catálogo)' : ''}\n`;
+          da.forEach(a => {
+            const cnt = countMap[a.id] || 0;
+            ctx += `    Área ${a.numero}: ${a.nombre}${cnt ? ' [' + cnt + ']' : ''}\n`;
+          });
+        }
+        ctx += '\n';
+      }
+      _orgContext = ctx.trim();
+    }
+  } catch(_e) { /* silencioso — Edge Function usa su lógica base */ }
 }
 
 function _mdToHtml(text) {
@@ -4343,7 +4375,7 @@ async function enviarConsulta() {
     const res = await fetch(CONSULTA_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: pregunta, policies: politicas })
+      body: JSON.stringify({ question: pregunta, policies: politicas, orgContext: _orgContext })
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
