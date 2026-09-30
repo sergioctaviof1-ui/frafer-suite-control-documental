@@ -3816,7 +3816,7 @@ async function loadAdmin() {
         <button onclick="moverDir('${d.id}',-1)" title="Subir" style="display:none">↑</button>
         <button onclick="moverDir('${d.id}',1)" title="Bajar" style="display:none">↓</button>
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
-        <button onclick="openConfigDir('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">⚙ Config</button>
+
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
