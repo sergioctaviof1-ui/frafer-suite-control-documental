@@ -3969,7 +3969,68 @@ async function generarPDFConfirmacion(dirId) {
       { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,10] },
       { text:`Confidencial · Uso exclusivo de ${dir.nombre} y Consejo Administrativo · Grupo Morsa`, alignment:'center', fontSize:8, color:GRAY, italics:true, margin:[0,0,0,4] },
 
-      // SECCIÓN 1
+      // SECCIÓN 1 — PROPÓSITO DEL PROYECTO
+      secTitle('1.  PROPÓSITO DEL PROYECTO'),
+      { text:'El presente documento forma parte del proyecto Sistema Integral de Políticas Empresariales y Control Documental de Grupo Morsa · Energy Parts LTH, desarrollado por Frafer Consulting a partir de julio de 2026. Su objetivo es convertir el capital de experiencia y valores del Grupo en un sistema formal de políticas codificadas, autorizadas y accesibles para toda la estructura directiva.', fontSize:9, color:NAVY, margin:[0,0,0,12], lineHeight:1.5 },
+      { columns:[
+          { stack:[
+              { text:'OBJETIVO', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'Formalizar las directrices y valores del Grupo en un sistema de políticas documentado, con codificación por División y Área, ciclo de vida digital y trazabilidad para el Consejo Administrativo.', fontSize:8.5, color:NAVY, lineHeight:1.4 }
+            ], width:'50%', margin:[0,0,12,0] },
+          { stack:[
+              { text:'ALCANCE (5 FASES)', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'A · Diagnóstico y Levantamiento  |  B · Catálogo de Políticas  |  C · Levantamiento de Políticas  |  D · Documentación  |  E · Autorización y Control Documental', fontSize:8.5, color:NAVY, lineHeight:1.4 }
+            ], width:'50%' }
+        ], margin:[0,0,0,12] },
+      { table:{ widths:['*','*','*','*'],
+          body:[[
+            { text:'5 MESES', alignment:'center', bold:true, fontSize:13, color:ORANGE, margin:[4,8,4,2] },
+            { text:'$3,500 MDP', alignment:'center', bold:true, fontSize:13, color:NAVY, margin:[4,8,4,2] },
+            { text:'58', alignment:'center', bold:true, fontSize:13, color:ORANGE, margin:[4,8,4,2] },
+            { text:'48 AÑOS', alignment:'center', bold:true, fontSize:13, color:NAVY, margin:[4,8,4,2] }
+          ],[
+            { text:'duración del proyecto', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'volumen anual del Grupo', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'sucursales activas', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'de trayectoria', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] }
+          ]]},
+        layout:{ hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER }, margin:[0,0,0,0] },
+
+      // SECCIÓN 2 — CONTEXTO ORGANIZACIONAL · LEVANTAMIENTO DG
+      secTitle('2.  CONTEXTO ORGANIZACIONAL · LEVANTAMIENTO DIRECCIÓN GENERAL'),
+      { text:'Información recabada en sesión de levantamiento con la Dirección General de Grupo Morsa, como parte de la Fase A del proyecto. Este contexto sirve como marco de referencia para la estructura de políticas de cada División.', fontSize:9, color:GRAY, italics:true, margin:[0,0,0,10], lineHeight:1.4 },
+      { columns:[
+          { stack:[
+              { text:'GRUPO MORSA', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'Líder en distribución mayorista de refacciones automotrices en México. Catálogo de más de 500,000 partes multimarca. 35 sucursales operativas.', fontSize:8.5, color:NAVY, lineHeight:1.4, margin:[0,0,0,10] },
+              { text:'ENERGY PARTS LTH', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'13 tiendas especializadas en refacciones. 10 puntos de venta mayoristas adicionales.', fontSize:8.5, color:NAVY, lineHeight:1.4 }
+            ], width:'50%', margin:[0,0,12,0] },
+          { stack:[
+              { text:'POSICIÓN ESR', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'El Grupo cuenta con la certificación de Empresa Socialmente Responsable (ESR), que establece el piso de valores institucionales que el sistema de políticas deberá formalizar y escalar a sus 58 puntos de venta.', fontSize:8.5, color:NAVY, lineHeight:1.4, margin:[0,0,0,10] },
+              { text:'DIAGNÓSTICO INICIAL', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
+              { text:'Las directrices de cada Dirección viven en la experiencia de las personas, no en documentos validados. El proyecto convierte ese conocimiento tácito en gobierno formal.', fontSize:8.5, color:NAVY, lineHeight:1.4 }
+            ], width:'50%' }
+        ], margin:[0,0,0,12] },
+      { table:{ widths:['5%','95%'],
+          body:[
+            [{ text:'NECESIDADES IDENTIFICADAS EN LEVANTAMIENTO CON DIRECCIÓN GENERAL', bold:true, fontSize:7.5, color:WHITE, fillColor:NAVY, margin:[6,5,6,5], colSpan:2 },{}],
+            ...[
+              'Claridad en la visión estratégica del Grupo como base para las políticas',
+              'Levantamiento de directrices y valores por cada Dirección',
+              'Organigrama completo con todas las áreas integradas',
+              'Documentación de macro-procesos y cadena de valor',
+              'Políticas de RRHH con enfoque en Empresa Socialmente Responsable (ESR)',
+              'Canal de comunicación, periodicidad y esquema de capacitación por política'
+            ].map((item,i)=>[
+              { text:`${i+1}`, fontSize:8, color:ORANGE, bold:true, alignment:'center', fillColor:i%2===0?'#F9F6F3':WHITE, margin:[4,4,4,4] },
+              { text:item, fontSize:8.5, color:NAVY, fillColor:i%2===0?'#F9F6F3':WHITE, margin:[8,4,6,4] }
+            ])
+          ]},
+        layout:{ hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER }, margin:[0,0,0,0] },
+
+      // SECCIÓN 3
       secTitle('3.  ESTRUCTURA ORGANIZACIONAL ACORDADA'),
       thRow(['División','Área','Departamento','Bloque']),
       ...estructuraRows,
