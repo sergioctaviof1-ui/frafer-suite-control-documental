@@ -1161,7 +1161,15 @@ input,textarea,select{font-family:inherit}
     </div>
 
     <div class="tab-panel" id="atab-actividades">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="filter-acts-dir" onchange="filterActsDir()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
+            <option value="">Todas las Direcciones</option>
+          </select>
+          <select id="filter-acts-area" onchange="renderAdminActs()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:220px">
+            <option value="">Todas las Áreas</option>
+          </select>
+        </div>
         <button class="btn btn-primary btn-sm" onclick="openModalActividad()">+ Nueva Actividad</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
@@ -3874,32 +3882,65 @@ async function loadAdmin() {
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
 
-  // Construir tabla de actividades con jerarquía completa
+  // Poblar filtro de dirección en actividades
+  const filterActsDirSel = document.getElementById('filter-acts-dir');
+  if (filterActsDirSel && filterActsDirSel.options.length === 1) {
+    direcciones.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `${d.codigo} · ${d.nombre}`;
+      filterActsDirSel.appendChild(opt);
+    });
+  }
+
+  window.filterActsDir = function() {
+    const dirSel = document.getElementById('filter-acts-dir');
+    const areaSel = document.getElementById('filter-acts-area');
+    const dirFiltro = dirSel ? dirSel.value : '';
+    areaSel.innerHTML = '<option value="">Todas las Áreas</option>';
+    const areasVisibles = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
+    areasVisibles.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = `${a.numero} · ${a.nombre}`;
+      areaSel.appendChild(opt);
+    });
+    window.renderAdminActs();
+  };
+
   const sortedDirsA = [...direcciones].sort((a,b)=>a.orden-b.orden);
-  let actsRows = [];
-  let actNum = 1;
-  sortedDirsA.forEach(dir => {
-    areas.filter(a=>a.direccion_id===dir.id).sort((a,b)=>a.orden-b.orden).forEach(area => {
-      departamentos.filter(d=>d.area_id===area.id).sort((a,b)=>a.orden-b.orden).forEach(dept => {
-        actividades.filter(a=>a.departamento_id===dept.id)
-          .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at))
-          .forEach((act, idx) => {
-            const bloqueada = dir.confirmada;
-            actsRows.push(`<tr>
-              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;width:40px">${actNum++}</td>
-              <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
-              <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
-              <td style="font-size:11px">${dept.nombre}</td>
-              <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
-              <td>${act.nombre}</td>
-              <td style="white-space:nowrap">${btnEditar('openEditarAct',act.id,act.activa,'pol_actividades','activa')}</td>
-            </tr>`);
-          });
+
+  window.renderAdminActs = function() {
+    const dirFiltro = document.getElementById('filter-acts-dir')?.value || '';
+    const areaFiltro = document.getElementById('filter-acts-area')?.value || '';
+    let rowNum = 1;
+    const rows = [];
+    const dirsVisible = dirFiltro ? sortedDirsA.filter(d => d.id === dirFiltro) : sortedDirsA;
+    dirsVisible.forEach(dir => {
+      let areasDir = areas.filter(a => a.direccion_id === dir.id).sort((a,b) => a.orden-b.orden);
+      if (areaFiltro) areasDir = areasDir.filter(a => a.id === areaFiltro);
+      areasDir.forEach(area => {
+        departamentos.filter(d => d.area_id === area.id).sort((a,b) => a.orden-b.orden).forEach(dept => {
+          actividades.filter(a => a.departamento_id === dept.id)
+            .sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
+            .forEach(act => {
+              rows.push(`<tr>
+                <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;width:40px">${rowNum++}</td>
+                <td><span class="code-tag">${dir.codigo}</span> ${dir.nombre}</td>
+                <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
+                <td style="font-size:11px">${dept.nombre}</td>
+                <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
+                <td>${act.nombre}</td>
+                <td style="white-space:nowrap">${btnEditar('openEditarAct',act.id,act.activa,'pol_actividades','activa')}</td>
+              </tr>`);
+            });
+        });
       });
     });
-  });
-  document.getElementById('admin-acts-body').innerHTML =
-    actsRows.join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Sin actividades — corre el seed_actividades.sql en Supabase</td></tr>';
+    document.getElementById('admin-acts-body').innerHTML =
+      rows.join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Sin actividades para este filtro</td></tr>';
+  };
+  window.renderAdminActs();
 
   document.getElementById('admin-catalogo-body').innerHTML =
     catalogo.map(c => {
