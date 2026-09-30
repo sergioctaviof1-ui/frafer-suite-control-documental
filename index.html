@@ -500,12 +500,12 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="mreasig-error"></div>
     <input type="hidden" id="mreasig-area-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Nombre del Área</label>
-      <input id="mreasig-area-nombre" placeholder="Nombre del área">
-    </div>
-    <div class="form-group" style="margin-bottom:14px">
       <label>División</label>
       <select id="mreasig-dir"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Nombre del Área</label>
+      <input id="mreasig-area-nombre" placeholder="Nombre del área">
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="saveEditarArea()">Guardar</button>
@@ -521,16 +521,16 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="mrdept-error"></div>
     <input type="hidden" id="mrdept-dept-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Nombre del Departamento</label>
-      <input id="mrdept-nombre" placeholder="Nombre del departamento">
-    </div>
-    <div class="form-group" style="margin-bottom:14px">
       <label>División</label>
       <select id="mrdept-dir" onchange="onEditDeptoDirChange()"></select>
     </div>
     <div class="form-group" style="margin-bottom:14px">
       <label>Área</label>
       <select id="mrdept-area"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Nombre del Departamento</label>
+      <input id="mrdept-nombre" placeholder="Nombre del departamento">
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="saveEditarDepto()">Guardar</button>
@@ -546,10 +546,6 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="mract-error"></div>
     <input type="hidden" id="mract-act-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Nombre de la Actividad</label>
-      <input id="mract-nombre" placeholder="Nombre de la actividad">
-    </div>
-    <div class="form-group" style="margin-bottom:14px">
       <label>División</label>
       <select id="mract-dir" onchange="onEditActDirChange()"></select>
     </div>
@@ -560,6 +556,10 @@ input,textarea,select{font-family:inherit}
     <div class="form-group" style="margin-bottom:14px">
       <label>Departamento</label>
       <select id="mract-dept"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Nombre de la Actividad</label>
+      <input id="mract-nombre" placeholder="Nombre de la actividad">
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="saveEditarAct()">Guardar</button>
