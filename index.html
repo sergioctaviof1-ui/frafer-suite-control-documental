@@ -359,6 +359,7 @@ input,textarea,select{font-family:inherit}
     <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar Política</button>
     <button class="nav-btn" onclick="showView('repositorio')" data-view="repositorio">Repositorio</button>
     <button class="nav-btn" onclick="showView('entrevista-dg')" data-view="entrevista-dg" style="color:var(--ember-deep);font-weight:700">Entrevista DG</button>
+    <button class="nav-btn" onclick="showView('gobierno-corporativo')" data-view="gobierno-corporativo">Gobierno Corp.</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -1020,6 +1021,57 @@ input,textarea,select{font-family:inherit}
     <div id="edg-container" style="display:flex;flex-direction:column;gap:24px"></div>
   </div>
 
+  <!-- VIEW: GOBIERNO CORPORATIVO -->
+  <div class="view" id="view-gobierno-corporativo">
+    <div style="background:var(--navy);border-radius:12px;padding:28px 32px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.4);margin-bottom:8px">FRAFER CONSULTING · GRUPO MORSA</div>
+          <h1 style="font-size:20px;font-weight:800;color:#fff;margin:0 0 4px">Marco de Gobierno Corporativo</h1>
+          <p style="font-size:12px;color:rgba(255,255,255,.5);margin:0">Campos institucionales que permean a todas las políticas del Grupo</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <span id="gc-status-badge" style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ember-glow);border:1px solid rgba(241,90,34,.4);border-radius:20px;padding:3px 12px">BORRADOR</span>
+          <div style="display:flex;gap:6px">
+            <button onclick="saveGobiernoCorporativo()" style="font-size:11px;font-weight:700;color:#fff;background:var(--ember-deep);border:none;border-radius:6px;padding:7px 16px;cursor:pointer">Guardar</button>
+            <button onclick="nuevaVersionGC()" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:7px 14px;cursor:pointer">+ Nueva versión</button>
+            <button onclick="generarPDFGobiernoCorporativo()" style="font-size:11px;font-weight:600;color:var(--navy);background:#fff;border:none;border-radius:6px;padding:7px 14px;cursor:pointer">📄 PDF</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)">
+        <span id="gc-version-label" style="font-size:10px;color:rgba(255,255,255,.4)">Versión 1</span>
+        <span id="gc-fecha-label" style="font-size:10px;color:rgba(255,255,255,.4)"></span>
+      </div>
+    </div>
+
+    <!-- 4 CAMPOS INSTITUCIONALES -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="border:1px solid var(--stone);border-radius:10px;padding:18px 20px;background:var(--bg)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ember-deep);margin-bottom:10px">CAMPO 3 · MARCO NORMATIVO Y REFERENCIAS</div>
+        <textarea id="gc-marco" rows="10" style="width:100%;font-size:12px;padding:0;border:none;resize:vertical;font-family:var(--ff-body);color:var(--ink);background:transparent;line-height:1.6" placeholder="Enumera cada referencia en una línea…"></textarea>
+      </div>
+      <div style="border:1px solid var(--stone);border-radius:10px;padding:18px 20px;background:var(--bg)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ember-deep);margin-bottom:10px">CAMPO 12 · DIRECTRICES Y VALORES ASOCIADOS</div>
+        <textarea id="gc-valores" rows="10" style="width:100%;font-size:12px;padding:0;border:none;resize:vertical;font-family:var(--ff-body);color:var(--ink);background:transparent;line-height:1.6" placeholder="Describe los valores y directrices institucionales del Grupo…"></textarea>
+      </div>
+      <div style="border:1px solid var(--stone);border-radius:10px;padding:18px 20px;background:var(--bg)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ember-deep);margin-bottom:10px">CAMPO 10 · CANAL DE COMUNICACIÓN</div>
+        <textarea id="gc-canal" rows="6" style="width:100%;font-size:12px;padding:0;border:none;resize:vertical;font-family:var(--ff-body);color:var(--ink);background:transparent;line-height:1.6" placeholder="¿Cómo se comunican y publican las políticas a toda la organización?…"></textarea>
+      </div>
+      <div style="border:1px solid var(--stone);border-radius:10px;padding:18px 20px;background:var(--bg)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ember-deep);margin-bottom:10px">CAMPO 11 · ESQUEMA DE CAPACITACIÓN</div>
+        <textarea id="gc-capacitacion" rows="6" style="width:100%;font-size:12px;padding:0;border:none;resize:vertical;font-family:var(--ff-body);color:var(--ink);background:transparent;line-height:1.6" placeholder="Describe la metodología y frecuencia de capacitación sobre políticas…"></textarea>
+      </div>
+    </div>
+
+    <!-- HISTORIAL DE VERSIONES -->
+    <div style="border:1px solid var(--stone);border-radius:10px;overflow:hidden">
+      <div style="background:var(--linen);padding:12px 18px;border-bottom:1px solid var(--stone);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--navy)">HISTORIAL DE VERSIONES</div>
+      <div id="gc-historial" style="padding:0"></div>
+    </div>
+  </div>
+
   <!-- VIEW: ADMIN -->
   <div class="view" id="view-admin">
     <div class="page-header">
@@ -1138,6 +1190,7 @@ function showView(name) {
   if (name === 'catalogo')    loadCatalogo();
   if (name === 'repositorio')   loadRepositorio();
   if (name === 'entrevista-dg') loadEntrevistaDG();
+  if (name === 'gobierno-corporativo') loadGobiernoCorporativo();
   if (name === 'maestro')       loadMaestro();
   if (name === 'admin')       loadAdmin();
 }
@@ -3967,6 +4020,160 @@ async function saveConfirmarDir() {
   closeModal('modal-confirmar-dir');
   await loadAdmin();
   await generarPDFConfirmacion(dirId);
+}
+
+// ── GOBIERNO CORPORATIVO ──────────────────────────────────────────────────────
+let _gcCurrent = null;
+
+async function loadGobiernoCorporativo() {
+  const { data, error } = await sb.from('pol_gobierno_corporativo')
+    .select('*').order('version', { ascending: false });
+  if (error || !data?.length) return;
+
+  _gcCurrent = data[0]; // versión más reciente
+  const d = _gcCurrent;
+
+  document.getElementById('gc-marco').value        = d.marco_normativo      || '';
+  document.getElementById('gc-valores').value      = d.directrices_valores  || '';
+  document.getElementById('gc-canal').value        = d.canal_comunicacion   || '';
+  document.getElementById('gc-capacitacion').value = d.esquema_capacitacion || '';
+  document.getElementById('gc-version-label').textContent = `Versión ${d.version}`;
+  document.getElementById('gc-fecha-label').textContent   =
+    `Creado: ${new Date(d.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
+
+  const statusLabel = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', firmado_dg:'FIRMADO · DG', firmado_all:'FIRMADO · TODAS LAS DIRECCIONES' };
+  document.getElementById('gc-status-badge').textContent = statusLabel[d.status] || d.status.toUpperCase();
+
+  // Historial
+  const hist = document.getElementById('gc-historial');
+  if (!data.length) { hist.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--fog)">Sin versiones</div>'; return; }
+  hist.innerHTML = `<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:var(--bg)">
+      <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">VER.</th>
+      <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">ESTATUS</th>
+      <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">FECHA</th>
+      <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">DOCUMENTO</th>
+    </tr></thead>
+    <tbody>${data.map((v,i)=>`<tr style="border-top:1px solid var(--stone);background:${i===0?'var(--linen)':'var(--bg)'}">
+      <td style="padding:8px 14px;font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--navy)">v${v.version}</td>
+      <td style="padding:8px 14px;font-size:11px">${statusLabel[v.status]||v.status}</td>
+      <td style="padding:8px 14px;font-size:11px;color:var(--fog)">${new Date(v.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td style="padding:8px 14px">${v.url_documento
+        ? `<a href="${v.url_documento}" target="_blank" style="font-size:10px;font-weight:700;color:var(--navy);border:1px solid var(--navy);border-radius:4px;padding:2px 8px;text-decoration:none">📄 PDF</a>`
+        : '<span style="font-size:10px;color:var(--fog)">Sin PDF</span>'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function saveGobiernoCorporativo() {
+  if (!_gcCurrent) return;
+  const patch = {
+    marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
+    directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
+    canal_comunicacion:   document.getElementById('gc-canal').value.trim()        || null,
+    esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null,
+    updated_at:           new Date().toISOString()
+  };
+  const { error } = await sb.from('pol_gobierno_corporativo').update(patch).eq('id', _gcCurrent.id);
+  if (error) { alert('Error al guardar: ' + error.message); return; }
+  Object.assign(_gcCurrent, patch);
+  alert('Guardado correctamente.');
+}
+
+async function nuevaVersionGC() {
+  if (!_gcCurrent) return;
+  if (!confirm('¿Crear una nueva versión a partir de la actual? La versión actual se conserva en el historial.')) return;
+  const { data, error } = await sb.from('pol_gobierno_corporativo').insert({
+    version:              _gcCurrent.version + 1,
+    status:               'borrador',
+    marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
+    directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
+    canal_comunicacion:   document.getElementById('gc-canal').value.trim()        || null,
+    esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null
+  }).select().single();
+  if (error) { alert('Error: ' + error.message); return; }
+  _gcCurrent = data;
+  await loadGobiernoCorporativo();
+}
+
+async function generarPDFGobiernoCorporativo() {
+  if (!window.pdfMake) {
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+  }
+  const gc   = _gcCurrent;
+  const fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const ORANGE='#F15A22', NAVY='#1C2B3A', WHITE='#FFFFFF', GRAY='#666666', BORDER='#E0D8D0';
+  const dk = v => (v&&String(v).trim()) ? String(v).trim() : '[ Por definir en levantamiento con Dirección General ]';
+
+  const secTitle = txt => ({
+    table:{ widths:['*'], body:[[{ text:txt, bold:true, color:ORANGE, fontSize:10, margin:[0,4,0,4] }]] },
+    layout:{ hLineWidth:(i)=>i===1?1.5:0, hLineColor:()=>ORANGE, vLineWidth:()=>0 },
+    margin:[0,18,0,8]
+  });
+  const campo = (num, label, valor) => [
+    secTitle(`${num}.  ${label}`),
+    { text: dk(valor), fontSize:9, color:NAVY, lineHeight:1.6, margin:[0,0,0,4] }
+  ];
+
+  // Líneas de firma para los 8 directores + DG
+  const dirsOrdenadas = [...direcciones].sort((a,b)=>a.orden-b.orden);
+  const sigLine = nombre => ({
+    stack:[
+      { canvas:[{ type:'line', x1:0,y1:0,x2:155,y2:0, lineWidth:0.8, lineColor:NAVY }], margin:[0,36,0,4] },
+      { text:nombre, fontSize:8, color:GRAY }
+    ], width:180, margin:[0,0,12,12]
+  });
+
+  const dd = {
+    pageSize:'LETTER', pageMargins:[45,85,45,60],
+    header:()=>({ columns:[
+      { text:'FRAFER CONSULTING', bold:true, color:ORANGE, fontSize:9, margin:[45,22,0,0] },
+      { text:`MARCO DE GOBIERNO CORPORATIVO · Versión ${gc.version} · Grupo Morsa`, fontSize:7.5, color:GRAY, alignment:'right', margin:[0,24,45,0] }
+    ]}),
+    footer:(cur,total)=>({ columns:[
+      { text:`Frafer Consulting · Confidencial · Uso exclusivo del Consejo Administrativo y Direcciones · Grupo Morsa`, fontSize:7, color:GRAY, margin:[45,0,0,0] },
+      { text:`Página ${cur} | ${total}`, fontSize:7, color:GRAY, alignment:'right', margin:[0,0,45,0] }
+    ]}),
+    content:[
+      { text:'MARCO DE GOBIERNO CORPORATIVO', style:'mainTitle', alignment:'center', margin:[0,0,0,6] },
+      { text:'Grupo Morsa · Energy Parts LTH', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
+      { text:`Zapopan, Jalisco · ${fecha}`, alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
+      { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
+      { text:`Versión ${gc.version} · ${gc.status==='borrador'?'BORRADOR — PENDIENTE DE VALIDACIÓN Y FIRMA':gc.status==='firmado_dg'?'FIRMADO POR DIRECCIÓN GENERAL':'DOCUMENTO FIRMADO'}`, alignment:'center', fontSize:8, color:ORANGE, italics:true, margin:[0,0,0,16] },
+
+      ...campo('1','MARCO NORMATIVO Y REFERENCIAS', gc.marco_normativo),
+      ...campo('2','DIRECTRICES Y VALORES ASOCIADOS', gc.directrices_valores),
+      ...campo('3','CANAL DE COMUNICACIÓN INSTITUCIONAL', gc.canal_comunicacion),
+      ...campo('4','ESQUEMA DE CAPACITACIÓN', gc.esquema_capacitacion),
+
+      secTitle('5.  AUTORIZACIÓN'),
+      { text:`Al firmar el presente documento, los abajo firmantes validan y aprueban el Marco de Gobierno Corporativo de Grupo Morsa como instrumento rector de todas las políticas del Grupo, con vigencia a partir de la fecha de la última firma.`, fontSize:9, color:NAVY, margin:[0,0,0,20], lineHeight:1.5 },
+      { columns:[ sigLine('Director General'), sigLine(dirsOrdenadas[1]?.nombre||'Director') ], margin:[0,0,0,0] },
+      { columns:[ sigLine(dirsOrdenadas[2]?.nombre||'Director'), sigLine(dirsOrdenadas[3]?.nombre||'Director') ] },
+      { columns:[ sigLine(dirsOrdenadas[4]?.nombre||'Director'), sigLine(dirsOrdenadas[5]?.nombre||'Director') ] },
+      { columns:[ sigLine(dirsOrdenadas[6]?.nombre||'Director'), sigLine(dirsOrdenadas[7]?.nombre||'Director') ] },
+    ],
+    styles:{ mainTitle:{ fontSize:16, bold:true, color:NAVY } }
+  };
+
+  const fileName = `GobiernoCorporativo_v${gc.version}_${new Date().toISOString().slice(0,10)}.pdf`;
+  pdfMake.createPdf(dd).getBlob(async (blob) => {
+    // Descargar
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=blobUrl; a.download=fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl),3000);
+    // Subir a Storage
+    const storagePath = `gobierno-corporativo/${fileName}`;
+    const { error: upErr } = await sb.storage.from('confirmaciones')
+      .upload(storagePath, blob, { contentType:'application/pdf', upsert:true });
+    if (upErr) { console.error('[GC] Storage error:', upErr.message); return; }
+    const { data: urlData } = sb.storage.from('confirmaciones').getPublicUrl(storagePath);
+    await sb.from('pol_gobierno_corporativo').update({ url_documento: urlData.publicUrl }).eq('id', gc.id);
+    _gcCurrent.url_documento = urlData.publicUrl;
+    await loadGobiernoCorporativo();
+  });
 }
 
 async function generarPDFConfirmacion(dirId) {
