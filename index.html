@@ -1151,7 +1151,15 @@ input,textarea,select{font-family:inherit}
     </div>
 
     <div class="tab-panel" id="atab-depto">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="filter-deptos-dir" onchange="filterDeptosDir()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
+            <option value="">Todas las Direcciones</option>
+          </select>
+          <select id="filter-deptos-area" onchange="renderAdminDeptos()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:220px">
+            <option value="">Todas las Áreas</option>
+          </select>
+        </div>
         <button class="btn btn-primary btn-sm" onclick="openModalDepto()">+ Nuevo Departamento</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
@@ -3868,19 +3876,57 @@ async function loadAdmin() {
 
   const deptById = Object.fromEntries(departamentos.map(d=>[d.id,d]));
 
-  document.getElementById('admin-deptos-body').innerHTML =
-    departamentos.map(d=>{
+  // Poblar filtro de dirección en departamentos
+  const filterDeptosDirSel = document.getElementById('filter-deptos-dir');
+  if (filterDeptosDirSel && filterDeptosDirSel.options.length === 1) {
+    direcciones.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `${d.codigo} · ${d.nombre}`;
+      filterDeptosDirSel.appendChild(opt);
+    });
+  }
+
+  window.filterDeptosDir = function() {
+    const dirSel = document.getElementById('filter-deptos-dir');
+    const areaSel = document.getElementById('filter-deptos-area');
+    const dirFiltro = dirSel ? dirSel.value : '';
+    areaSel.innerHTML = '<option value="">Todas las Áreas</option>';
+    const areasVisibles = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
+    areasVisibles.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = `${a.numero} · ${a.nombre}`;
+      areaSel.appendChild(opt);
+    });
+    window.renderAdminDeptos();
+  };
+
+  window.renderAdminDeptos = function() {
+    const dirFiltro = document.getElementById('filter-deptos-dir')?.value || '';
+    const areaFiltro = document.getElementById('filter-deptos-area')?.value || '';
+    const lista = departamentos.filter(d => {
       const area = areaById[d.area_id];
-      const dir  = area ? dirById[area.direccion_id] : null;
-      return `<tr>
-        <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
-        <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
-        <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
-        <td>${d.nombre}</td>
-        <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
-        <td style="white-space:nowrap">${btnEditar('openEditarDepto',d.id,d.activo,'pol_departamentos','activo')}</td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
+      if (!area) return !dirFiltro && !areaFiltro;
+      if (areaFiltro && area.id !== areaFiltro) return false;
+      if (dirFiltro && area.direccion_id !== dirFiltro) return false;
+      return true;
+    });
+    document.getElementById('admin-deptos-body').innerHTML =
+      lista.map(d => {
+        const area = areaById[d.area_id];
+        const dir  = area ? dirById[area.direccion_id] : null;
+        return `<tr>
+          <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
+          <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
+          <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
+          <td>${d.nombre}</td>
+          <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
+          <td style="white-space:nowrap">${btnEditar('openEditarDepto',d.id,d.activo,'pol_departamentos','activo')}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos para este filtro</td></tr>';
+  };
+  window.renderAdminDeptos();
 
   // Poblar filtro de dirección en actividades
   const filterActsDirSel = document.getElementById('filter-acts-dir');
