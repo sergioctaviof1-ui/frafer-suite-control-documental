@@ -4137,7 +4137,7 @@ async function generarPDFGobiernoCorporativo() {
     ]}),
     content:[
       { text:'MARCO DE GOBIERNO CORPORATIVO', style:'mainTitle', alignment:'center', margin:[0,0,0,6] },
-      { text:'Grupo Morsa · Energy Parts LTH', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
+      { text:'Grupo Morsa', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
       { text:`Zapopan, Jalisco · ${fecha}`, alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
       { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
       { text:`Versión ${gc.version} · ${gc.status==='borrador'?'BORRADOR — PENDIENTE DE VALIDACIÓN Y FIRMA':gc.status==='firmado_dg'?'FIRMADO POR DIRECCIÓN GENERAL':'DOCUMENTO FIRMADO'}`, alignment:'center', fontSize:8, color:ORANGE, italics:true, margin:[0,0,0,16] },
@@ -4265,7 +4265,7 @@ async function generarPDFConfirmacion(dirId) {
 
       // SECCIÓN 1 — PROPÓSITO DEL PROYECTO
       secTitle('1.  PROPÓSITO DEL PROYECTO'),
-      { text:'El presente documento forma parte del proyecto Sistema Integral de Políticas Empresariales y Control Documental de Grupo Morsa · Energy Parts LTH, desarrollado por Frafer Consulting a partir de septiembre de 2026. Su objetivo es convertir el capital de experiencia y valores del Grupo en un sistema formal de políticas codificadas, autorizadas y accesibles para toda la estructura directiva.', fontSize:9, color:NAVY, margin:[0,0,0,12], lineHeight:1.5 },
+      { text:'El presente documento forma parte del proyecto Sistema Integral de Políticas Empresariales y Control Documental de Grupo Morsa, desarrollado por Frafer Consulting a partir de septiembre de 2026. Su objetivo es convertir el capital de experiencia y valores del Grupo en un sistema formal de políticas codificadas, autorizadas y accesibles para toda la estructura directiva.', fontSize:9, color:NAVY, margin:[0,0,0,12], lineHeight:1.5 },
       { columns:[
           { stack:[
               { text:'OBJETIVO', bold:true, fontSize:8, color:ORANGE, margin:[0,0,0,4] },
