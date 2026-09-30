@@ -4299,15 +4299,39 @@ async function enviarConsulta() {
   // Agregar burbuja del usuario
   _consultaAddMsg('user', pregunta);
 
-  // Buscar políticas relevantes en Supabase
-  const terminos = pregunta.replace(/[¿?¡!,\.]/g,'').split(/\s+/).filter(w=>w.length>3).slice(0,6);
-  const filtros = terminos.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
+  // Buscar en catálogo (171 items) + políticas documentadas
+  const terminos = pregunta.replace(/[¿?¡!,\.]/g,'').split(/\s+/).filter(w=>w.length>2).slice(0,8);
 
-  const { data: politicas } = await sb.from('pol_politicas')
-    .select('id,titulo,contenido,objetivo,alcance,folio,status,dir_codigo')
-    .or(filtros)
-    .in('status', ['autorizado','publicado'])
-    .limit(5);
+  let politicas = [];
+
+  if (terminos.length) {
+    const filtrosCat = terminos.map(t=>`nombre.ilike.%${t}%`).join(',');
+    const { data: catItems } = await sb.from('pol_catalogo')
+      .select('id,nombre,codigo_documento,tipo_documento')
+      .or(filtrosCat)
+      .limit(5);
+
+    const filtrosPol = terminos.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
+    const { data: polItems } = await sb.from('pol_politicas')
+      .select('id,titulo,contenido,objetivo,alcance,folio,status')
+      .or(filtrosPol)
+      .limit(5);
+
+    // Unificar: políticas documentadas primero, luego catálogo
+    const polNorm = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,300), status:p.status }));
+    const catNorm = (catItems||[]).map(c=>({ folio:c.codigo_documento||'—', titulo:c.nombre, resumen:'', status:'en catálogo (sin documentar)' }));
+    politicas = [...polNorm, ...catNorm].slice(0,6);
+  }
+
+  // Si pregunta genérica ("tenemos políticas", "qué hay"), devolver resumen del catálogo
+  const esGenerica = terminos.length === 0 || ['politica','politicas','tenemos','cuantas','cuantos','que','hay','donde','consulta','consultas'].some(k=>terminos.map(t=>t.toLowerCase()).includes(k));
+  if (esGenerica && politicas.length === 0) {
+    const { count } = await sb.from('pol_catalogo').select('*', { count:'exact', head:true });
+    const { count: countPol } = await sb.from('pol_politicas').select('*', { count:'exact', head:true });
+    _consultaAddMsg('bot', `El catálogo de Grupo Morsa cuenta con ${count||171} documentos registrados (políticas, procedimientos y manuales). De estos, ${countPol||0} ya tienen contenido documentado en el sistema. Puedes preguntarme sobre un tema específico para encontrar el documento correspondiente.`);
+    document.getElementById('btn-consulta-enviar').disabled = false;
+    return;
+  }
 
   // Mostrar fuentes
   const fuentesDiv = document.getElementById('consulta-fuentes');
@@ -4316,9 +4340,9 @@ async function enviarConsulta() {
     fuentesDiv.style.display = 'block';
     fuentesLista.innerHTML = politicas.map(p=>`
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--stone);border-radius:6px;background:var(--linen)">
-        <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap">${p.folio||p.dir_codigo||'—'}</span>
-        <span style="font-size:11px;color:var(--ink)">${p.titulo}</span>
-        <span style="margin-left:auto;font-size:10px;color:var(--fog)">${p.status}</span>
+        <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap">${p.folio||'—'}</span>
+        <span style="font-size:11px;color:var(--ink);flex:1">${p.titulo}</span>
+        <span style="font-size:10px;color:var(--fog)">${p.status}</span>
       </div>`).join('');
   } else {
     fuentesDiv.style.display = 'none';
@@ -4328,7 +4352,7 @@ async function enviarConsulta() {
   const LM = window.LanguageModel || window.ai?.languageModel;
   if (LM && politicas?.length) {
     try {
-      const contexto = politicas.map(p=>`[${p.folio||p.titulo}] ${p.titulo}\nObjetivo: ${p.objetivo||'—'}\nAlcance: ${p.alcance||'—'}\nContenido: ${(p.contenido||'').slice(0,800)}`).join('\n\n---\n\n');
+      const contexto = politicas.map(p=>`[${p.folio}] ${p.titulo}\nEstatus: ${p.status}\n${p.resumen?'Contenido: '+p.resumen:''}`).join('\n\n---\n\n');
       const systemPrompt = `Eres el asistente institucional de políticas de Grupo Morsa. Responde ÚNICAMENTE con base en las políticas proporcionadas. Si la información no está en las políticas, indícalo claramente. Cita el folio de la política cuando sea relevante. Responde en español, de forma clara y directa.`;
 
       if (!_consultaAI) {
