@@ -3764,6 +3764,22 @@ function showModalError(elId, msg) {
 }
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
+
+async function moverDir(id, delta) {
+  const idx = direcciones.findIndex(d => d.id === id);
+  const swapIdx = idx + delta;
+  if (swapIdx < 0 || swapIdx >= direcciones.length) return;
+  const a = direcciones[idx];
+  const b = direcciones[swapIdx];
+  const ordenA = a.orden ?? idx + 1;
+  const ordenB = b.orden ?? swapIdx + 1;
+  await Promise.all([
+    sb.from('pol_direcciones').update({ orden: ordenB }).eq('id', a.id),
+    sb.from('pol_direcciones').update({ orden: ordenA }).eq('id', b.id)
+  ]);
+  loadAdmin();
+}
+
 async function loadAdmin() {
   const [{ data: dirsData }, { data: areasData }, { data: deptosData }, { data: actsData }, { data: catsData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').order('orden'),
@@ -3805,21 +3821,6 @@ async function loadAdmin() {
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
-
-  async function moverDir(id, delta) {
-    const idx = direcciones.findIndex(d => d.id === id);
-    const swapIdx = idx + delta;
-    if (swapIdx < 0 || swapIdx >= direcciones.length) return;
-    const a = direcciones[idx];
-    const b = direcciones[swapIdx];
-    const ordenA = a.orden ?? idx + 1;
-    const ordenB = b.orden ?? swapIdx + 1;
-    await Promise.all([
-      sb.from('pol_direcciones').update({ orden: ordenB }).eq('id', a.id),
-      sb.from('pol_direcciones').update({ orden: ordenA }).eq('id', b.id)
-    ]);
-    loadAdmin();
-  }
 
   const btnEditar = (fn, id, activo, tabla, campo) => `
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
