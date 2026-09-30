@@ -360,6 +360,7 @@ input,textarea,select{font-family:inherit}
     <button class="nav-btn" onclick="showView('repositorio')" data-view="repositorio">Repositorio</button>
     <button class="nav-btn" onclick="showView('entrevista-dg')" data-view="entrevista-dg" style="color:var(--ember-deep);font-weight:700">Entrevista DG</button>
     <button class="nav-btn" onclick="showView('gobierno-corporativo')" data-view="gobierno-corporativo">Gobierno Corp.</button>
+    <button class="nav-btn" onclick="showView('consulta')" data-view="consulta">Consulta</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
@@ -921,6 +922,44 @@ input,textarea,select{font-family:inherit}
     </div>
   </div>
 
+  <!-- VIEW: CONSULTA DE POLÍTICAS -->
+  <div class="view" id="view-consulta">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div class="page-title">Consulta de Políticas</div>
+        <div class="page-sub">Grupo Morsa · Respuestas fundamentadas en el repositorio institucional</div>
+      </div>
+      <span id="consulta-ai-badge" style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:4px 14px;border-radius:20px;border:1px solid var(--stone);color:var(--fog)">Verificando IA…</span>
+    </div>
+
+    <!-- Chat container -->
+    <div id="consulta-chat" style="display:flex;flex-direction:column;gap:0;border:1px solid var(--stone);border-radius:12px;overflow:hidden;background:var(--bg);max-height:520px">
+      <!-- Mensajes -->
+      <div id="consulta-mensajes" style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;min-height:320px;max-height:420px">
+        <div id="consulta-bienvenida" style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">🤖</div>
+          <div style="background:var(--linen);border-radius:0 10px 10px 10px;padding:12px 16px;max-width:80%">
+            <p style="margin:0;font-size:13px;color:var(--ink);line-height:1.6">Hola. Puedo responder preguntas sobre las políticas de Grupo Morsa. Pregúntame sobre procesos, autorizaciones, responsabilidades o cualquier lineamiento institucional.</p>
+          </div>
+        </div>
+      </div>
+      <!-- Input -->
+      <div style="border-top:1px solid var(--stone);padding:14px 16px;display:flex;gap:10px;background:var(--bg)">
+        <textarea id="consulta-input" rows="2" placeholder="Escribe tu pregunta sobre políticas de Grupo Morsa…"
+          style="flex:1;resize:none;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;font-family:var(--ff-body);color:var(--ink);background:var(--linen);line-height:1.5"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarConsulta()}"></textarea>
+        <button onclick="enviarConsulta()" id="btn-consulta-enviar"
+          style="align-self:flex-end;padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Enviar →</button>
+      </div>
+    </div>
+
+    <!-- Fuentes encontradas -->
+    <div id="consulta-fuentes" style="margin-top:16px;display:none">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--fog);margin-bottom:10px">POLÍTICAS CONSULTADAS</div>
+      <div id="consulta-fuentes-lista" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+
   <!-- VIEW: CATÁLOGO MAESTRO -->
   <div class="view" id="view-maestro">
     <div class="page-header">
@@ -1192,6 +1231,7 @@ function showView(name) {
   if (name === 'repositorio')   loadRepositorio();
   if (name === 'entrevista-dg') loadEntrevistaDG();
   if (name === 'gobierno-corporativo') loadGobiernoCorporativo();
+  if (name === 'consulta')      loadConsulta();
   if (name === 'maestro')       loadMaestro();
   if (name === 'admin')       loadAdmin();
 }
@@ -4214,6 +4254,145 @@ async function generarPDFGobiernoCorporativo() {
     _gcCurrent.url_documento = urlData.publicUrl;
     await loadGobiernoCorporativo();
   });
+}
+
+// ── CONSULTA DE POLÍTICAS ─────────────────────────────────────────────────────
+
+let _consultaAI = null; // sesión Chrome Built-in AI reutilizable
+
+async function loadConsulta() {
+  const badge = document.getElementById('consulta-ai-badge');
+  // Detectar Chrome Built-in AI (Prompt API)
+  const LM = window.LanguageModel || window.ai?.languageModel;
+  if (!LM) {
+    badge.textContent = '● Sin IA local';
+    badge.style.color = 'var(--fog)';
+    badge.style.borderColor = 'var(--stone)';
+    return;
+  }
+  try {
+    const availability = await (LM.availability?.() ?? LM.capabilities?.().then(c=>c.available));
+    if (availability === 'no' || availability === 'unavailable') {
+      badge.textContent = '● IA no disponible';
+      badge.style.color = '#c62828';
+      badge.style.borderColor = '#c6282866';
+    } else {
+      badge.textContent = '● IA disponible';
+      badge.style.color = '#2e7d32';
+      badge.style.borderColor = '#2e7d3266';
+    }
+  } catch(e) {
+    badge.textContent = '● Sin IA local';
+    badge.style.color = 'var(--fog)';
+  }
+}
+
+async function enviarConsulta() {
+  const input = document.getElementById('consulta-input');
+  const pregunta = input.value.trim();
+  if (!pregunta) return;
+
+  input.value = '';
+  const btn = document.getElementById('btn-consulta-enviar');
+  btn.disabled = true;
+
+  // Agregar burbuja del usuario
+  _consultaAddMsg('user', pregunta);
+
+  // Buscar políticas relevantes en Supabase
+  const terminos = pregunta.replace(/[¿?¡!,\.]/g,'').split(/\s+/).filter(w=>w.length>3).slice(0,6);
+  const filtros = terminos.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
+
+  const { data: politicas } = await sb.from('pol_politicas')
+    .select('id,titulo,contenido,objetivo,alcance,folio,status,dir_codigo')
+    .or(filtros)
+    .in('status', ['autorizado','publicado'])
+    .limit(5);
+
+  // Mostrar fuentes
+  const fuentesDiv = document.getElementById('consulta-fuentes');
+  const fuentesLista = document.getElementById('consulta-fuentes-lista');
+  if (politicas?.length) {
+    fuentesDiv.style.display = 'block';
+    fuentesLista.innerHTML = politicas.map(p=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--stone);border-radius:6px;background:var(--linen)">
+        <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap">${p.folio||p.dir_codigo||'—'}</span>
+        <span style="font-size:11px;color:var(--ink)">${p.titulo}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--fog)">${p.status}</span>
+      </div>`).join('');
+  } else {
+    fuentesDiv.style.display = 'none';
+  }
+
+  // Intentar respuesta con Chrome Built-in AI
+  const LM = window.LanguageModel || window.ai?.languageModel;
+  if (LM && politicas?.length) {
+    try {
+      const contexto = politicas.map(p=>`[${p.folio||p.titulo}] ${p.titulo}\nObjetivo: ${p.objetivo||'—'}\nAlcance: ${p.alcance||'—'}\nContenido: ${(p.contenido||'').slice(0,800)}`).join('\n\n---\n\n');
+      const systemPrompt = `Eres el asistente institucional de políticas de Grupo Morsa. Responde ÚNICAMENTE con base en las políticas proporcionadas. Si la información no está en las políticas, indícalo claramente. Cita el folio de la política cuando sea relevante. Responde en español, de forma clara y directa.`;
+
+      if (!_consultaAI) {
+        _consultaAI = await (LM.create?.({systemPrompt}) || LM.create?.({system:systemPrompt}));
+      }
+
+      const prompt = `Políticas relevantes encontradas:\n\n${contexto}\n\nPregunta del usuario: ${pregunta}`;
+      const typingId = _consultaAddMsg('bot', '…', true);
+
+      let respuesta = '';
+      try {
+        const stream = _consultaAI.promptStreaming?.(prompt);
+        if (stream) {
+          for await (const chunk of stream) { respuesta = chunk; _consultaUpdateMsg(typingId, respuesta); }
+        } else {
+          respuesta = await _consultaAI.prompt(prompt);
+          _consultaUpdateMsg(typingId, respuesta);
+        }
+      } catch(e) {
+        // Sesión caducada — reintentar una vez
+        _consultaAI = null;
+        _consultaAI = await (LM.create?.({systemPrompt}) || LM.create?.({system:systemPrompt}));
+        respuesta = await _consultaAI.prompt(prompt);
+        _consultaUpdateMsg(typingId, respuesta);
+      }
+
+    } catch(e) {
+      _consultaAddMsg('bot', `No fue posible generar una respuesta con IA local (${e.message}). Las políticas encontradas están listadas abajo.`);
+    }
+  } else if (!politicas?.length) {
+    _consultaAddMsg('bot', 'No encontré políticas relacionadas con tu pregunta en el repositorio actual. Es posible que aún no estén documentadas o autorizadas.');
+  } else {
+    // Sin IA, solo mostrar lo que encontró
+    _consultaAddMsg('bot', `Encontré ${politicas.length} política(s) relacionada(s). Revisa las fuentes listadas abajo para consultar el contenido completo.`);
+  }
+
+  btn.disabled = false;
+  // Scroll al fondo
+  const msgs = document.getElementById('consulta-mensajes');
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function _consultaAddMsg(tipo, texto, esTyping=false) {
+  const msgs = document.getElementById('consulta-mensajes');
+  const id = 'msg-' + Date.now();
+  const isBot = tipo === 'bot';
+  const burbuja = document.createElement('div');
+  burbuja.id = id;
+  burbuja.style.cssText = `display:flex;gap:12px;align-items:flex-start;${isBot?'':'flex-direction:row-reverse'}`;
+  burbuja.innerHTML = `
+    <div style="width:32px;height:32px;border-radius:50%;background:${isBot?'var(--navy)':'var(--ember-deep)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">${isBot?'🤖':'👤'}</div>
+    <div class="consulta-burbuja-${id}" style="background:${isBot?'var(--linen)':'#FFF3EC'};border-radius:${isBot?'0 10px 10px 10px':'10px 0 10px 10px'};padding:12px 16px;max-width:80%">
+      <p style="margin:0;font-size:13px;color:var(--ink);line-height:1.6;white-space:pre-wrap">${texto}</p>
+    </div>`;
+  msgs.appendChild(burbuja);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function _consultaUpdateMsg(id, texto) {
+  const burbuja = document.querySelector(`.consulta-burbuja-${id} p`);
+  if (burbuja) burbuja.textContent = texto;
+  const msgs = document.getElementById('consulta-mensajes');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
 
 async function generarPDFConfirmacion(dirId) {
