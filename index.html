@@ -1138,7 +1138,10 @@ input,textarea,select{font-family:inherit}
     </div>
 
     <div class="tab-panel" id="atab-areas">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px">
+        <select id="filter-areas-dir" onchange="renderAdminAreas()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
+          <option value="">Todas las Direcciones</option>
+        </select>
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
@@ -3826,17 +3829,34 @@ async function loadAdmin() {
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
     <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campo}')" style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer">${activo?'Inactivar':'Activar'}</button>`;
 
-  document.getElementById('admin-areas-body').innerHTML =
-    areas.map(a=>{
-      const dir = dirById[a.direccion_id];
-      return `<tr>
-        <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
-        <td><span class="code-tag">${a.numero}</span></td>
-        <td>${a.nombre}</td>
-        <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
-        <td style="white-space:nowrap">${btnEditar('openEditarArea',a.id,a.activa,'pol_areas','activa')}</td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
+  // Poblar filtro de direcciones en Áreas
+  const filterSel = document.getElementById('filter-areas-dir');
+  if (filterSel && filterSel.options.length === 1) {
+    direcciones.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `${d.codigo} · ${d.nombre}`;
+      filterSel.appendChild(opt);
+    });
+  }
+
+  window.renderAdminAreas = function() {
+    const sel = document.getElementById('filter-areas-dir');
+    const dirFiltro = sel ? sel.value : '';
+    const lista = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
+    document.getElementById('admin-areas-body').innerHTML =
+      lista.map(a => {
+        const dir = dirById[a.direccion_id];
+        return `<tr>
+          <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
+          <td><span class="code-tag">${a.numero}</span></td>
+          <td>${a.nombre}</td>
+          <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
+          <td style="white-space:nowrap">${btnEditar('openEditarArea',a.id,a.activa,'pol_areas','activa')}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas para esta dirección</td></tr>';
+  };
+  window.renderAdminAreas();
 
   const deptById = Object.fromEntries(departamentos.map(d=>[d.id,d]));
 
