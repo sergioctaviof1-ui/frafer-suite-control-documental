@@ -1170,12 +1170,15 @@ input,textarea,select{font-family:inherit}
 
     <div class="tab-panel" id="atab-actividades">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px">
-        <div style="display:flex;gap:10px;align-items:center">
-          <select id="filter-acts-dir" onchange="filterActsDir()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="filter-acts-dir" onchange="filterActsDir()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:240px">
             <option value="">Todas las Direcciones</option>
           </select>
-          <select id="filter-acts-area" onchange="renderAdminActs()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:220px">
+          <select id="filter-acts-area" onchange="filterActsArea()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:200px">
             <option value="">Todas las Áreas</option>
+          </select>
+          <select id="filter-acts-depto" onchange="renderAdminActs()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:180px">
+            <option value="">Todos los Deptos</option>
           </select>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openModalActividad()">+ Nueva Actividad</button>
@@ -3942,8 +3945,10 @@ async function loadAdmin() {
   window.filterActsDir = function() {
     const dirSel = document.getElementById('filter-acts-dir');
     const areaSel = document.getElementById('filter-acts-area');
+    const deptoSel = document.getElementById('filter-acts-depto');
     const dirFiltro = dirSel ? dirSel.value : '';
     areaSel.innerHTML = '<option value="">Todas las Áreas</option>';
+    deptoSel.innerHTML = '<option value="">Todos los Deptos</option>';
     const areasVisibles = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
     areasVisibles.forEach(a => {
       const opt = document.createElement('option');
@@ -3954,11 +3959,31 @@ async function loadAdmin() {
     window.renderAdminActs();
   };
 
+  window.filterActsArea = function() {
+    const areaSel = document.getElementById('filter-acts-area');
+    const deptoSel = document.getElementById('filter-acts-depto');
+    const areaFiltro = areaSel ? areaSel.value : '';
+    deptoSel.innerHTML = '<option value="">Todos los Deptos</option>';
+    const deptosVisibles = areaFiltro
+      ? departamentos.filter(d => d.area_id === areaFiltro)
+      : (document.getElementById('filter-acts-dir')?.value
+          ? departamentos.filter(d => { const a = areaById[d.area_id]; return a && a.direccion_id === document.getElementById('filter-acts-dir').value; })
+          : departamentos);
+    deptosVisibles.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.nombre;
+      deptoSel.appendChild(opt);
+    });
+    window.renderAdminActs();
+  };
+
   const sortedDirsA = [...direcciones].sort((a,b)=>a.orden-b.orden);
 
   window.renderAdminActs = function() {
     const dirFiltro = document.getElementById('filter-acts-dir')?.value || '';
     const areaFiltro = document.getElementById('filter-acts-area')?.value || '';
+    const deptoFiltro = document.getElementById('filter-acts-depto')?.value || '';
     let rowNum = 1;
     const rows = [];
     const dirsVisible = dirFiltro ? sortedDirsA.filter(d => d.id === dirFiltro) : sortedDirsA;
@@ -3966,7 +3991,9 @@ async function loadAdmin() {
       let areasDir = areas.filter(a => a.direccion_id === dir.id).sort((a,b) => a.orden-b.orden);
       if (areaFiltro) areasDir = areasDir.filter(a => a.id === areaFiltro);
       areasDir.forEach(area => {
-        departamentos.filter(d => d.area_id === area.id).sort((a,b) => a.orden-b.orden).forEach(dept => {
+        let deptosArea = departamentos.filter(d => d.area_id === area.id).sort((a,b) => a.orden-b.orden);
+        if (deptoFiltro) deptosArea = deptosArea.filter(d => d.id === deptoFiltro);
+        deptosArea.forEach(dept => {
           actividades.filter(a => a.departamento_id === dept.id)
             .sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
             .forEach(act => {
