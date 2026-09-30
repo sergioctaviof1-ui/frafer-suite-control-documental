@@ -3877,6 +3877,119 @@ async function saveConfirmarDir() {
   if (error) { alert('Error al confirmar: ' + error.message); return; }
   closeModal('modal-confirmar-dir');
   await loadAdmin();
+  await generarPDFConfirmacion(dirId);
+}
+
+async function generarPDFConfirmacion(dirId) {
+  if (!window.pdfMake) {
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+  }
+
+  const dir      = direcciones.find(d=>d.id===dirId);
+  const dirAreas = areas.filter(a=>a.direccion_id===dirId).sort((a,b)=>parseInt(a.numero)-parseInt(b.numero));
+  const areaById = Object.fromEntries(dirAreas.map(a=>[a.id,a]));
+  const dirDepts = departamentos.filter(d=>dirAreas.some(a=>a.id===d.area_id)).sort((a,b)=>a.orden-b.orden);
+  const deptById = Object.fromEntries(dirDepts.map(d=>[d.id,d]));
+  const dirActs  = actividades.filter(a=>dirDepts.some(d=>d.id===a.departamento_id))
+                              .sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''));
+
+  const ORANGE='#F15A22', NAVY='#1C2B3A', WHITE='#FFFFFF', LIGHT='#FFF3EC', GRAY='#666666', BORDER='#E0D8D0';
+  const fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  const dk = v => (v&&String(v).trim()) ? String(v).trim() : '—';
+
+  // encabezado de tabla naranja
+  const thRow = cells => ({
+    table:{ widths: cells.map(()=>'*'), body:[[
+      ...cells.map(c=>({ text:c, bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, margin:[5,4,5,4] }))
+    ]]},
+    layout:{ hLineWidth:()=>0, vLineWidth:()=>0.5, vLineColor:()=>WHITE }, margin:[0,0,0,0]
+  });
+
+  const tdRow = (cells, shade) => ({
+    table:{ widths: cells.map(()=>'*'), body:[[
+      ...cells.map(c=>({ text:dk(c), fontSize:8, color:NAVY, fillColor:shade?'#F9F6F3':WHITE, margin:[5,3,5,3] }))
+    ]]},
+    layout:{ hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+  });
+
+  const secTitle = txt => ({
+    table:{ widths:['*'], body:[[{ text:txt, bold:true, color:ORANGE, fontSize:10, margin:[0,4,0,4] }]] },
+    layout:{ hLineWidth:(i)=>i===1?1.5:0, hLineColor:()=>ORANGE, vLineWidth:()=>0 },
+    margin:[0,18,0,6]
+  });
+
+  // ── SECCIÓN 1: Estructura ────────────────────────────────────────────────────
+  const estructuraRows = [];
+  dirDepts.forEach((dept,i) => {
+    const area = areaById[dept.area_id];
+    estructuraRows.push(tdRow([dir.nombre, area?.nombre||'—', dept.nombre, 'Primaria'], i%2===0));
+  });
+
+  // ── SECCIÓN 2: Catálogo de Actividades ──────────────────────────────────────
+  const catalogoRows = [];
+  dirActs.forEach((act,i) => {
+    const dept = deptById[act.departamento_id];
+    const area = dept ? areaById[dept.area_id] : null;
+    const plt  = catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT');
+    catalogoRows.push(tdRow([area?.nombre||'—', dept?.nombre||'—', act.nombre, plt?.codigo_documento||'Pendiente'], i%2===0));
+  });
+
+  // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
+  const sigBox = (label) => ({
+    stack:[
+      { canvas:[{ type:'line', x1:0,y1:0,x2:160,y2:0, lineWidth:0.8, lineColor:NAVY }], margin:[0,40,0,4] },
+      { text:label, fontSize:8, color:GRAY, alignment:'left' }
+    ], width:180, margin:[0,0,20,0]
+  });
+
+  const dd = {
+    pageSize:'LETTER',
+    pageMargins:[45,90,45,60],
+    header: (cur,total) => ({
+      columns:[
+        { text:'FRAFER CONSULTING', bold:true, color:ORANGE, fontSize:9, margin:[45,22,0,0] },
+        { text:`CONFIRMACIÓN DE ESTRUCTURA · ${dir.codigo} · Grupo Morsa`, fontSize:7.5, color:GRAY, alignment:'right', margin:[0,24,45,0] }
+      ]
+    }),
+    footer: (cur,total) => ({
+      columns:[
+        { text:`Frafer Consulting · Uso exclusivo de ${dir.nombre} y Consejo Administrativo · Grupo Morsa`, fontSize:7, color:GRAY, margin:[45,0,0,0] },
+        { text:`Página ${cur} | ${total}`, fontSize:7, color:GRAY, alignment:'right', margin:[0,0,45,0] }
+      ]
+    }),
+    content:[
+      // TÍTULO
+      { text:'ENTREGABLE DE CONFIRMACIÓN DE ESTRUCTURA ORGANIZACIONAL', style:'mainTitle', alignment:'center', margin:[0,0,0,6] },
+      { text:dir.nombre, style:'divNombre', alignment:'center', italics:true, margin:[0,0,0,16] },
+      { text:'Grupo Morsa', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
+      { text:`Zapopan, Jalisco · ${fecha}`, alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
+      { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,10] },
+      { text:`Confidencial · Uso exclusivo de ${dir.nombre} y Consejo Administrativo · Grupo Morsa`, alignment:'center', fontSize:8, color:GRAY, italics:true, margin:[0,0,0,4] },
+
+      // SECCIÓN 1
+      secTitle('3.  ESTRUCTURA ORGANIZACIONAL ACORDADA'),
+      thRow(['División','Área','Departamento','Bloque']),
+      ...estructuraRows,
+
+      // SECCIÓN 2
+      secTitle('4.  CATÁLOGO DE ACTIVIDADES Y POLÍTICAS A DOCUMENTAR'),
+      thRow(['Área','Departamento','Actividad','Código PLT']),
+      ...catalogoRows,
+
+      // SECCIÓN 3 — AUTORIZACIÓN
+      secTitle('5.  AUTORIZACIÓN'),
+      { text:`Al firmar el presente documento, el Director(a) de ${dir.nombre} confirma y valida la estructura organizacional y el catálogo de actividades y políticas establecidos en este entregable, con fecha ${fecha}.`,
+        fontSize:9, color:NAVY, margin:[0,0,0,24], lineHeight:1.5 },
+      { columns:[ sigBox('Nombre'), sigBox('Cargo'), sigBox('Firma'), sigBox('Fecha') ], margin:[0,0,0,0] }
+    ],
+    styles:{
+      mainTitle:{ fontSize:14, bold:true, color:NAVY },
+      divNombre:{ fontSize:12, color:ORANGE }
+    }
+  };
+
+  pdfMake.createPdf(dd).download(`Confirmacion_Estructura_${dir.codigo}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
 // ── INACTIVAR / EDITAR NOMBRE ─────────────────────────────────────────────────
