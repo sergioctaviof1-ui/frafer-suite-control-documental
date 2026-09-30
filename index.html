@@ -4015,20 +4015,23 @@ async function loadAdmin() {
   };
   window.renderAdminActs();
 
-  document.getElementById('admin-catalogo-body').innerHTML =
-    catalogo.map(c => {
-      const area = areaById[c.area_id];
-      const act  = actividades.find(a=>a.id===c.actividad_id);
-      const prioColor = {alta:'var(--red)',media:'var(--amber)',baja:'var(--fog)'}[c.prioridad]||'var(--fog)';
-      return `<tr>
-        <td><span class="cat-folio">${c.codigo_documento}</span></td>
-        <td style="font-weight:500">${c.nombre}</td>
-        <td><span class="cat-mono">${area?.numero||'—'}</span>${area?.nombre||'—'}</td>
-        <td style="font-size:11px;color:var(--muted)">${act?.nombre||'—'}</td>
-        <td><span class="code-tag">${c.tipo_documento}</span></td>
-        <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
+  const cataloBody = document.getElementById('admin-catalogo-body');
+  if (cataloBody) {
+    cataloBody.innerHTML =
+      catalogo.map(c => {
+        const area = areaById[c.area_id];
+        const act  = actividades.find(a=>a.id===c.actividad_id);
+        const prioColor = {alta:'var(--red)',media:'var(--amber)',baja:'var(--fog)'}[c.prioridad]||'var(--fog)';
+        return `<tr>
+          <td><span class="cat-folio">${c.codigo_documento}</span></td>
+          <td style="font-weight:500">${c.nombre}</td>
+          <td><span class="cat-mono">${area?.numero||'—'}</span>${area?.nombre||'—'}</td>
+          <td style="font-size:11px;color:var(--muted)">${act?.nombre||'—'}</td>
+          <td><span class="code-tag">${c.tipo_documento}</span></td>
+          <td style="font-size:11px;color:${prioColor};font-weight:600;text-transform:capitalize">${c.prioridad}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
+  }
 }
 
 // ── EDITAR ÁREA (nombre + división) ───────────────────────────────────────────
