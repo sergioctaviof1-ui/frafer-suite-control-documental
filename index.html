@@ -4260,6 +4260,7 @@ async function generarPDFGobiernoCorporativo() {
 
 const CONSULTA_FN = 'https://lygpotmaneqgewjcetzw.supabase.co/functions/v1/consulta-politicas';
 let _orgContext = '';
+let _catalogoPLT = '';  // Catálogo completo de políticas (PLT), cargado al abrir la pestaña
 
 async function loadConsulta() {
   const badge = document.getElementById('consulta-ai-badge');
@@ -4267,36 +4268,40 @@ async function loadConsulta() {
   badge.style.color = '#2e7d32';
   badge.style.borderColor = '#2e7d3266';
 
-  // Cargar estructura orgánica real desde Supabase (fuente de verdad, no hardcodeado)
   try {
-    const [{ data: dirs }, { data: areas }, { data: catItems }] = await Promise.all([
+    const [{ data: dirs }, { data: areas }, { data: catCountItems }, { data: pltItems }] = await Promise.all([
       sb.from('pol_direcciones').select('id,codigo,nombre,tipo').eq('activa', true),
       sb.from('pol_areas').select('id,numero,nombre,direccion_id').eq('activa', true),
-      sb.from('pol_catalogo').select('area_id').not('area_id', 'is', null)
+      sb.from('pol_catalogo').select('area_id').not('area_id', 'is', null),
+      sb.from('pol_catalogo').select('nombre,codigo_documento').eq('tipo_documento','PLT').order('codigo_documento')
     ]);
+
+    // Estructura orgánica con conteos reales
     if (dirs && areas) {
       const countMap = {};
-      (catItems || []).forEach(c => { if (c.area_id) countMap[c.area_id] = (countMap[c.area_id] || 0) + 1; });
-      const labels = { gobierno: 'BLOQUE GOBIERNO', soporte: 'BLOQUE SOPORTE', primaria: 'BLOQUE ACTIVIDADES PRIMARIAS' };
+      (catCountItems||[]).forEach(c => { if (c.area_id) countMap[c.area_id] = (countMap[c.area_id]||0)+1; });
+      const labels = { gobierno:'BLOQUE GOBIERNO', soporte:'BLOQUE SOPORTE', primaria:'BLOQUE ACTIVIDADES PRIMARIAS' };
       let ctx = '';
-      for (const tipo of ['gobierno', 'soporte', 'primaria']) {
+      for (const tipo of ['gobierno','soporte','primaria']) {
         const dirsBloque = dirs.filter(d => d.tipo === tipo);
         if (!dirsBloque.length) continue;
         ctx += `${labels[tipo]}:\n`;
         for (const dir of dirsBloque) {
           const da = areas.filter(a => a.direccion_id === dir.id);
-          const total = da.reduce((s, a) => s + (countMap[a.id] || 0), 0);
-          ctx += `  ${dir.codigo} — ${dir.nombre}${total ? ' (' + total + ' docs en catálogo)' : ''}\n`;
-          da.forEach(a => {
-            const cnt = countMap[a.id] || 0;
-            ctx += `    Área ${a.numero}: ${a.nombre}${cnt ? ' [' + cnt + ']' : ''}\n`;
-          });
+          const total = da.reduce((s,a) => s+(countMap[a.id]||0), 0);
+          ctx += `  ${dir.codigo} — ${dir.nombre}${total?' ('+total+' docs)':''}\n`;
+          da.forEach(a => { ctx += `    Área ${a.numero}: ${a.nombre}\n`; });
         }
         ctx += '\n';
       }
       _orgContext = ctx.trim();
     }
-  } catch(_e) { /* silencioso — Edge Function usa su lógica base */ }
+
+    // Catálogo PLT completo — el AI lo usa para identificar documentos por nombre, sin keyword matching
+    if (pltItems) {
+      _catalogoPLT = pltItems.map(p => `[${p.codigo_documento}] ${p.nombre}`).join('\n');
+    }
+  } catch(_e) {}
 }
 
 function _mdToHtml(text) {
@@ -4320,8 +4325,8 @@ async function enviarConsulta() {
   // Agregar burbuja del usuario
   _consultaAddMsg('user', pregunta);
 
-  // Extraer términos temáticos — quitar stopwords que no aportan a la búsqueda
-  const _STOP = new Set(['quiero','saber','tenemos','tiene','tienen','politica','politicas','proceso','procesos','procedimiento','procedimientos','cual','cuales','como','cuanto','cuanta','cuantos','cuantas','que','hay','donde','ver','dame','dime','busca','existe','existir','favor','sobre','acerca','una','uno','los','las','del','con','sin','por','para','nos','mas']);
+  // Buscar políticas ya documentadas con contenido (keyword search solo aquí, donde los datos son ricos)
+  const _STOP = new Set(['quiero','saber','tenemos','cual','como','cuanto','cuanta','cuantos','cuantas','que','hay','donde','ver','dame','dime','existe','favor','sobre','una','uno','los','las','del','con','sin','por','para','nos']);
   const terminosClave = pregunta
     .normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/[¿?¡!,\.;:]/g,'')
@@ -4329,45 +4334,21 @@ async function enviarConsulta() {
     .filter(w => w.length > 2 && !_STOP.has(w))
     .slice(0,6);
 
-  // Si la pregunta menciona "política/políticas", priorizar documentos PLT en catálogo
-  const buscaPLT = /politic/i.test(pregunta);
-
-  let politicas = [];
-
+  let documentadas = [];
   if (terminosClave.length) {
-    const filtrosCat = terminosClave.map(t=>`nombre.ilike.%${t}%`).join(',');
-    let catQ = sb.from('pol_catalogo')
-      .select('id,nombre,codigo_documento,tipo_documento')
-      .or(filtrosCat);
-    if (buscaPLT) catQ = catQ.eq('tipo_documento','PLT');
-    const { data: catItems } = await catQ.limit(6);
-
     const filtrosPol = terminosClave.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
     const { data: polItems } = await sb.from('pol_politicas')
       .select('id,titulo,contenido,objetivo,alcance,folio,status')
       .or(filtrosPol).limit(5);
-
-    // Documentadas primero (más ricas), luego catálogo
-    const polNorm = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,300), status:p.status }));
-    const catNorm = (catItems||[]).map(c=>({ folio:c.codigo_documento||'—', titulo:c.nombre, resumen:'', status:'en catálogo (pendiente de documentar)' }));
-    politicas = [...polNorm, ...catNorm].slice(0,8);
+    documentadas = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,400), status:p.status }));
   }
 
-  // Respuesta genérica solo cuando la pregunta no tiene términos temáticos
-  if (terminosClave.length === 0) {
-    const { count } = await sb.from('pol_catalogo').select('*', { count:'exact', head:true });
-    const { count: countPol } = await sb.from('pol_politicas').select('*', { count:'exact', head:true });
-    _consultaAddMsg('bot', `El catálogo de Grupo Morsa cuenta con ${count||171} documentos registrados. De estos, ${countPol||0} están documentados en el sistema. Pregúntame sobre un tema específico para encontrar el documento.`);
-    document.getElementById('btn-consulta-enviar').disabled = false;
-    return;
-  }
-
-  // Mostrar fuentes
+  // Mostrar políticas documentadas encontradas como fuentes (si las hay)
   const fuentesDiv = document.getElementById('consulta-fuentes');
   const fuentesLista = document.getElementById('consulta-fuentes-lista');
-  if (politicas?.length) {
+  if (documentadas.length) {
     fuentesDiv.style.display = 'block';
-    fuentesLista.innerHTML = politicas.map(p=>`
+    fuentesLista.innerHTML = documentadas.map(p=>`
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--stone);border-radius:6px;background:var(--linen)">
         <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap">${p.folio||'—'}</span>
         <span style="font-size:11px;color:var(--ink);flex:1">${p.titulo}</span>
@@ -4377,13 +4358,13 @@ async function enviarConsulta() {
     fuentesDiv.style.display = 'none';
   }
 
-  // Llamar Edge Function — funciona en Edge, Chrome, cualquier browser
+  // Llamar Edge Function con: catálogo PLT completo + políticas documentadas + estructura org
   const typingId = _consultaAddMsg('bot', '…');
   try {
     const res = await fetch(CONSULTA_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: pregunta, policies: politicas, orgContext: _orgContext })
+      body: JSON.stringify({ question: pregunta, catalogoPLT: _catalogoPLT, documentadas, orgContext: _orgContext })
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
