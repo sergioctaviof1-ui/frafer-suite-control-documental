@@ -476,6 +476,14 @@ input,textarea,select{font-family:inherit}
     <div class="alert alert-error" id="mact-error"></div>
     <div class="form-grid" style="margin-bottom:14px">
       <div class="form-group full">
+        <label>Dirección</label>
+        <select id="mact-dir" onchange="onActDirChange()"></select>
+      </div>
+      <div class="form-group full">
+        <label>Área</label>
+        <select id="mact-area" onchange="onActAreaChange()"></select>
+      </div>
+      <div class="form-group full">
         <label>Departamento</label>
         <select id="mact-dept" onchange="onActDeptChange()"></select>
       </div>
@@ -3695,13 +3703,17 @@ async function saveDepto() {
   const nombre  = document.getElementById('mdepto-nombre').value.trim();
   if (!area_id || !nombre) { showModalError('mdepto-error','Área y Nombre son obligatorios.'); return; }
   const area = areas.find(a=>a.id===area_id);
-  const deptsEnArea = departamentos.filter(d=>d.area_id===area_id && d.codigo);
+  const { data: existingDepts } = await sb.from('pol_departamentos')
+    .select('codigo').eq('area_id', area_id).not('codigo','is',null);
   let nextSeq = 1;
-  if (deptsEnArea.length > 0) {
-    const maxSeq = Math.max(...deptsEnArea.map(d => parseInt(d.codigo.split('-').pop())||0));
-    nextSeq = maxSeq + 1;
+  let padLen = 2;
+  if (existingDepts?.length > 0) {
+    const suffixes = existingDepts.map(d => d.codigo?.split('-').pop()).filter(Boolean);
+    const maxSuffix = suffixes.reduce((max,s) => parseInt(s)>parseInt(max)?s:max, '0');
+    padLen = maxSuffix.length > 2 ? maxSuffix.length : 2;
+    nextSeq = parseInt(maxSuffix) + 1;
   }
-  const codigo = `${area.numero}-${String(nextSeq).padStart(3,'0')}`;
+  const codigo = `${area.numero}-${String(nextSeq).padStart(padLen,'0')}`;
   const orden  = nextSeq;
   const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, codigo, orden });
   if (error) { showModalError('mdepto-error', error.message); return; }
@@ -3709,29 +3721,49 @@ async function saveDepto() {
   loadCatalogo(); loadAdmin();
 }
 
-function onActDeptChange() {
+async function onActDeptChange() {
   const departamento_id = document.getElementById('mact-dept').value;
   const dept = departamentos.find(d=>d.id===departamento_id);
   if (!dept?.codigo) { document.getElementById('mact-codigo-preview').textContent = '—'; return; }
-  const actsEnDept = actividades.filter(a=>a.departamento_id===departamento_id && a.codigo);
+  const { data: existingActs } = await sb.from('pol_actividades')
+    .select('codigo').eq('departamento_id', departamento_id).not('codigo','is',null);
   let nextSeq = 1;
-  if (actsEnDept.length > 0) {
-    const maxSeq = Math.max(...actsEnDept.map(a => parseInt(a.codigo.split('-').pop())||0));
+  if (existingActs?.length > 0) {
+    const maxSeq = Math.max(...existingActs.map(a => parseInt(a.codigo.split('-').pop())||0));
     nextSeq = maxSeq + 1;
   }
   document.getElementById('mact-codigo-preview').textContent = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
 }
 
-function openModalActividad() {
+function onActDirChange() {
+  const dirId = document.getElementById('mact-dir').value;
+  document.getElementById('mact-area').innerHTML =
+    '<option value="">— Selecciona Área —</option>' +
+    areas.filter(a=>a.direccion_id===dirId).sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
+      .map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`).join('');
+  document.getElementById('mact-dept').innerHTML = '<option value="">— Selecciona Departamento —</option>';
+  document.getElementById('mact-codigo-preview').textContent = '—';
+}
+
+function onActAreaChange() {
+  const areaId = document.getElementById('mact-area').value;
   document.getElementById('mact-dept').innerHTML =
-    departamentos.map(d => {
-      const area = areas.find(a=>a.id===d.area_id);
-      const dir  = area ? direcciones.find(x=>x.id===area.direccion_id) : null;
-      return `<option value="${d.id}">${dir?.codigo||''} · ${area?.numero||''} · ${d.nombre}</option>`;
-    }).join('');
+    '<option value="">— Selecciona Departamento —</option>' +
+    departamentos.filter(d=>d.area_id===areaId).sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''))
+      .map(d=>`<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
+  document.getElementById('mact-codigo-preview').textContent = '—';
+}
+
+function openModalActividad() {
+  document.getElementById('mact-dir').innerHTML =
+    '<option value="">— Selecciona Dirección —</option>' +
+    [...direcciones].sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
+  document.getElementById('mact-area').innerHTML = '<option value="">— Selecciona Área —</option>';
+  document.getElementById('mact-dept').innerHTML = '<option value="">— Selecciona Departamento —</option>';
   document.getElementById('mact-nombre').value = '';
+  document.getElementById('mact-codigo-preview').textContent = '—';
   document.getElementById('mact-error').classList.remove('show');
-  onActDeptChange();
   document.getElementById('modal-actividad').classList.add('open');
 }
 
@@ -3741,11 +3773,14 @@ async function saveActividad() {
   if (!departamento_id || !nombre) { showModalError('mact-error','Departamento y Nombre son obligatorios.'); return; }
   const dept    = departamentos.find(d=>d.id===departamento_id);
   const area_id = dept?.area_id || null;
-  const actsEnDept = actividades.filter(a=>a.departamento_id===departamento_id && a.codigo);
   let nextSeq = 1;
-  if (actsEnDept.length > 0) {
-    const maxSeq = Math.max(...actsEnDept.map(a => parseInt(a.codigo.split('-').pop())||0));
-    nextSeq = maxSeq + 1;
+  if (dept?.codigo) {
+    const { data: existingActs } = await sb.from('pol_actividades')
+      .select('codigo').eq('departamento_id', departamento_id).not('codigo','is',null);
+    if (existingActs?.length > 0) {
+      const maxSeq = Math.max(...existingActs.map(a => parseInt(a.codigo.split('-').pop())||0));
+      nextSeq = maxSeq + 1;
+    }
   }
   const payload = { departamento_id, area_id, nombre, tipo: 'actividad' };
   if (dept?.codigo) payload.codigo = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
@@ -3846,7 +3881,8 @@ async function loadAdmin() {
 
   const btnEditar = (fn, id, activo, tabla, campo) => `
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
-    <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campo}')" style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer">${activo?'Inactivar':'Activar'}</button>`;
+    <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campo}')" style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer;margin-right:4px">${activo?'Inactivar':'Activar'}</button>
+    <button onclick="eliminarRegistro('${tabla}','${id}')" style="border:1px solid var(--red);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--red);cursor:pointer">Eliminar</button>`;
 
   // Poblar filtro de direcciones en Áreas
   const filterSel = document.getElementById('filter-areas-dir');
@@ -4777,6 +4813,13 @@ async function toggleActivo(tabla, id, activo, campo) {
   const patch = {}; patch[campo] = !activo;
   const { error } = await sb.from(tabla).update(patch).eq('id', id);
   if (error) { alert(error.message); return; }
+  loadAdmin();
+}
+
+async function eliminarRegistro(tabla, id) {
+  if (!confirm('¿Eliminar permanentemente este registro? Esta acción no se puede deshacer.')) return;
+  const { error } = await sb.from(tabla).delete().eq('id', id);
+  if (error) { alert('Error al eliminar: ' + error.message); return; }
   loadAdmin();
 }
 
