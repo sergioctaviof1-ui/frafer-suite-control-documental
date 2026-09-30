@@ -4320,36 +4320,44 @@ async function enviarConsulta() {
   // Agregar burbuja del usuario
   _consultaAddMsg('user', pregunta);
 
-  // Buscar en catálogo (171 items) + políticas documentadas
-  const terminos = pregunta.replace(/[¿?¡!,\.]/g,'').split(/\s+/).filter(w=>w.length>2).slice(0,8);
+  // Extraer términos temáticos — quitar stopwords que no aportan a la búsqueda
+  const _STOP = new Set(['quiero','saber','tenemos','tiene','tienen','politica','politicas','proceso','procesos','procedimiento','procedimientos','cual','cuales','como','cuanto','cuanta','cuantos','cuantas','que','hay','donde','ver','dame','dime','busca','existe','existir','favor','sobre','acerca','una','uno','los','las','del','con','sin','por','para','nos','mas']);
+  const terminosClave = pregunta
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[¿?¡!,\.;:]/g,'')
+    .toLowerCase().split(/\s+/)
+    .filter(w => w.length > 2 && !_STOP.has(w))
+    .slice(0,6);
+
+  // Si la pregunta menciona "política/políticas", priorizar documentos PLT en catálogo
+  const buscaPLT = /politic/i.test(pregunta);
 
   let politicas = [];
 
-  if (terminos.length) {
-    const filtrosCat = terminos.map(t=>`nombre.ilike.%${t}%`).join(',');
-    const { data: catItems } = await sb.from('pol_catalogo')
+  if (terminosClave.length) {
+    const filtrosCat = terminosClave.map(t=>`nombre.ilike.%${t}%`).join(',');
+    let catQ = sb.from('pol_catalogo')
       .select('id,nombre,codigo_documento,tipo_documento')
-      .or(filtrosCat)
-      .limit(5);
+      .or(filtrosCat);
+    if (buscaPLT) catQ = catQ.eq('tipo_documento','PLT');
+    const { data: catItems } = await catQ.limit(6);
 
-    const filtrosPol = terminos.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
+    const filtrosPol = terminosClave.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
     const { data: polItems } = await sb.from('pol_politicas')
       .select('id,titulo,contenido,objetivo,alcance,folio,status')
-      .or(filtrosPol)
-      .limit(5);
+      .or(filtrosPol).limit(5);
 
-    // Unificar: políticas documentadas primero, luego catálogo
+    // Documentadas primero (más ricas), luego catálogo
     const polNorm = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,300), status:p.status }));
-    const catNorm = (catItems||[]).map(c=>({ folio:c.codigo_documento||'—', titulo:c.nombre, resumen:'', status:'en catálogo (sin documentar)' }));
-    politicas = [...polNorm, ...catNorm].slice(0,6);
+    const catNorm = (catItems||[]).map(c=>({ folio:c.codigo_documento||'—', titulo:c.nombre, resumen:'', status:'en catálogo (pendiente de documentar)' }));
+    politicas = [...polNorm, ...catNorm].slice(0,8);
   }
 
-  // Si pregunta genérica ("tenemos políticas", "qué hay"), devolver resumen del catálogo
-  const esGenerica = terminos.length === 0 || ['politica','politicas','tenemos','cuantas','cuantos','que','hay','donde','consulta','consultas'].some(k=>terminos.map(t=>t.toLowerCase()).includes(k));
-  if (esGenerica && politicas.length === 0) {
+  // Respuesta genérica solo cuando la pregunta no tiene términos temáticos
+  if (terminosClave.length === 0) {
     const { count } = await sb.from('pol_catalogo').select('*', { count:'exact', head:true });
     const { count: countPol } = await sb.from('pol_politicas').select('*', { count:'exact', head:true });
-    _consultaAddMsg('bot', `El catálogo de Grupo Morsa cuenta con ${count||171} documentos registrados (políticas, procedimientos y manuales). De estos, ${countPol||0} ya tienen contenido documentado en el sistema. Puedes preguntarme sobre un tema específico para encontrar el documento correspondiente.`);
+    _consultaAddMsg('bot', `El catálogo de Grupo Morsa cuenta con ${count||171} documentos registrados. De estos, ${countPol||0} están documentados en el sistema. Pregúntame sobre un tema específico para encontrar el documento.`);
     document.getElementById('btn-consulta-enviar').disabled = false;
     return;
   }
