@@ -587,6 +587,7 @@ input,textarea,select{font-family:inherit}
     </div>
     <div class="actions-row">
       <button class="btn" onclick="saveConfirmarDir()" style="background:var(--ember-deep);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.03em">Confirmar y Congelar</button>
+      <button class="btn" onclick="generarPDFConfirmacion(document.getElementById('mconfdir-id').value)" style="background:var(--navy);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">📄 Vista Previa PDF</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-confirmar-dir')">Cancelar</button>
     </div>
   </div>
@@ -3645,6 +3646,7 @@ async function loadAdmin() {
       </td>
       <td style="white-space:nowrap">
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
+        <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
