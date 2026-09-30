@@ -1147,9 +1147,16 @@ input,textarea,select{font-family:inherit}
 
     <div class="tab-panel" id="atab-areas">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px">
-        <select id="filter-areas-dir" onchange="renderAdminAreas()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
-          <option value="">Todas las Direcciones</option>
-        </select>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select id="filter-areas-dir" onchange="renderAdminAreas()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:260px">
+            <option value="">Todas las Direcciones</option>
+          </select>
+          <select id="filter-areas-status" onchange="renderAdminAreas()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen)">
+            <option value="activas">Activas</option>
+            <option value="inactivas">Inactivas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
         <button class="btn btn-primary btn-sm" onclick="openModalArea()">+ Nueva Área</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
@@ -1166,6 +1173,11 @@ input,textarea,select{font-family:inherit}
           </select>
           <select id="filter-deptos-area" onchange="renderAdminDeptos()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:220px">
             <option value="">Todas las Áreas</option>
+          </select>
+          <select id="filter-deptos-status" onchange="renderAdminDeptos()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen)">
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+            <option value="todos">Todos</option>
           </select>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openModalDepto()">+ Nuevo Departamento</button>
@@ -1187,6 +1199,11 @@ input,textarea,select{font-family:inherit}
           </select>
           <select id="filter-acts-depto" onchange="renderAdminActs()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen);min-width:180px">
             <option value="">Todos los Deptos</option>
+          </select>
+          <select id="filter-acts-status" onchange="renderAdminActs()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen)">
+            <option value="activas">Activas</option>
+            <option value="inactivas">Inactivas</option>
+            <option value="todas">Todas</option>
           </select>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openModalActividad()">+ Nueva Actividad</button>
@@ -3898,7 +3915,10 @@ async function loadAdmin() {
   window.renderAdminAreas = function() {
     const sel = document.getElementById('filter-areas-dir');
     const dirFiltro = sel ? sel.value : '';
-    const lista = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
+    const statusFiltro = document.getElementById('filter-areas-status')?.value || 'activas';
+    let lista = dirFiltro ? areas.filter(a => a.direccion_id === dirFiltro) : areas;
+    if (statusFiltro === 'activas')   lista = lista.filter(a => a.activa);
+    if (statusFiltro === 'inactivas') lista = lista.filter(a => !a.activa);
     document.getElementById('admin-areas-body').innerHTML =
       lista.map(a => {
         const dir = dirById[a.direccion_id];
@@ -3944,11 +3964,14 @@ async function loadAdmin() {
   window.renderAdminDeptos = function() {
     const dirFiltro = document.getElementById('filter-deptos-dir')?.value || '';
     const areaFiltro = document.getElementById('filter-deptos-area')?.value || '';
+    const statusFiltro = document.getElementById('filter-deptos-status')?.value || 'activos';
     const lista = departamentos.filter(d => {
       const area = areaById[d.area_id];
       if (!area) return !dirFiltro && !areaFiltro;
       if (areaFiltro && area.id !== areaFiltro) return false;
       if (dirFiltro && area.direccion_id !== dirFiltro) return false;
+      if (statusFiltro === 'activos'   && !d.activo) return false;
+      if (statusFiltro === 'inactivos' &&  d.activo) return false;
       return true;
     });
     document.getElementById('admin-deptos-body').innerHTML =
@@ -4020,6 +4043,7 @@ async function loadAdmin() {
     const dirFiltro = document.getElementById('filter-acts-dir')?.value || '';
     const areaFiltro = document.getElementById('filter-acts-area')?.value || '';
     const deptoFiltro = document.getElementById('filter-acts-depto')?.value || '';
+    const statusFiltro = document.getElementById('filter-acts-status')?.value || 'activas';
     let rowNum = 1;
     const rows = [];
     const dirsVisible = dirFiltro ? sortedDirsA.filter(d => d.id === dirFiltro) : sortedDirsA;
@@ -4030,7 +4054,12 @@ async function loadAdmin() {
         let deptosArea = departamentos.filter(d => d.area_id === area.id).sort((a,b) => a.orden-b.orden);
         if (deptoFiltro) deptosArea = deptosArea.filter(d => d.id === deptoFiltro);
         deptosArea.forEach(dept => {
-          actividades.filter(a => a.departamento_id === dept.id)
+          actividades.filter(a => {
+            if (a.departamento_id !== dept.id) return false;
+            if (statusFiltro === 'activas'   && !a.activa) return false;
+            if (statusFiltro === 'inactivas' &&  a.activa) return false;
+            return true;
+          })
             .sort((a,b) => new Date(a.created_at)-new Date(b.created_at))
             .forEach(act => {
               rows.push(`<tr>
