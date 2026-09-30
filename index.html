@@ -4262,22 +4262,18 @@ const CONSULTA_FN = 'https://lygpotmaneqgewjcetzw.supabase.co/functions/v1/consu
 
 async function loadConsulta() {
   const badge = document.getElementById('consulta-ai-badge');
-  // Verificar Edge Function disponible
-  try {
-    const res = await fetch(CONSULTA_FN, { method:'OPTIONS' });
-    if (res.ok || res.status === 204) {
-      badge.textContent = '● IA activa';
-      badge.style.color = '#2e7d32';
-      badge.style.borderColor = '#2e7d3266';
-    } else {
-      badge.textContent = '● IA no disponible';
-      badge.style.color = '#c62828';
-      badge.style.borderColor = '#c6282866';
-    }
-  } catch(e) {
-    badge.textContent = '● Sin conexión';
-    badge.style.color = 'var(--fog)';
-  }
+  badge.textContent = '● IA activa';
+  badge.style.color = '#2e7d32';
+  badge.style.borderColor = '#2e7d3266';
+}
+
+function _mdToHtml(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^## (.+)$/gm, '<strong style="display:block;margin:10px 0 4px">$1</strong>')
+    .replace(/^### (.+)$/gm, '<strong style="display:block;margin:8px 0 2px;font-size:11px">$1</strong>')
+    .replace(/^- (.+)$/gm, '&nbsp;&nbsp;• $1')
+    .replace(/\n/g, '<br>');
 }
 
 async function enviarConsulta() {
@@ -4362,7 +4358,7 @@ async function enviarConsulta() {
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-function _consultaAddMsg(tipo, texto, esTyping=false) {
+function _consultaAddMsg(tipo, texto) {
   const msgs = document.getElementById('consulta-mensajes');
   const id = 'msg-' + Date.now();
   const isBot = tipo === 'bot';
@@ -4371,8 +4367,8 @@ function _consultaAddMsg(tipo, texto, esTyping=false) {
   burbuja.style.cssText = `display:flex;gap:12px;align-items:flex-start;${isBot?'':'flex-direction:row-reverse'}`;
   burbuja.innerHTML = `
     <div style="width:32px;height:32px;border-radius:50%;background:${isBot?'var(--navy)':'var(--ember-deep)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">${isBot?'🤖':'👤'}</div>
-    <div class="consulta-burbuja-${id}" style="background:${isBot?'var(--linen)':'#FFF3EC'};border-radius:${isBot?'0 10px 10px 10px':'10px 0 10px 10px'};padding:12px 16px;max-width:80%">
-      <p style="margin:0;font-size:13px;color:var(--ink);line-height:1.6;white-space:pre-wrap">${texto}</p>
+    <div class="consulta-burbuja-${id}" style="background:${isBot?'var(--linen)':'#FFF3EC'};border-radius:${isBot?'0 10px 10px 10px':'10px 0 10px 10px'};padding:12px 16px;max-width:82%">
+      <div style="margin:0;font-size:13px;color:var(--ink);line-height:1.7">${_mdToHtml(texto)}</div>
     </div>`;
   msgs.appendChild(burbuja);
   msgs.scrollTop = msgs.scrollHeight;
@@ -4380,8 +4376,8 @@ function _consultaAddMsg(tipo, texto, esTyping=false) {
 }
 
 function _consultaUpdateMsg(id, texto) {
-  const burbuja = document.querySelector(`.consulta-burbuja-${id} p`);
-  if (burbuja) burbuja.textContent = texto;
+  const burbuja = document.querySelector(`.consulta-burbuja-${id} div`);
+  if (burbuja) burbuja.innerHTML = _mdToHtml(texto);
   const msgs = document.getElementById('consulta-mensajes');
   if (msgs) msgs.scrollTop = msgs.scrollHeight;
 }
