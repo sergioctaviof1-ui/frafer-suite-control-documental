@@ -1035,6 +1035,7 @@ input,textarea,select{font-family:inherit}
           <div style="display:flex;gap:6px">
             <button onclick="saveGobiernoCorporativo()" style="font-size:11px;font-weight:700;color:#fff;background:var(--ember-deep);border:none;border-radius:6px;padding:7px 16px;cursor:pointer">Guardar</button>
             <button onclick="nuevaVersionGC()" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:7px 14px;cursor:pointer">+ Nueva versión</button>
+            <button id="btn-gc-autorizar" onclick="autorizarGC()" style="display:none;font-size:11px;font-weight:700;color:#fff;background:#2e7d32;border:none;border-radius:6px;padding:7px 16px;cursor:pointer">✓ Autorizar</button>
             <button onclick="generarPDFGobiernoCorporativo()" style="font-size:11px;font-weight:600;color:var(--navy);background:#fff;border:none;border-radius:6px;padding:7px 14px;cursor:pointer">📄 PDF</button>
           </div>
         </div>
@@ -4041,8 +4042,28 @@ async function loadGobiernoCorporativo() {
   document.getElementById('gc-fecha-label').textContent   =
     `Creado: ${new Date(d.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
 
-  const statusLabel = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', firmado_dg:'FIRMADO · DG', firmado_all:'FIRMADO · TODAS LAS DIRECCIONES' };
-  document.getElementById('gc-status-badge').textContent = statusLabel[d.status] || d.status.toUpperCase();
+  const statusLabel = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', firmado_dg:'FIRMADO · DG', firmado_all:'FIRMADO · TODAS LAS DIRECCIONES' };
+  const statusColors = { borrador:'var(--ember-glow)', autorizado:'#2e7d32', firmado_dg:'#1565c0', firmado_all:'#1565c0' };
+  const badge = document.getElementById('gc-status-badge');
+  badge.textContent = statusLabel[d.status] || d.status.toUpperCase();
+  badge.style.color = statusColors[d.status] || 'var(--ember-glow)';
+  badge.style.borderColor = statusColors[d.status] ? statusColors[d.status]+'66' : 'rgba(241,90,34,.4)';
+
+  // Mostrar autorizador si aplica
+  let autorizadorInfo = document.getElementById('gc-autorizador-info');
+  if (!autorizadorInfo) {
+    autorizadorInfo = document.createElement('div');
+    autorizadorInfo.id = 'gc-autorizador-info';
+    autorizadorInfo.style.cssText = 'font-size:10px;color:rgba(255,255,255,.5);margin-top:4px;text-align:right';
+    badge.parentNode.appendChild(autorizadorInfo);
+  }
+  autorizadorInfo.textContent = d.autorizado_por
+    ? `Autorizado por: ${d.autorizado_por} · ${new Date(d.firmado_dg_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}`
+    : '';
+
+  // Botón Autorizar solo en borrador
+  const btnAutorizar = document.getElementById('btn-gc-autorizar');
+  if (btnAutorizar) btnAutorizar.style.display = d.status === 'borrador' ? 'inline-block' : 'none';
 
   // Historial
   const hist = document.getElementById('gc-historial');
@@ -4051,12 +4072,14 @@ async function loadGobiernoCorporativo() {
     <thead><tr style="background:var(--bg)">
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">VER.</th>
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">ESTATUS</th>
+      <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">AUTORIZADO POR</th>
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">FECHA</th>
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">DOCUMENTO</th>
     </tr></thead>
     <tbody>${data.map((v,i)=>`<tr style="border-top:1px solid var(--stone);background:${i===0?'var(--linen)':'var(--bg)'}">
       <td style="padding:8px 14px;font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--navy)">v${v.version}</td>
-      <td style="padding:8px 14px;font-size:11px">${statusLabel[v.status]||v.status}</td>
+      <td style="padding:8px 14px;font-size:11px;color:${statusColors[v.status]||'var(--fog)'}">${statusLabel[v.status]||v.status}</td>
+      <td style="padding:8px 14px;font-size:11px;color:var(--ink)">${v.autorizado_por||'—'}</td>
       <td style="padding:8px 14px;font-size:11px;color:var(--fog)">${new Date(v.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</td>
       <td style="padding:8px 14px">${v.url_documento
         ? `<a href="${v.url_documento}" target="_blank" style="font-size:10px;font-weight:700;color:var(--navy);border:1px solid var(--navy);border-radius:4px;padding:2px 8px;text-decoration:none">📄 PDF</a>`
@@ -4078,6 +4101,22 @@ async function saveGobiernoCorporativo() {
   if (error) { alert('Error al guardar: ' + error.message); return; }
   Object.assign(_gcCurrent, patch);
   alert('Guardado correctamente.');
+}
+
+async function autorizarGC() {
+  if (!_gcCurrent) return;
+  if (_gcCurrent.status !== 'borrador') { alert('Esta versión ya fue autorizada.'); return; }
+  const nombre = prompt('Nombre completo del autorizador (Dirección General):');
+  if (!nombre || !nombre.trim()) return;
+  const patch = {
+    status:        'autorizado',
+    autorizado_por: nombre.trim(),
+    firmado_dg_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('pol_gobierno_corporativo').update(patch).eq('id', _gcCurrent.id);
+  if (error) { alert('Error: ' + error.message); return; }
+  Object.assign(_gcCurrent, patch);
+  await loadGobiernoCorporativo();
 }
 
 async function nuevaVersionGC() {
@@ -4140,7 +4179,8 @@ async function generarPDFGobiernoCorporativo() {
       { text:'Grupo Morsa', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
       { text:`Zapopan, Jalisco · ${fecha}`, alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
       { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
-      { text:`Versión ${gc.version} · ${gc.status==='borrador'?'BORRADOR — PENDIENTE DE VALIDACIÓN Y FIRMA':gc.status==='firmado_dg'?'FIRMADO POR DIRECCIÓN GENERAL':'DOCUMENTO FIRMADO'}`, alignment:'center', fontSize:8, color:ORANGE, italics:true, margin:[0,0,0,16] },
+      { text:`Versión ${gc.version} · ${gc.status==='borrador'?'BORRADOR — PENDIENTE DE VALIDACIÓN Y FIRMA':gc.status==='autorizado'?'AUTORIZADO':gc.status==='firmado_dg'?'FIRMADO POR DIRECCIÓN GENERAL':'DOCUMENTO FIRMADO'}`, alignment:'center', fontSize:8, color:gc.status==='autorizado'?'#2e7d32':ORANGE, italics:true, margin:[0,0,0,gc.autorizado_por?4:16] },
+      ...(gc.autorizado_por ? [{ text:`Autorizado por: ${gc.autorizado_por} · ${new Date(gc.firmado_dg_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`, alignment:'center', fontSize:8, color:'#2e7d32', margin:[0,0,0,16] }] : []),
 
       ...campo('1','MARCO NORMATIVO Y REFERENCIAS', gc.marco_normativo),
       ...campo('2','DIRECTRICES Y VALORES ASOCIADOS', gc.directrices_valores),
