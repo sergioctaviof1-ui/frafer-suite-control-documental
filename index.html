@@ -4353,7 +4353,7 @@ async function enviarConsulta() {
     if (json.error) throw new Error(json.error);
     _consultaUpdateMsg(typingId, json.respuesta);
   } catch(e) {
-    _consultaUpdateMsg(typingId, `No fue posible obtener respuesta: ${(e as Error).message}`);
+    _consultaUpdateMsg(typingId, `No fue posible obtener respuesta: ${e.message}`);
   }
 
   btn.disabled = false;
