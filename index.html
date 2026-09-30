@@ -3797,12 +3797,29 @@ async function loadAdmin() {
         ${d.confirmada?`<span class="badge" style="background:var(--navy)12;border:1px solid var(--navy)40;color:var(--navy);font-size:8px;padding:2px 7px;border-radius:10px;font-family:var(--ff-mono);letter-spacing:.05em">CONFIRMADA</span>`:''}
       </td>
       <td style="white-space:nowrap">
+        <button onclick="moverDir('${d.id}',-1)" title="Subir" style="border:1px solid var(--stone);border-radius:4px;padding:2px 7px;font-size:11px;background:none;color:var(--dust);cursor:pointer;margin-right:2px">↑</button>
+        <button onclick="moverDir('${d.id}',1)" title="Bajar" style="border:1px solid var(--stone);border-radius:4px;padding:2px 7px;font-size:11px;background:none;color:var(--dust);cursor:pointer;margin-right:6px">↓</button>
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
         <button onclick="openConfigDir('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">⚙ Config</button>
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
+
+  async function moverDir(id, delta) {
+    const idx = direcciones.findIndex(d => d.id === id);
+    const swapIdx = idx + delta;
+    if (swapIdx < 0 || swapIdx >= direcciones.length) return;
+    const a = direcciones[idx];
+    const b = direcciones[swapIdx];
+    const ordenA = a.orden ?? idx + 1;
+    const ordenB = b.orden ?? swapIdx + 1;
+    await Promise.all([
+      sb.from('pol_direcciones').update({ orden: ordenB }).eq('id', a.id),
+      sb.from('pol_direcciones').update({ orden: ordenA }).eq('id', b.id)
+    ]);
+    loadAdmin();
+  }
 
   const btnEditar = (fn, id, activo, tabla, campo) => `
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
