@@ -1687,7 +1687,31 @@ async function loadRepositorio() {
   // Opciones de Dirección para el filtro
   const dirOpts = dirs.map(d => `<option value="${d.id}">${d.codigo} · ${d.nombre}</option>`).join('');
 
-  container.innerHTML = `
+  // ── Sección Confirmaciones de Estructura ──────────────────────────────────
+  const confirmSection = `
+    <div style="margin-bottom:28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:11px;font-family:var(--ff-mono);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ember-deep)">Confirmaciones de Estructura</span>
+        <span style="font-size:10px;color:var(--fog)">${dirs.filter(d=>d.url_confirmacion).length} de ${dirs.length} con documento</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+        ${dirs.map(d=>`
+          <div style="border:1px solid var(--stone);border-radius:8px;padding:12px 14px;background:${d.url_confirmacion?'var(--linen)':'var(--bg)'}">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+              <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--ember-deep)">${d.codigo}</span>
+              ${d.confirmada?'<span style="font-size:9px;font-weight:700;color:#fff;background:var(--ember-deep);border-radius:4px;padding:1px 6px">CONFIRMADA</span>':''}
+            </div>
+            <div style="font-size:11px;font-weight:500;color:var(--ink);margin-bottom:10px;line-height:1.3">${d.nombre}</div>
+            ${d.url_confirmacion
+              ? `<a href="${d.url_confirmacion}" target="_blank" download style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:var(--navy);border:1px solid var(--navy);border-radius:4px;padding:3px 10px;text-decoration:none;background:#fff">📄 Descargar PDF</a>`
+              : `<span style="font-size:10px;color:var(--fog)">Sin documento generado</span>`
+            }
+          </div>`).join('')}
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--stone);margin-bottom:24px">`;
+
+  container.innerHTML = confirmSection + `
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
       <select id="repo-ftipo" class="cat-filter-select" onchange="renderRepo()">
         <option value="">Todos los tipos</option>
@@ -4052,7 +4076,29 @@ async function generarPDFConfirmacion(dirId) {
     }
   };
 
-  pdfMake.createPdf(dd).download(`Confirmacion_Estructura_${dir.codigo}_${new Date().toISOString().slice(0,10)}.pdf`);
+  const fileName = `Confirmacion_Estructura_${dir.codigo}_${new Date().toISOString().slice(0,10)}.pdf`;
+  pdfMake.createPdf(dd).getBlob(async (blob) => {
+    // Descargar al usuario
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+
+    // Subir a Supabase Storage bucket 'confirmaciones'
+    const storagePath = `${dir.codigo}/${fileName}`;
+    const { error: upErr } = await sb.storage.from('confirmaciones')
+      .upload(storagePath, blob, { contentType: 'application/pdf', upsert: true });
+    if (upErr) { console.error('[Confirmacion] Storage error:', upErr.message); return; }
+
+    // Guardar URL pública en pol_direcciones
+    const { data: urlData } = sb.storage.from('confirmaciones').getPublicUrl(storagePath);
+    await sb.from('pol_direcciones').update({ url_confirmacion: urlData.publicUrl }).eq('id', dirId);
+
+    // Actualizar estado local para que el Repositorio lo refleje sin recargar
+    const local = direcciones.find(d=>d.id===dirId);
+    if (local) local.url_confirmacion = urlData.publicUrl;
+  });
 }
 
 // ── INACTIVAR / EDITAR NOMBRE ─────────────────────────────────────────────────
