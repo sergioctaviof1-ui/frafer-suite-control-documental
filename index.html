@@ -4236,11 +4236,14 @@ function openConfirmarDir(dirId) {
   const deptIds  = dirDepts.map(d=>d.id);
   const dirActs  = actividades.filter(a=>deptIds.includes(a.departamento_id));
   document.getElementById('mconfdir-id').value = dirId;
+  const dirPlts = catalogo.filter(c => dirActs.some(a => a.id === c.actividad_id) && c.tipo_documento === 'PLT');
   document.getElementById('mconfdir-resumen').innerHTML =
     `<strong>[${dir.codigo}] ${dir.nombre}</strong><br>
      ${dirAreas.length} área${dirAreas.length!==1?'s':''} &nbsp;·&nbsp;
      ${dirDepts.length} departamento${dirDepts.length!==1?'s':''} &nbsp;·&nbsp;
-     ${dirActs.length} actividad${dirActs.length!==1?'es':''}`;
+     ${dirActs.length} actividad${dirActs.length!==1?'es':''} &nbsp;·&nbsp;
+     <strong style="color:var(--ember-deep)">${dirActs.length} política${dirActs.length!==1?'s':''} a documentar</strong>
+     ${dirPlts.length > 0 ? `<span style="color:var(--fog);font-size:11px">(${dirPlts.length} con código PLT asignado)</span>` : ''}`;
   document.getElementById('modal-confirmar-dir').classList.add('open');
 }
 
@@ -4681,9 +4684,9 @@ async function generarPDFConfirmacion(dirId) {
   // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
   const sigBox = (label) => ({
     stack:[
-      { canvas:[{ type:'line', x1:0,y1:0,x2:160,y2:0, lineWidth:0.8, lineColor:NAVY }], margin:[0,40,0,4] },
+      { canvas:[{ type:'line', x1:0,y1:0,x2:115,y2:0, lineWidth:0.8, lineColor:NAVY }], margin:[0,40,0,4] },
       { text:label, fontSize:8, color:GRAY, alignment:'left' }
-    ], width:180, margin:[0,0,20,0]
+    ], width:'*'
   });
 
   const dd = {
@@ -4708,7 +4711,20 @@ async function generarPDFConfirmacion(dirId) {
       { text:'Grupo Morsa', bold:true, alignment:'center', fontSize:11, color:NAVY, margin:[0,0,0,4] },
       { text:`Zapopan, Jalisco · ${fecha}`, alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,4] },
       { text:'Frafer Consulting', alignment:'center', fontSize:9, color:GRAY, margin:[0,0,0,10] },
-      { text:`Confidencial · Uso exclusivo de ${dir.nombre} y Consejo Administrativo · Grupo Morsa`, alignment:'center', fontSize:8, color:GRAY, italics:true, margin:[0,0,0,4] },
+      { text:`Confidencial · Uso exclusivo de ${dir.nombre} y Consejo Administrativo · Grupo Morsa`, alignment:'center', fontSize:8, color:GRAY, italics:true, margin:[0,0,0,16] },
+      { table:{ widths:['*','*','*','*'],
+          body:[[
+            { text:`${dirAreas.length}`, alignment:'center', bold:true, fontSize:16, color:ORANGE, margin:[4,8,4,2] },
+            { text:`${dirDepts.length}`, alignment:'center', bold:true, fontSize:16, color:NAVY, margin:[4,8,4,2] },
+            { text:`${dirActs.length}`, alignment:'center', bold:true, fontSize:16, color:ORANGE, margin:[4,8,4,2] },
+            { text:`${dirActs.length}`, alignment:'center', bold:true, fontSize:16, color:NAVY, margin:[4,8,4,2] }
+          ],[
+            { text:'áreas', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'departamentos', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'actividades', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] },
+            { text:'políticas a documentar', alignment:'center', fontSize:7.5, color:GRAY, margin:[4,0,4,6] }
+          ]]},
+        layout:{ hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER }, margin:[0,0,0,18] },
 
       // SECCIÓN 1 — PROPÓSITO DEL PROYECTO
       secTitle('1.  PROPÓSITO DEL PROYECTO'),
@@ -4776,8 +4792,13 @@ async function generarPDFConfirmacion(dirId) {
       thRow(['División','Área','Departamento','Bloque']),
       ...estructuraRows,
 
-      // SECCIÓN 2
+      // SECCIÓN 4
       secTitle('4.  CATÁLOGO DE ACTIVIDADES Y POLÍTICAS A DOCUMENTAR'),
+      { columns:[
+          { text:`Total de políticas a documentar en ${dir.codigo}:`, fontSize:9, color:GRAY, width:'*' },
+          { text:`${dirActs.length}`, fontSize:13, bold:true, color:ORANGE, alignment:'right', width:40 }
+        ], margin:[0,0,0,6] },
+      { canvas:[{ type:'line', x1:0, y1:0, x2:505, y2:0, lineWidth:0.5, lineColor:BORDER }], margin:[0,0,0,8] },
       thRow(['Área','Departamento','Actividad','Código PLT']),
       ...catalogoRows,
 
