@@ -493,64 +493,76 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
-<!-- MODAL: Reasignar Área a Dirección -->
+<!-- MODAL: Editar Área -->
 <div class="modal-overlay" id="modal-reasignar-area">
-  <div class="modal" style="max-width:420px">
-    <h3>Reasignar Área a Dirección</h3>
+  <div class="modal" style="max-width:460px">
+    <h3>Editar Área</h3>
     <div class="alert alert-error" id="mreasig-error"></div>
     <input type="hidden" id="mreasig-area-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Área</label>
-      <div id="mreasig-area-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+      <label>Nombre del Área</label>
+      <input id="mreasig-area-nombre" placeholder="Nombre del área">
     </div>
     <div class="form-group" style="margin-bottom:14px">
-      <label>Asignar a Dirección</label>
+      <label>División</label>
       <select id="mreasig-dir"></select>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveReasignarArea()">Guardar</button>
+      <button class="btn btn-primary" onclick="saveEditarArea()">Guardar</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-area')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Reasignar Departamento a Área -->
+<!-- MODAL: Editar Departamento -->
 <div class="modal-overlay" id="modal-reasignar-depto">
   <div class="modal" style="max-width:460px">
-    <h3>Reasignar Departamento a Área</h3>
+    <h3>Editar Departamento</h3>
     <div class="alert alert-error" id="mrdept-error"></div>
     <input type="hidden" id="mrdept-dept-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Departamento</label>
-      <div id="mrdept-dept-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+      <label>Nombre del Departamento</label>
+      <input id="mrdept-nombre" placeholder="Nombre del departamento">
     </div>
     <div class="form-group" style="margin-bottom:14px">
-      <label>Asignar a Área</label>
+      <label>División</label>
+      <select id="mrdept-dir" onchange="onEditDeptoDirChange()"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Área</label>
       <select id="mrdept-area"></select>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveReasignarDepto()">Guardar</button>
+      <button class="btn btn-primary" onclick="saveEditarDepto()">Guardar</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-depto')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Reasignar Actividad a Departamento -->
+<!-- MODAL: Editar Actividad -->
 <div class="modal-overlay" id="modal-reasignar-act">
   <div class="modal" style="max-width:460px">
-    <h3>Reasignar Actividad a Departamento</h3>
+    <h3>Editar Actividad</h3>
     <div class="alert alert-error" id="mract-error"></div>
     <input type="hidden" id="mract-act-id">
     <div class="form-group" style="margin-bottom:14px">
-      <label>Actividad</label>
-      <div id="mract-act-nombre" style="font-size:13px;font-weight:500;padding:6px 0;color:var(--ink)"></div>
+      <label>Nombre de la Actividad</label>
+      <input id="mract-nombre" placeholder="Nombre de la actividad">
     </div>
     <div class="form-group" style="margin-bottom:14px">
-      <label>Asignar a Departamento</label>
+      <label>División</label>
+      <select id="mract-dir" onchange="onEditActDirChange()"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Área</label>
+      <select id="mract-area" onchange="onEditActAreaChange()"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Departamento</label>
       <select id="mract-dept"></select>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveReasignarAct()">Guardar</button>
+      <button class="btn btn-primary" onclick="saveEditarAct()">Guardar</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-reasignar-act')">Cancelar</button>
     </div>
   </div>
@@ -3637,19 +3649,19 @@ async function loadAdmin() {
       </td>
     </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
+  const btnEditar = (fn, id, activo, tabla, campo) => `
+    <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
+    <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campo}')" style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer">${activo?'Inactivar':'Activar'}</button>`;
+
   document.getElementById('admin-areas-body').innerHTML =
     areas.map(a=>{
       const dir = dirById[a.direccion_id];
-      const bloqueada = dir?.confirmada;
       return `<tr>
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:a.direccion_id}</td>
         <td><span class="code-tag">${a.numero}</span></td>
         <td>${a.nombre}</td>
         <td><span class="badge ${a.activa?'badge-publicado':'badge-vencido'}">${a.activa?'Activa':'Inactiva'}</span></td>
-        <td style="white-space:nowrap">
-          ${accionesBtns('pol_areas',a.id,a.activa,'activa',a.nombre)}
-          ${!bloqueada?`<button onclick="openReasignarArea('${a.id}','${a.direccion_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
-        </td>
+        <td style="white-space:nowrap">${btnEditar('openEditarArea',a.id,a.activa,'pol_areas','activa')}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin áreas</td></tr>';
 
@@ -3659,17 +3671,13 @@ async function loadAdmin() {
     departamentos.map(d=>{
       const area = areaById[d.area_id];
       const dir  = area ? dirById[area.direccion_id] : null;
-      const bloqueada = dir?.confirmada;
       return `<tr>
         <td>${dir?`<span class="code-tag">${dir.codigo}</span> ${dir.nombre}`:'—'}</td>
         <td>${area?`<span class="code-tag">${area.numero}</span> ${area.nombre}`:'—'}</td>
         <td style="font-family:var(--ff-mono);font-size:11px;color:var(--gold)">${d.codigo||'—'}</td>
         <td>${d.nombre}</td>
         <td><span class="badge ${d.activo?'badge-publicado':'badge-vencido'}">${d.activo?'Activo':'Inactivo'}</span></td>
-        <td style="white-space:nowrap">
-          ${accionesBtns('pol_departamentos',d.id,d.activo,'activo',d.nombre)}
-          ${!bloqueada?`<button onclick="openReasignarDepto('${d.id}','${d.area_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
-        </td>
+        <td style="white-space:nowrap">${btnEditar('openEditarDepto',d.id,d.activo,'pol_departamentos','activo')}</td>
       </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin departamentos</td></tr>';
 
@@ -3691,10 +3699,7 @@ async function loadAdmin() {
               <td style="font-size:11px">${dept.nombre}</td>
               <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
               <td>${act.nombre}</td>
-              <td style="white-space:nowrap">
-                ${accionesBtns('pol_actividades',act.id,act.activa,'activa',act.nombre)}
-                ${!bloqueada?`<button onclick="openReasignarAct('${act.id}','${act.departamento_id}')" style="margin-left:4px;border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer">↕ Mover</button>`:''}
-              </td>
+              <td style="white-space:nowrap">${btnEditar('openEditarAct',act.id,act.activa,'pol_actividades','activa')}</td>
             </tr>`);
           });
       });
@@ -3719,74 +3724,128 @@ async function loadAdmin() {
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">El catálogo está vacío — registra el primer folio con el botón "+ Nuevo Folio"</td></tr>';
 }
 
-// ── REASIGNAR ÁREA ────────────────────────────────────────────────────────────
-function openReasignarArea(areaId, dirActualId) {
+// ── EDITAR ÁREA (nombre + división) ───────────────────────────────────────────
+function openEditarArea(areaId) {
   const area = areas.find(a=>a.id===areaId);
+  if (!area) return;
   document.getElementById('mreasig-area-id').value    = areaId;
-  document.getElementById('mreasig-area-nombre').textContent = area ? `${area.numero} · ${area.nombre}` : areaId;
+  document.getElementById('mreasig-area-nombre').value = area.nombre;
   document.getElementById('mreasig-dir').innerHTML =
     [...direcciones].sort((a,b)=>a.orden-b.orden)
-      .map(d=>`<option value="${d.id}"${d.id===dirActualId?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
+      .map(d=>`<option value="${d.id}"${d.id===area.direccion_id?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
       .join('');
   document.getElementById('mreasig-error').classList.remove('show');
   document.getElementById('modal-reasignar-area').classList.add('open');
 }
 
-async function saveReasignarArea() {
-  const areaId  = document.getElementById('mreasig-area-id').value;
-  const dirId   = document.getElementById('mreasig-dir').value;
-  const { error } = await sb.from('pol_areas').update({ direccion_id: dirId }).eq('id', areaId);
+async function saveEditarArea() {
+  const areaId = document.getElementById('mreasig-area-id').value;
+  const nombre = document.getElementById('mreasig-area-nombre').value.trim();
+  const dirId  = document.getElementById('mreasig-dir').value;
+  if (!nombre) { showModalError('mreasig-error','El nombre es obligatorio.'); return; }
+  const { error } = await sb.from('pol_areas').update({ nombre, direccion_id: dirId }).eq('id', areaId);
   if (error) { showModalError('mreasig-error', error.message); return; }
   closeModal('modal-reasignar-area');
   await loadAdmin();
   renderEstructura();
 }
 
-// ── REASIGNAR DEPARTAMENTO ─────────────────────────────────────────────────────
-function openReasignarDepto(deptId, areaActualId) {
-  const dept = departamentos.find(d=>d.id===deptId);
+// ── EDITAR DEPARTAMENTO (nombre + div → área en cascada) ──────────────────────
+function openEditarDepto(deptId) {
+  const dept    = departamentos.find(d=>d.id===deptId);
+  if (!dept) return;
+  const areaAct = areas.find(a=>a.id===dept.area_id);
+  const dirAct  = areaAct ? direcciones.find(d=>d.id===areaAct.direccion_id) : null;
   document.getElementById('mrdept-dept-id').value = deptId;
-  document.getElementById('mrdept-dept-nombre').textContent = dept ? `${dept.codigo||'—'} · ${dept.nombre}` : deptId;
+  document.getElementById('mrdept-nombre').value  = dept.nombre;
+  document.getElementById('mrdept-dir').innerHTML =
+    [...direcciones].sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}"${dirAct&&d.id===dirAct.id?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
+      .join('');
   document.getElementById('mrdept-area').innerHTML =
-    [...areas].sort((a,b)=>parseInt(a.numero)-parseInt(b.numero)).map(a => {
-      const dir = direcciones.find(d=>d.id===a.direccion_id);
-      return `<option value="${a.id}"${a.id===areaActualId?' selected':''}>${dir?.codigo||''} · ${a.numero} · ${a.nombre}</option>`;
-    }).join('');
+    areas.filter(a=>a.direccion_id===(dirAct?.id||''))
+      .sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
+      .map(a=>`<option value="${a.id}"${a.id===dept.area_id?' selected':''}>${a.numero} · ${a.nombre}</option>`)
+      .join('');
   document.getElementById('mrdept-error').classList.remove('show');
   document.getElementById('modal-reasignar-depto').classList.add('open');
 }
 
-async function saveReasignarDepto() {
+function onEditDeptoDirChange() {
+  const dirId = document.getElementById('mrdept-dir').value;
+  document.getElementById('mrdept-area').innerHTML =
+    areas.filter(a=>a.direccion_id===dirId)
+      .sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
+      .map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`)
+      .join('');
+}
+
+async function saveEditarDepto() {
   const deptId = document.getElementById('mrdept-dept-id').value;
+  const nombre = document.getElementById('mrdept-nombre').value.trim();
   const areaId = document.getElementById('mrdept-area').value;
-  const { error } = await sb.from('pol_departamentos').update({ area_id: areaId }).eq('id', deptId);
+  if (!nombre || !areaId) { showModalError('mrdept-error','Nombre y Área son obligatorios.'); return; }
+  const { error } = await sb.from('pol_departamentos').update({ nombre, area_id: areaId }).eq('id', deptId);
   if (error) { showModalError('mrdept-error', error.message); return; }
   closeModal('modal-reasignar-depto');
   await loadAdmin();
   renderEstructura();
 }
 
-// ── REASIGNAR ACTIVIDAD ────────────────────────────────────────────────────────
-function openReasignarAct(actId, deptActualId) {
-  const act = actividades.find(a=>a.id===actId);
+// ── EDITAR ACTIVIDAD (nombre + div → área → dept en cascada) ──────────────────
+function openEditarAct(actId) {
+  const act    = actividades.find(a=>a.id===actId);
+  if (!act) return;
+  const deptAct = departamentos.find(d=>d.id===act.departamento_id);
+  const areaAct = deptAct ? areas.find(a=>a.id===deptAct.area_id) : null;
+  const dirAct  = areaAct ? direcciones.find(d=>d.id===areaAct.direccion_id) : null;
   document.getElementById('mract-act-id').value = actId;
-  document.getElementById('mract-act-nombre').textContent = act ? `${act.codigo||'—'} · ${act.nombre}` : actId;
+  document.getElementById('mract-nombre').value = act.nombre;
+  document.getElementById('mract-dir').innerHTML =
+    [...direcciones].sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}"${dirAct&&d.id===dirAct.id?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
+      .join('');
+  document.getElementById('mract-area').innerHTML =
+    areas.filter(a=>a.direccion_id===(dirAct?.id||''))
+      .sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
+      .map(a=>`<option value="${a.id}"${areaAct&&a.id===areaAct.id?' selected':''}>${a.numero} · ${a.nombre}</option>`)
+      .join('');
   document.getElementById('mract-dept').innerHTML =
-    [...departamentos].sort((a,b)=>a.orden-b.orden).map(d => {
-      const area = areas.find(a=>a.id===d.area_id);
-      const dir  = area ? direcciones.find(x=>x.id===area.direccion_id) : null;
-      return `<option value="${d.id}"${d.id===deptActualId?' selected':''}>${dir?.codigo||''} · ${area?.numero||''} · ${d.nombre}</option>`;
-    }).join('');
+    departamentos.filter(d=>d.area_id===(areaAct?.id||''))
+      .sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}"${deptAct&&d.id===deptAct.id?' selected':''}>${d.nombre}</option>`)
+      .join('');
   document.getElementById('mract-error').classList.remove('show');
   document.getElementById('modal-reasignar-act').classList.add('open');
 }
 
-async function saveReasignarAct() {
+function onEditActDirChange() {
+  const dirId = document.getElementById('mract-dir').value;
+  document.getElementById('mract-area').innerHTML =
+    areas.filter(a=>a.direccion_id===dirId)
+      .sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
+      .map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`)
+      .join('');
+  document.getElementById('mract-dept').innerHTML = '<option value="">— selecciona área —</option>';
+}
+
+function onEditActAreaChange() {
+  const areaId = document.getElementById('mract-area').value;
+  document.getElementById('mract-dept').innerHTML =
+    departamentos.filter(d=>d.area_id===areaId)
+      .sort((a,b)=>a.orden-b.orden)
+      .map(d=>`<option value="${d.id}">${d.nombre}</option>`)
+      .join('');
+}
+
+async function saveEditarAct() {
   const actId  = document.getElementById('mract-act-id').value;
+  const nombre = document.getElementById('mract-nombre').value.trim();
   const deptId = document.getElementById('mract-dept').value;
+  if (!nombre || !deptId) { showModalError('mract-error','Nombre y Departamento son obligatorios.'); return; }
   const dept   = departamentos.find(d=>d.id===deptId);
   const areaId = dept?.area_id || null;
-  const { error } = await sb.from('pol_actividades').update({ departamento_id: deptId, area_id: areaId }).eq('id', actId);
+  const { error } = await sb.from('pol_actividades').update({ nombre, departamento_id: deptId, area_id: areaId }).eq('id', actId);
   if (error) { showModalError('mract-error', error.message); return; }
   closeModal('modal-reasignar-act');
   await loadAdmin();
