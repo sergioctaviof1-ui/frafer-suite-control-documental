@@ -568,6 +568,40 @@ input,textarea,select{font-family:inherit}
   </div>
 </div>
 
+<!-- MODAL: Configuración Institucional de División -->
+<div class="modal-overlay" id="modal-config-dir">
+  <div class="modal" style="max-width:580px">
+    <h3>Configuración Institucional</h3>
+    <p style="font-size:12px;color:var(--fog);margin:-8px 0 16px">Estos campos se pre-llenan automáticamente en todas las políticas de esta División.</p>
+    <input type="hidden" id="mcfgdir-id">
+    <div class="alert alert-error" id="mcfgdir-error"></div>
+    <div class="form-group">
+      <label>Marco Normativo y Referencias</label>
+      <textarea id="mcfgdir-marco" rows="6" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--stone);border-radius:6px;resize:vertical;font-family:var(--ff-body)"></textarea>
+      <span style="font-size:10px;color:var(--fog)">Enumera cada referencia en una línea. Campo 3 de la política.</span>
+    </div>
+    <div class="form-group">
+      <label>Directrices y Valores Asociados</label>
+      <textarea id="mcfgdir-valores" rows="4" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--stone);border-radius:6px;resize:vertical;font-family:var(--ff-body)"></textarea>
+      <span style="font-size:10px;color:var(--fog)">Campo 12 de la política.</span>
+    </div>
+    <div class="form-group">
+      <label>Canal de Comunicación</label>
+      <textarea id="mcfgdir-canal" rows="3" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--stone);border-radius:6px;resize:vertical;font-family:var(--ff-body)"></textarea>
+      <span style="font-size:10px;color:var(--fog)">Campo 10 de la política.</span>
+    </div>
+    <div class="form-group">
+      <label>Esquema de Capacitación</label>
+      <textarea id="mcfgdir-capacitacion" rows="3" style="width:100%;font-size:12px;padding:8px;border:1px solid var(--stone);border-radius:6px;resize:vertical;font-family:var(--ff-body)"></textarea>
+      <span style="font-size:10px;color:var(--fog)">Campo 11 de la política.</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn" onclick="saveConfigDir()" style="background:var(--navy);color:#fff;border:none;padding:9px 22px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-config-dir')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Confirmar y Congelar División -->
 <div class="modal-overlay" id="modal-confirmar-dir">
   <div class="modal" style="max-width:500px">
@@ -3670,6 +3704,7 @@ async function loadAdmin() {
       </td>
       <td style="white-space:nowrap">
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
+        <button onclick="openConfigDir('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">⚙ Config</button>
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
@@ -3893,6 +3928,34 @@ function openConfirmarDir(dirId) {
      ${dirDepts.length} departamento${dirDepts.length!==1?'s':''} &nbsp;·&nbsp;
      ${dirActs.length} actividad${dirActs.length!==1?'es':''}`;
   document.getElementById('modal-confirmar-dir').classList.add('open');
+}
+
+// ── CONFIGURACIÓN INSTITUCIONAL DE DIVISIÓN ───────────────────────────────
+function openConfigDir(dirId) {
+  const d = direcciones.find(x=>x.id===dirId);
+  document.getElementById('mcfgdir-id').value = dirId;
+  document.getElementById('mcfgdir-marco').value       = d.marco_normativo       || '';
+  document.getElementById('mcfgdir-valores').value     = d.directrices_valores   || '';
+  document.getElementById('mcfgdir-canal').value       = d.canal_comunicacion    || '';
+  document.getElementById('mcfgdir-capacitacion').value= d.esquema_capacitacion  || '';
+  document.getElementById('mcfgdir-error').classList.remove('show');
+  document.getElementById('modal-config-dir').classList.add('open');
+}
+
+async function saveConfigDir() {
+  const dirId = document.getElementById('mcfgdir-id').value;
+  const patch = {
+    marco_normativo:     document.getElementById('mcfgdir-marco').value.trim()        || null,
+    directrices_valores: document.getElementById('mcfgdir-valores').value.trim()      || null,
+    canal_comunicacion:  document.getElementById('mcfgdir-canal').value.trim()        || null,
+    esquema_capacitacion:document.getElementById('mcfgdir-capacitacion').value.trim() || null
+  };
+  const { error } = await sb.from('pol_direcciones').update(patch).eq('id', dirId);
+  if (error) { showModalError('mcfgdir-error', error.message); return; }
+  // Actualizar estado local
+  const local = direcciones.find(x=>x.id===dirId);
+  if (local) Object.assign(local, patch);
+  closeModal('modal-config-dir');
 }
 
 async function saveConfirmarDir() {
