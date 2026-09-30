@@ -1140,8 +1140,8 @@ input,textarea,select{font-family:inherit}
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="admin-direcciones-body"><tr><td colspan="5" class="loading">Cargando…</td></tr></tbody></table>
+        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th style="text-align:center">Políticas</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="admin-direcciones-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
 
@@ -3878,10 +3878,17 @@ async function loadAdmin() {
   const dirConfirmada = id => (direcciones.find(d=>d.id===id)||{}).confirmada;
 
   document.getElementById('admin-direcciones-body').innerHTML =
-    direcciones.map(d=>`<tr>
+    direcciones.map(d=>{
+      const dAreas = areas.filter(a=>a.direccion_id===d.id);
+      const areaIds = dAreas.map(a=>a.id);
+      const dDepts = departamentos.filter(dep=>areaIds.includes(dep.area_id));
+      const deptIds = dDepts.map(dep=>dep.id);
+      const totalPoliticas = actividades.filter(a=>deptIds.includes(a.departamento_id)).length;
+      return `<tr>
       <td><span class="code-tag">${d.codigo}</span></td>
       <td>${d.nombre}</td>
       <td style="font-size:11px;color:var(--muted)">${tipoLabel[d.tipo]||d.tipo}</td>
+      <td style="text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:13px;color:${totalPoliticas>0?'var(--ember-deep)':'var(--fog)'}">${totalPoliticas||'—'}</td>
       <td>
         <span class="badge ${d.activa?'badge-publicado':'badge-vencido'}" style="margin-right:4px">${d.activa?'Activa':'Inactiva'}</span>
         ${d.confirmada?`<span class="badge" style="background:var(--navy)12;border:1px solid var(--navy)40;color:var(--navy);font-size:8px;padding:2px 7px;border-radius:10px;font-family:var(--ff-mono);letter-spacing:.05em">CONFIRMADA</span>`:''}
@@ -3894,7 +3901,8 @@ async function loadAdmin() {
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${!d.confirmada?`<button onclick="openConfirmarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Confirmar</button>`:''}
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
+    </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
   const btnEditar = (fn, id, activo, tabla, campo) => `
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
