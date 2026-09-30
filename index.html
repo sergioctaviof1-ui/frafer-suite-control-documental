@@ -4149,10 +4149,10 @@ async function generarPDFGobiernoCorporativo() {
 
       secTitle('5.  AUTORIZACIÓN'),
       { text:`Al firmar el presente documento, los abajo firmantes validan y aprueban el Marco de Gobierno Corporativo de Grupo Morsa como instrumento rector de todas las políticas del Grupo, con vigencia a partir de la fecha de la última firma.`, fontSize:9, color:NAVY, margin:[0,0,0,20], lineHeight:1.5 },
-      { columns:[ sigLine('Director General'), sigLine(dirsOrdenadas[1]?.nombre||'Director') ], margin:[0,0,0,0] },
-      { columns:[ sigLine(dirsOrdenadas[2]?.nombre||'Director'), sigLine(dirsOrdenadas[3]?.nombre||'Director') ] },
-      { columns:[ sigLine(dirsOrdenadas[4]?.nombre||'Director'), sigLine(dirsOrdenadas[5]?.nombre||'Director') ] },
-      { columns:[ sigLine(dirsOrdenadas[6]?.nombre||'Director'), sigLine(dirsOrdenadas[7]?.nombre||'Director') ] },
+      { columns:[ sigLine(dirsOrdenadas[0]?.nombre||'Dirección'), sigLine(dirsOrdenadas[1]?.nombre||'Dirección') ], margin:[0,0,0,0] },
+      { columns:[ sigLine(dirsOrdenadas[2]?.nombre||'Dirección'), sigLine(dirsOrdenadas[3]?.nombre||'Dirección') ] },
+      { columns:[ sigLine(dirsOrdenadas[4]?.nombre||'Dirección'), sigLine(dirsOrdenadas[5]?.nombre||'Dirección') ] },
+      { columns:[ sigLine(dirsOrdenadas[6]?.nombre||'Dirección'), sigLine(dirsOrdenadas[7]?.nombre||'Dirección') ] },
     ],
     styles:{ mainTitle:{ fontSize:16, bold:true, color:NAVY } }
   };
