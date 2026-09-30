@@ -51,13 +51,13 @@ button{cursor:pointer;border:none;font-family:inherit}
 input,textarea,select{font-family:inherit}
 
 /* NAV — Frafer header */
-.topbar{display:flex;align-items:center;gap:20px;padding:0 28px;height:58px;background:var(--navy);position:sticky;top:0;z-index:100;border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%) 1}
-.topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:24px;font-weight:400;letter-spacing:.18em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
-.topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow),transparent);opacity:.4;margin:4px 0}
-.topbar-title{font-family:var(--ff-mono);font-size:9px;font-weight:400;color:var(--ember-glow);letter-spacing:0;text-transform:uppercase;opacity:.85;white-space:nowrap;display:inline-block}
-.topbar-brand-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:52px;background:var(--navy);position:sticky;top:0;z-index:100;border-bottom:2px solid transparent;border-image:linear-gradient(90deg,var(--ember) 0%,var(--gold) 55%,transparent 100%) 1}
+.topbar-brand{font-family:'Cormorant Garamond','Cormorant',Georgia,serif;font-size:18px;font-weight:400;letter-spacing:.16em;color:var(--parchment);line-height:1;text-transform:uppercase;text-align:center}
+.topbar-sep{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--ember-glow),transparent);opacity:.4;margin:3px 0}
+.topbar-title{font-family:var(--ff-mono);font-size:8px;font-weight:400;color:var(--ember-glow);letter-spacing:.06em;text-transform:uppercase;opacity:.8;white-space:nowrap;display:inline-block}
+.topbar-brand-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;flex-shrink:0}
 .topbar-nav{display:flex;gap:0;margin-left:auto}
-.nav-btn{padding:0 20px;height:58px;font-family:var(--ff-body);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.42);background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.nav-btn{padding:0 13px;height:52px;font-family:var(--ff-body);font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.42);background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap}
 .nav-btn:hover{color:rgba(255,255,255,.75);background:rgba(255,255,255,.04)}
 .nav-btn.active{color:var(--ember-glow);border-bottom-color:var(--ember);background:transparent}
 .nav-btn.active:hover{background:transparent}
@@ -86,7 +86,7 @@ input,textarea,select{font-family:inherit}
 /* ── TABLAS — LÍNEA DE DISEÑO ÚNICA ─────────────────────────────
    Navy bg · ember-glow text · ember-deep border · ff-mono 9px .10em
    Aplica a semaforo-table, cat-table, maestro-table, admin-table    */
-.semaforo-table th,.cat-table th,.maestro-table th,.admin-table th{background:var(--navy);color:var(--ember-glow);border-bottom:2px solid var(--ember-deep);font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;text-transform:uppercase;font-weight:600;text-align:left;white-space:nowrap;position:sticky;top:58px;z-index:30}
+.semaforo-table th,.cat-table th,.maestro-table th,.admin-table th{background:var(--navy);color:var(--ember-glow);border-bottom:2px solid var(--ember-deep);font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;text-transform:uppercase;font-weight:600;text-align:left;white-space:nowrap;position:sticky;top:52px;z-index:30}
 .semaforo-table td,.cat-table td,.maestro-table td,.admin-table td{background:#FDF9F5;position:relative;z-index:0;border-bottom:1px solid var(--stone)}
 .semaforo-table tr:last-child td,.cat-table tr:last-child td,.maestro-table tr:last-child td,.admin-table tr:last-child td{border-bottom:none}
 .semaforo-table tr:hover td,.cat-table tbody tr:hover td,.maestro-table tr:hover td,.admin-table tr:hover td{background:var(--linen)}
@@ -130,7 +130,7 @@ input,textarea,select{font-family:inherit}
 .cat-mono{font-family:var(--ff-mono);font-size:9px;color:var(--navy);font-weight:700;letter-spacing:.06em;white-space:nowrap;margin-right:6px}
 .cat-folio{font-family:var(--ff-mono);font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.04em}
 /* ── DOCUMENTAR VIEW ── */
-.doc-header{position:sticky;top:58px;z-index:50;background:var(--navy);display:flex;align-items:center;gap:16px;padding:0 28px;height:56px;border-bottom:2px solid var(--ember-deep)}
+.doc-header{position:sticky;top:52px;z-index:50;background:var(--navy);display:flex;align-items:center;gap:16px;padding:0 28px;height:56px;border-bottom:2px solid var(--ember-deep)}
 .doc-back-btn{background:transparent;border:none;color:rgba(255,255,255,.55);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;white-space:nowrap;padding:0;font-family:var(--ff-mono)}
 .doc-back-btn:hover{color:var(--ember-glow)}
 .doc-header-identity{display:flex;align-items:center;gap:10px;flex:1;min-width:0;overflow:hidden}
@@ -174,7 +174,7 @@ input,textarea,select{font-family:inherit}
 .tree-empresa-name{font-family:var(--ff-display);font-size:17px;font-weight:400;color:var(--ink);letter-spacing:.04em}
 .tree-empresa-body{padding:0 12px 12px}
 .tree-division{border:1px solid var(--stone);border-radius:8px;margin-bottom:8px;overflow:hidden}
-.tree-division-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--linen);user-select:none;position:sticky;top:58px;z-index:40}
+.tree-division-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--linen);user-select:none;position:sticky;top:52px;z-index:40}
 .tree-division-header:hover{background:var(--stone)}
 .tree-div-code{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);font-weight:700;min-width:36px;font-family:var(--ff-mono)}
 .tree-div-name{font-size:13px;font-weight:500;color:var(--ink)}
@@ -355,11 +355,11 @@ input,textarea,select{font-family:inherit}
   </div>
   <nav class="topbar-nav">
     <button class="nav-btn active" onclick="showView('dashboard')" data-view="dashboard">Dashboard</button>
-    <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo</button>
-    <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar Política</button>
+    <button class="nav-btn" onclick="showView('catalogo')" data-view="catalogo">Catálogo · 171</button>
+    <button class="nav-btn" onclick="navDocumentar()" data-view="documentar">Documentar</button>
     <button class="nav-btn" onclick="showView('repositorio')" data-view="repositorio">Repositorio</button>
     <button class="nav-btn" onclick="showView('entrevista-dg')" data-view="entrevista-dg" style="color:var(--ember-deep);font-weight:700">Entrevista DG</button>
-    <button class="nav-btn" onclick="showView('gobierno-corporativo')" data-view="gobierno-corporativo">Gobierno Corp.</button>
+    <button class="nav-btn" onclick="showView('gobierno-corporativo')" data-view="gobierno-corporativo">Gobierno</button>
     <button class="nav-btn" onclick="showView('consulta')" data-view="consulta">Consulta</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
