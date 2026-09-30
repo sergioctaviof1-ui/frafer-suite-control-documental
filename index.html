@@ -3813,8 +3813,8 @@ async function loadAdmin() {
         ${d.confirmada?`<span class="badge" style="background:var(--navy)12;border:1px solid var(--navy)40;color:var(--navy);font-size:8px;padding:2px 7px;border-radius:10px;font-family:var(--ff-mono);letter-spacing:.05em">CONFIRMADA</span>`:''}
       </td>
       <td style="white-space:nowrap">
-        <button onclick="moverDir('${d.id}',-1)" title="Subir" style="border:1px solid var(--stone);border-radius:4px;padding:2px 7px;font-size:11px;background:none;color:var(--dust);cursor:pointer;margin-right:2px">↑</button>
-        <button onclick="moverDir('${d.id}',1)" title="Bajar" style="border:1px solid var(--stone);border-radius:4px;padding:2px 7px;font-size:11px;background:none;color:var(--dust);cursor:pointer;margin-right:6px">↓</button>
+        <button onclick="moverDir('${d.id}',-1)" title="Subir" style="display:none">↑</button>
+        <button onclick="moverDir('${d.id}',1)" title="Bajar" style="display:none">↓</button>
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
         <button onclick="openConfigDir('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">⚙ Config</button>
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
