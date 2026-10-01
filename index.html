@@ -1133,6 +1133,7 @@ input,textarea,select{font-family:inherit}
       <button class="tab" onclick="switchTab(this,'atab-actividades')">Actividades</button>
       <button class="tab" onclick="switchTab(this,'atab-estructura')">Estructura</button>
       <button class="tab" onclick="switchTab(this,'atab-baseline');loadBaselineStats()" style="color:var(--gold);font-weight:600">Baseline</button>
+      <button class="tab" onclick="switchTab(this,'atab-borrador');renderAdminBorrador()" style="color:var(--ember-deep);font-weight:600">Borrador</button>
     </div>
 
     <div class="tab-panel active" id="atab-direcciones">
@@ -1244,6 +1245,36 @@ input,textarea,select{font-family:inherit}
         </div>
         <div id="baseline-status" style="margin-top:14px;font-size:12px;color:var(--ember-deep);font-family:var(--ff-mono)"></div>
         <div id="baseline-table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- TAB: BORRADOR -->
+    <div class="tab-panel" id="atab-borrador">
+      <div style="padding:4px 0 20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember-deep);margin-bottom:6px">Repositorio de Documentos</div>
+            <h3 style="font-family:var(--ff-display);font-size:22px;font-weight:400;color:var(--ink);margin-bottom:4px">Programación de Políticas</h3>
+            <p style="font-size:12px;color:var(--dust);line-height:1.6;max-width:640px">Vista de avance por dirección. Una dirección en "Por Autorizar" ya permite iniciar la documentación de sus políticas. No es candado.</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="borrador-filter-status" onchange="renderAdminBorrador()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen)">
+              <option value="">Todas las Direcciones</option>
+              <option value="levantamiento">En Levantamiento</option>
+              <option value="por_autorizar">Por Autorizar</option>
+              <option value="autorizada">Autorizada</option>
+            </select>
+            <select id="borrador-filter-doc" onchange="renderAdminBorrador()" style="border:1px solid var(--stone);border-radius:6px;padding:6px 12px;font-size:11px;font-family:var(--ff-mono);color:var(--ink);background:var(--linen)">
+              <option value="">Todos los documentos</option>
+              <option value="sin_iniciar">Sin iniciar</option>
+              <option value="iniciados">Con documento</option>
+            </select>
+          </div>
+        </div>
+        <div id="borrador-summary" style="display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap"></div>
+        <div id="borrador-content">
+          <div class="loading">Cargando…</div>
+        </div>
       </div>
     </div>
 
@@ -1605,7 +1636,7 @@ async function loadCatalogo() {
            </div>`;
       return `<tr>
         <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog);text-align:right;white-space:nowrap">${i+1}</td>
-        <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}</td>
+        <td><span class="cat-mono">${r.dir.codigo}</span>${r.dir.nombre}<br><span style="display:inline-block;margin-top:2px">${dirStatusChip(r.dir,true)}</span></td>
         <td><span class="cat-mono">${r.area.numero}</span>${r.area.nombre}</td>
         <td><span class="cat-mono">${r.deptCode}</span>${r.dept.nombre}</td>
         <td><span class="cat-mono">${r.actCode}</span>${r.act.nombre}</td>
@@ -3888,7 +3919,7 @@ async function loadAdmin() {
       <td style="text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:13px;color:${totalPoliticas>0?'var(--ember-deep)':'var(--fog)'}">${totalPoliticas||'—'}</td>
       <td>
         <span class="badge ${d.activa?'badge-publicado':'badge-vencido'}" style="margin-right:4px">${d.activa?'Activa':'Inactiva'}</span>
-        ${d.confirmada?`<span class="badge" style="background:var(--navy)12;border:1px solid var(--navy)40;color:var(--navy);font-size:8px;padding:2px 7px;border-radius:10px;font-family:var(--ff-mono);letter-spacing:.05em">CONFIRMADA</span>`:''}
+        ${dirStatusChip(d)}
       </td>
       <td style="white-space:nowrap">
         <button onclick="moverDir('${d.id}',-1)" title="Subir" style="display:none">↑</button>
@@ -3896,7 +3927,8 @@ async function loadAdmin() {
         ${accionesBtns('pol_direcciones',d.id,d.activa,'activa',d.nombre)}
 
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
-        ${!d.confirmada?`<button onclick="openAutorizarDir('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">✓ Autorizar</button>`:''}
+        ${getDirStatus(d)==='levantamiento'?`<button onclick="setPorAutorizar('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">📤 Por Autorizar</button>`:''}
+        ${getDirStatus(d)==='por_autorizar'?`<button onclick="openAutorizarDir('${d.id}')" style="margin-left:4px;border:1px solid #2E7D32;border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:#2E7D32;cursor:pointer;font-weight:600">✓ Autorizar</button>`:''}
       </td>
     </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
@@ -4292,6 +4324,119 @@ async function saveEditarAct() {
   closeModal('modal-reasignar-act');
   await loadAdmin();
   renderEstructura();
+}
+
+// ── ESTADO DE DIRECCIÓN (3 niveles, sin DDL) ──────────────────────────────────
+function getDirStatus(d) {
+  if (d.confirmada)    return 'autorizada';
+  if (d.confirmada_at) return 'por_autorizar';
+  return 'levantamiento';
+}
+function dirStatusChip(d, small) {
+  const s = getDirStatus(d);
+  const map = {
+    levantamiento: ['En Levantamiento','#F5F5F5','#888','#DDD'],
+    por_autorizar: ['Por Autorizar','#FFF3E0','#E65100','#FFB74D'],
+    autorizada:    ['Autorizada','#E8F5E9','#2E7D32','#81C784']
+  };
+  const [label,bg,color,border] = map[s];
+  const sz = small ? '8px' : '9px';
+  return `<span style="font-size:${sz};font-weight:700;padding:2px 7px;border-radius:10px;background:${bg};color:${color};border:1px solid ${border};letter-spacing:.04em;font-family:var(--ff-mono);white-space:nowrap">${label}</span>`;
+}
+
+async function setPorAutorizar(dirId) {
+  const dir = direcciones.find(d=>d.id===dirId);
+  if (!dir) return;
+  if (!confirm(`¿Marcar "${dir.nombre}" como Por Autorizar?\n\nEl PDF de confirmación quedará disponible para enviar al director.`)) return;
+  const now = new Date().toISOString();
+  const { error } = await sb.from('pol_direcciones').update({ confirmada_at: now }).eq('id', dirId);
+  if (error) { alert('Error: ' + error.message); return; }
+  dir.confirmada_at = now;
+  renderAdmin();
+  toast('Dirección marcada como Por Autorizar');
+}
+
+function renderAdminBorrador() {
+  const fStatus = document.getElementById('borrador-filter-status')?.value || '';
+  const fDoc    = document.getElementById('borrador-filter-doc')?.value    || '';
+
+  // Necesitamos datos de catálogo y políticas
+  const rows = [];
+  actividades.forEach(act => {
+    const dept = departamentos.find(d=>d.id===act.departamento_id); if (!dept) return;
+    const area = areas.find(a=>a.id===dept.area_id);               if (!area) return;
+    const dir  = direcciones.find(d=>d.id===area.direccion_id);    if (!dir)  return;
+    const cat  = catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT');
+    rows.push({ dir, area, dept, act, cat, dirStatus: getDirStatus(dir) });
+  });
+
+  // Filtros
+  const filtered = rows.filter(r => {
+    if (fStatus && r.dirStatus !== fStatus) return false;
+    if (fDoc === 'sin_iniciar' && r.cat?.status && r.cat.status !== 'en_catalogo') return false;
+    if (fDoc === 'iniciados'   && (!r.cat || !r.cat.status || r.cat.status === 'en_catalogo')) return false;
+    return true;
+  });
+
+  // Summary stats
+  const total       = filtered.length;
+  const levanta     = filtered.filter(r=>r.dirStatus==='levantamiento').length;
+  const porAut      = filtered.filter(r=>r.dirStatus==='por_autorizar').length;
+  const autorizadas = filtered.filter(r=>r.dirStatus==='autorizada').length;
+  document.getElementById('borrador-summary').innerHTML = [
+    ['Total actividades', total, '#555'],
+    ['En Levantamiento', levanta, '#888'],
+    ['Por Autorizar', porAut, '#E65100'],
+    ['Autorizadas', autorizadas, '#2E7D32']
+  ].map(([lbl,val,col])=>`<div style="background:var(--linen);border:1px solid var(--stone);border-radius:8px;padding:10px 18px;text-align:center;min-width:120px">
+    <div style="font-size:22px;font-weight:700;color:${col};font-family:var(--ff-mono)">${val}</div>
+    <div style="font-size:10px;color:var(--fog);margin-top:2px">${lbl}</div>
+  </div>`).join('');
+
+  // Agrupar por dirección
+  const byDir = {};
+  filtered.forEach(r => {
+    if (!byDir[r.dir.id]) byDir[r.dir.id] = { dir: r.dir, rows: [] };
+    byDir[r.dir.id].rows.push(r);
+  });
+
+  const groups = Object.values(byDir).sort((a,b)=>a.dir.orden-b.dir.orden);
+  if (!groups.length) {
+    document.getElementById('borrador-content').innerHTML = '<div style="text-align:center;color:var(--fog);padding:40px;font-size:13px">Sin resultados con ese filtro</div>';
+    return;
+  }
+
+  document.getElementById('borrador-content').innerHTML = groups.map(({dir, rows: gRows}) => {
+    const pct = Math.round(gRows.filter(r=>r.cat?.status && r.cat.status!=='en_catalogo').length / gRows.length * 100) || 0;
+    const rowsHtml = gRows.sort((a,b)=>a.area.numero.localeCompare(b.area.numero,undefined,{numeric:true}) || a.dept.codigo?.localeCompare(b.dept.codigo,undefined,{numeric:true}) || 0)
+      .map(r => {
+        const docStatus = r.cat?.status || 'en_catalogo';
+        const dsColor = { en_catalogo:'var(--fog)', borrador:'#E65100', en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#2E7D32' }[docStatus] || 'var(--fog)';
+        const dsLabel = { en_catalogo:'En Catálogo', borrador:'Borrador', en_revision:'En Revisión', autorizado:'Autorizado', publicado:'Publicado' }[docStatus] || docStatus;
+        return `<tr>
+          <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog)">${r.cat?.codigo_documento||'—'}</td>
+          <td style="font-size:10px;color:var(--fog)">${r.area.numero} · ${r.area.nombre}</td>
+          <td style="font-family:var(--ff-mono);font-size:10px;color:var(--fog)">${r.dept.codigo||'—'}</td>
+          <td style="font-size:11px">${r.act.nombre}</td>
+          <td><span style="font-size:9px;font-weight:700;color:${dsColor};font-family:var(--ff-mono)">${dsLabel}</span></td>
+          <td style="text-align:center">${r.cat
+            ? `<button class="btn-accion ${r.cat.status && r.cat.status!=='en_catalogo' ? 'btn-accion-update' : 'btn-accion-iniciar'}" onclick="openPolitica('${r.cat.id}','${r.cat.politica_id||'null'}')" style="font-size:10px;padding:3px 10px">${r.cat.status && r.cat.status!=='en_catalogo' ? 'Ver' : 'Iniciar'}</button>`
+            : ''}</td>
+        </tr>`;
+      }).join('');
+    return `<div style="background:var(--bg);border:1px solid var(--stone);border-radius:12px;overflow:clip;margin-bottom:16px">
+      <div style="background:var(--navy);padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="code-tag" style="background:var(--ember-deep)20;color:var(--ember-glow);border-color:var(--ember-deep)40">${dir.codigo}</span>
+        <span style="color:#fff;font-weight:600;font-size:14px;flex:1">${dir.nombre}</span>
+        ${dirStatusChip(dir)}
+        <span style="font-size:10px;color:var(--ember-glow);font-family:var(--ff-mono)">${gRows.length} políticas · ${pct}% iniciadas</span>
+        <button onclick="generarPDFConfirmacion('${dir.id}')" style="font-size:10px;border:1px solid var(--ember-glow)40;border-radius:4px;padding:2px 8px;background:none;color:var(--ember-glow);cursor:pointer">📄 PDF</button>
+      </div>
+      <table class="admin-table" style="margin:0"><thead><tr>
+        <th>Folio</th><th>Área</th><th>Depto</th><th>Actividad / Política</th><th>Doc. Status</th><th style="text-align:center">Acción</th>
+      </tr></thead><tbody>${rowsHtml}</tbody></table>
+    </div>`;
+  }).join('');
 }
 
 // ── CONFIRMAR DIVISIÓN ─────────────────────────────────────────────────────────
