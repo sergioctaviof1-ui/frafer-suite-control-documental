@@ -3048,10 +3048,9 @@ async function generatePDF(download=true) {
     const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
 
     // Badge de estado + logo Morsa (portada)
-    const statusColors = { borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
-    const statusLabels = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
-    const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||'#E65100', alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
-    const logoMorsaPol = { image:'logoMorsa', width:100, alignment:'center', margin:[0,8,0,4] };
+    const statusColors = { en_catalogo:MORSA, borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
+    const statusLabels = { en_catalogo:'EN CATÁLOGO', borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
+    const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||MORSA, alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
 
     // Bloque de título
     const titleBlock = { margin:[0,0,0,10],
@@ -3114,26 +3113,29 @@ async function generatePDF(download=true) {
     const dd = {
       pageSize:'LETTER', pageMargins:[45,90,45,60],
       header:(currentPage) => ({ stack:[
-        { table:{ widths:['*',75], body:[[
+        { table:{ widths:['*', 52, 75], body:[[
             { stack:[
-                {text:'GRUPO MORSA',bold:true,color:MORSA,fontSize:10,letterSpacing:1},
-                {text:`Política Organizacional · ${dk(d.folio)}`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
+                {text:'GRUPO MORSA',bold:true,color:MORSA,fontSize:10},
+                {text:`${dk(d.folio)}  ·  ${String(d.nombre||'').slice(0,60)}`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
               ], border:[false,false,false,false] },
-            { image:'logoMorsa', width:75, alignment:'right', border:[false,false,false,false] }
+            { stack:[
+                {text:`v${parseInt(d.version)||1}`,bold:true,color:MORSA,fontSize:10,alignment:'center'},
+                {text: statusLabels[d.status]||'BORRADOR', fontSize:6,color:GRAY,alignment:'center',margin:[0,2,0,0]}
+              ], border:[false,false,false,false] },
+            { image:'logoMorsa', width:72, alignment:'right', border:[false,false,false,false] }
           ]]}, layout:'noBorders', margin:[45,10,45,0]
         },
         { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:1,lineColor:MORSA}], margin:[45,4,45,0] }
       ]}),
       footer:(currentPage, pageCount) => ({ stack:[
-        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,4] },
+        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,3] },
         { columns:[
-          {text:`Grupo Morsa · Control Documental · Uso Interno`,color:GRAY,fontSize:7,margin:[45,0,0,0]},
-          {text:`Elaborado por Frafer Consulting`,color:GRAY,fontSize:6.5,italics:true,alignment:'center',width:160},
+          {text:`Elaboró: ${dk(d.respElab)}  ·  Autorizó: ${dk(d.autorizadoPor)}  ·  Vigente: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`,color:GRAY,fontSize:6,margin:[45,0,0,0],width:'*'},
           {text:`Pág. ${currentPage} | ${pageCount}`,alignment:'right',color:GRAY,fontSize:7,bold:true,margin:[0,0,45,0]}
-        ]}
+        ]},
+        {text:`Grupo Morsa · Control Documental · Uso Interno · Elaborado por Frafer Consulting`,color:GRAY,fontSize:5.5,italics:true,alignment:'center',margin:[45,1,45,0]}
       ]}),
       content:[
-        logoMorsaPol,
         statusBadge,
         titleBlock,
         grpLabel('Contenido de la Política'),
