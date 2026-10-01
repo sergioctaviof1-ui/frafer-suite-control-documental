@@ -4347,13 +4347,51 @@ function dirStatusChip(d, small) {
 async function setPorAutorizar(dirId) {
   const dir = direcciones.find(d=>d.id===dirId);
   if (!dir) return;
-  if (!confirm(`¿Marcar "${dir.nombre}" como Por Autorizar?\n\nEl PDF de confirmación quedará disponible para enviar al director.`)) return;
+  if (!confirm(`¿Marcar "${dir.nombre}" como Por Autorizar?\n\nSe crearán stubs en Borrador para todas las actividades que aún no tengan documento iniciado.`)) return;
+
   const now = new Date().toISOString();
-  const { error } = await sb.from('pol_direcciones').update({ confirmada_at: now }).eq('id', dirId);
-  if (error) { alert('Error: ' + error.message); return; }
+
+  // 1. Marcar dirección
+  const { error: dirErr } = await sb.from('pol_direcciones').update({ confirmada_at: now }).eq('id', dirId);
+  if (dirErr) { alert('Error: ' + dirErr.message); return; }
   dir.confirmada_at = now;
+
+  // 2. Actividades de esta dirección
+  const areaIds = areas.filter(a=>a.direccion_id===dirId).map(a=>a.id);
+  const deptIds = departamentos.filter(d=>areaIds.includes(d.area_id)).map(d=>d.id);
+  const dirActIds = actividades.filter(a=>deptIds.includes(a.departamento_id)&&a.activa).map(a=>a.id);
+  if (!dirActIds.length) { renderAdmin(); return; }
+
+  // 3. Catálogos PLT de esas actividades
+  const { data: cats } = await sb.from('pol_catalogo')
+    .select('id,actividad_id').in('actividad_id', dirActIds).eq('tipo_documento','PLT').eq('activo',true);
+  if (!cats?.length) { renderAdmin(); return; }
+
+  // 4. ¿Cuáles ya tienen pol_politicas?
+  const catIds = cats.map(c=>c.id);
+  const { data: existingPols } = await sb.from('pol_politicas').select('catalogo_id').in('catalogo_id', catIds);
+  const existingSet = new Set((existingPols||[]).map(p=>p.catalogo_id));
+
+  // 5. Crear stubs solo para los que faltan
+  const toCreate = cats.filter(c=>!existingSet.has(c.id));
+  let inserted = 0;
+  if (toCreate.length) {
+    const govData = {
+      marco_normativo:     dir.marco_normativo     || null,
+      directrices_valores: dir.directrices_valores || null,
+      canal_comunicacion:  dir.canal_comunicacion  || null,
+      esquema_capacitacion:dir.esquema_capacitacion|| null,
+    };
+    const stubs = toCreate.map(c=>({ catalogo_id:c.id, status:'borrador', version:1, borrador_at:now, ...govData }));
+    for (let i=0; i<stubs.length; i+=50) {
+      const { error:se } = await sb.from('pol_politicas').insert(stubs.slice(i,i+50));
+      if (!se) inserted += Math.min(50, stubs.length-i);
+      else console.error('[setPorAutorizar] stub insert error:', se);
+    }
+  }
+
   renderAdmin();
-  toast('Dirección marcada como Por Autorizar');
+  alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados en Borrador.\n${existingSet.size} ya tenían documento (no modificados).`);
 }
 
 function renderAdminBorrador() {
