@@ -4763,16 +4763,21 @@ async function generarPDFConfirmacion(dirId) {
     pageMargins:[45,90,45,60],
     header: (cur,total) => ({
       stack:[
-        { columns:[
-            { stack:[
-                { text:'FRAFER CONSULTING', bold:true, color:ORANGE, fontSize:9 },
-                { text:`CONFIRMACIÓN DE ESTRUCTURA ORGANIZACIONAL Y CATÁLOGO DE POLÍTICAS · ${dir.codigo} · Grupo Morsa`, fontSize:6.5, color:GRAY, margin:[0,2,0,0] }
-              ], margin:[45,14,0,0]
-            },
-            { image:'logoFrafer', width:60, alignment:'right', margin:[0,6,45,0] }
-          ]
+        { table:{
+            widths:['*', 62],
+            body:[[
+              { stack:[
+                  { text:'FRAFER CONSULTING', bold:true, color:ORANGE, fontSize:9 },
+                  { text:`CONFIRMACIÓN DE ESTRUCTURA ORGANIZACIONAL Y CATÁLOGO DE POLÍTICAS · ${dir.codigo} · Grupo Morsa`, fontSize:6.5, color:GRAY, margin:[0,2,0,0] }
+                ], border:[false,false,false,false]
+              },
+              { image:'logoFrafer', width:62, alignment:'right', border:[false,false,false,false] }
+            ]]
+          },
+          layout:'noBorders',
+          margin:[45,12,45,0]
         },
-        { canvas:[{ type:'line', x1:45, y1:0, x2:567, y2:0, lineWidth:0.5, lineColor:'#C8C0B8' }], margin:[0,6,0,0] }
+        { canvas:[{ type:'line', x1:0, y1:0, x2:522, y2:0, lineWidth:0.5, lineColor:'#C8C0B8' }], margin:[45,5,45,0] }
       ]
     }),
     footer: (cur,total) => ({
