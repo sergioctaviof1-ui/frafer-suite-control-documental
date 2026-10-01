@@ -3723,14 +3723,11 @@ async function saveDepto() {
   const { data: existingDepts } = await sb.from('pol_departamentos')
     .select('codigo').eq('area_id', area_id).not('codigo','is',null);
   let nextSeq = 1;
-  let padLen = 2;
   if (existingDepts?.length > 0) {
-    const suffixes = existingDepts.map(d => d.codigo?.split('-').pop()).filter(Boolean);
-    const maxSuffix = suffixes.reduce((max,s) => parseInt(s)>parseInt(max)?s:max, '0');
-    padLen = maxSuffix.length > 2 ? maxSuffix.length : 2;
-    nextSeq = parseInt(maxSuffix) + 1;
+    const maxSeq = Math.max(...existingDepts.map(d => parseInt(d.codigo?.split('-').pop())||0));
+    nextSeq = maxSeq + 1;
   }
-  const codigo = `${area.numero}-${String(nextSeq).padStart(padLen,'0')}`;
+  const codigo = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
   const orden  = nextSeq;
   const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, codigo, orden });
   if (error) { showModalError('mdepto-error', error.message); return; }
@@ -4180,14 +4177,12 @@ async function saveEditarDepto() {
   if (needsCodigo && newArea) {
     const { data: existingDepts } = await sb.from('pol_departamentos')
       .select('codigo').eq('area_id', areaId).not('codigo','is',null).neq('id', deptId);
-    let nextSeq = 1, padLen = 2;
+    let nextSeq = 1;
     if (existingDepts?.length > 0) {
-      const suffixes = existingDepts.map(d => d.codigo?.split('-').pop()).filter(Boolean);
-      const maxSuffix = suffixes.reduce((max,s) => parseInt(s)>parseInt(max)?s:max, '0');
-      padLen = maxSuffix.length > 2 ? maxSuffix.length : 2;
-      nextSeq = parseInt(maxSuffix) + 1;
+      const maxSeq = Math.max(...existingDepts.map(d => parseInt(d.codigo?.split('-').pop())||0));
+      nextSeq = maxSeq + 1;
     }
-    payload.codigo = `${newArea.numero}-${String(nextSeq).padStart(padLen,'0')}`;
+    payload.codigo = `${newArea.numero}-${String(nextSeq).padStart(2,'0')}`;
     payload.orden  = nextSeq;
   }
 
