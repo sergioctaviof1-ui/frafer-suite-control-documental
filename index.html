@@ -4164,12 +4164,48 @@ function onEditDeptoDirChange() {
 }
 
 async function saveEditarDepto() {
-  const deptId = document.getElementById('mrdept-dept-id').value;
-  const nombre = document.getElementById('mrdept-nombre').value.trim();
-  const areaId = document.getElementById('mrdept-area').value;
+  const deptId  = document.getElementById('mrdept-dept-id').value;
+  const nombre  = document.getElementById('mrdept-nombre').value.trim();
+  const areaId  = document.getElementById('mrdept-area').value;
   if (!nombre || !areaId) { showModalError('mrdept-error','Nombre y Área son obligatorios.'); return; }
-  const { error } = await sb.from('pol_departamentos').update({ nombre, area_id: areaId }).eq('id', deptId);
+
+  const dept    = departamentos.find(d => d.id === deptId);
+  const newArea = areas.find(a => a.id === areaId);
+  const areaChanged  = dept && dept.area_id !== areaId;
+  const codeMismatch = dept?.codigo && newArea && !dept.codigo.startsWith(newArea.numero + '-');
+  const needsCodigo  = areaChanged || codeMismatch;
+
+  const payload = { nombre, area_id: areaId };
+
+  if (needsCodigo && newArea) {
+    const { data: existingDepts } = await sb.from('pol_departamentos')
+      .select('codigo').eq('area_id', areaId).not('codigo','is',null).neq('id', deptId);
+    let nextSeq = 1, padLen = 2;
+    if (existingDepts?.length > 0) {
+      const suffixes = existingDepts.map(d => d.codigo?.split('-').pop()).filter(Boolean);
+      const maxSuffix = suffixes.reduce((max,s) => parseInt(s)>parseInt(max)?s:max, '0');
+      padLen = maxSuffix.length > 2 ? maxSuffix.length : 2;
+      nextSeq = parseInt(maxSuffix) + 1;
+    }
+    payload.codigo = `${newArea.numero}-${String(nextSeq).padStart(padLen,'0')}`;
+    payload.orden  = nextSeq;
+  }
+
+  const { error } = await sb.from('pol_departamentos').update(payload).eq('id', deptId);
   if (error) { showModalError('mrdept-error', error.message); return; }
+
+  // Cascada: recalcular códigos de actividades si el código del depto cambió
+  if (needsCodigo && payload.codigo) {
+    const deptActs = actividades
+      .filter(a => a.departamento_id === deptId)
+      .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+    for (let i = 0; i < deptActs.length; i++) {
+      await sb.from('pol_actividades')
+        .update({ codigo: `${payload.codigo}-${String(i+1).padStart(2,'0')}` })
+        .eq('id', deptActs[i].id);
+    }
+  }
+
   closeModal('modal-reasignar-depto');
   await loadAdmin();
   renderEstructura();
@@ -4226,9 +4262,28 @@ async function saveEditarAct() {
   const nombre = document.getElementById('mract-nombre').value.trim();
   const deptId = document.getElementById('mract-dept').value;
   if (!nombre || !deptId) { showModalError('mract-error','Nombre y Departamento son obligatorios.'); return; }
-  const dept   = departamentos.find(d=>d.id===deptId);
+
+  const act    = actividades.find(a => a.id === actId);
+  const dept   = departamentos.find(d => d.id === deptId);
   const areaId = dept?.area_id || null;
-  const { error } = await sb.from('pol_actividades').update({ nombre, departamento_id: deptId, area_id: areaId }).eq('id', actId);
+  const deptChanged  = act && act.departamento_id !== deptId;
+  const codeMismatch = act?.codigo && dept?.codigo && !act.codigo.startsWith(dept.codigo + '-');
+  const needsCodigo  = deptChanged || codeMismatch;
+
+  const payload = { nombre, departamento_id: deptId, area_id: areaId };
+
+  if (needsCodigo && dept?.codigo) {
+    const { data: existingActs } = await sb.from('pol_actividades')
+      .select('codigo').eq('departamento_id', deptId).not('codigo','is',null).neq('id', actId);
+    let nextSeq = 1;
+    if (existingActs?.length > 0) {
+      const maxSeq = Math.max(...existingActs.map(a => parseInt(a.codigo?.split('-').pop())||0));
+      nextSeq = maxSeq + 1;
+    }
+    payload.codigo = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
+  }
+
+  const { error } = await sb.from('pol_actividades').update(payload).eq('id', actId);
   if (error) { showModalError('mract-error', error.message); return; }
   closeModal('modal-reasignar-act');
   await loadAdmin();
