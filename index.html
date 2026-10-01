@@ -3021,7 +3021,7 @@ async function generatePDF(download=true) {
     const versionNum = parseInt(d.version) || 1;
 
     // Paleta
-    const NAVY='#1C2B3A', MAUVE='#9A6070', GRAY='#9C8E84';
+    const NAVY='#1C2B3A', MAUVE='#9A6070', GRAY='#9C8E84', ORANGE='#C84B31';
     const CREAM='#F0E8DC', BORDER='#C8BFB5', GREEN='#2D6B47', WHITE='#FFFFFF';
     const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
 
@@ -3045,6 +3045,12 @@ async function generatePDF(download=true) {
     };
 
     const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
+
+    // Badge de estado + logo Morsa (portada)
+    const statusColors = { borrador:'#E65100', en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
+    const statusLabels = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
+    const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||'#E65100', alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
+    const logoMorsaPol = { image:'logoMorsa', width:100, alignment:'center', margin:[0,8,0,4] };
 
     // Bloque de título
     const titleBlock = { margin:[0,0,0,10],
@@ -3105,25 +3111,28 @@ async function generatePDF(download=true) {
 
     // Definición completa del documento
     const dd = {
-      pageSize:'LETTER', pageMargins:[72,72,54,72],
-      header:(currentPage) => ({
-        table:{ widths:['30%','42%','28%'], body:[[
-          {text:dk(d.folio),bold:true,color:MAUVE,font:'Roboto',fontSize:7.5,margin:[4,4,0,4]},
-          {text:String(d.nombre||'').slice(0,50),alignment:'center',color:NAVY,fontSize:7,margin:[0,4,0,4]},
-          {text:'GRUPO MORSA',bold:true,alignment:'right',color:NAVY,fontSize:8.5,margin:[0,4,4,4]}
-        ]]},
-        layout:{ hLineWidth:(i)=>i===1?1:0, vLineWidth:()=>0, hLineColor:()=>NAVY },
-        margin:[72,24,54,0]
-      }),
+      pageSize:'LETTER', pageMargins:[45,90,45,60],
+      header:(currentPage) => ({ stack:[
+        { table:{ widths:['*',62], body:[[
+            { stack:[
+                {text:'FRAFER CONSULTING',bold:true,color:ORANGE,fontSize:9},
+                {text:`POLÍTICA ORGANIZACIONAL · ${dk(d.folio)} · Grupo Morsa`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
+              ], border:[false,false,false,false] },
+            { image:'logoFrafer', width:62, alignment:'right', border:[false,false,false,false] }
+          ]]}, layout:'noBorders', margin:[45,12,45,0]
+        },
+        { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:0.5,lineColor:'#C8C0B8'}], margin:[45,5,45,0] }
+      ]}),
       footer:(currentPage, pageCount) => ({ stack:[
-        { canvas:[{type:'line',x1:0,y1:0,x2:486,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[72,4,54,2] },
+        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:'#C8C0B8'}], margin:[0,0,0,4] },
         { columns:[
-          {text:`Elaboró: ${dk(d.respElab)}  ·  Autorizó: ${dk(d.autorizadoPor)}  ·  Vigente: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`,color:GRAY,fontSize:6,width:'*'},
-          {text:`Pág. ${currentPage} / ${pageCount}`,alignment:'right',color:GRAY,fontSize:7,bold:true,width:55}
-        ], margin:[72,0,54,2] },
-        {text:`Grupo Morsa  ·  Control Documental  ·  Uso Interno  ·  Generado el ${d.generadoEl||''}`,color:GRAY,fontSize:5.5,alignment:'center',margin:[72,0,54,0]}
+          {text:`Frafer Consulting · Grupo Morsa · Control Documental · Uso Interno`,color:GRAY,fontSize:7,margin:[45,0,0,0]},
+          {text:`Pág. ${currentPage} | ${pageCount}`,alignment:'right',color:GRAY,fontSize:7,bold:true,margin:[0,0,45,0]}
+        ]}
       ]}),
       content:[
+        logoMorsaPol,
+        statusBadge,
         titleBlock,
         grpLabel('Contenido de la Política'),
         ...mkSec('Propósito y Objetivo',           d.objeto),
@@ -3142,7 +3151,8 @@ async function generatePDF(download=true) {
         sigTable,
         histTable
       ],
-      defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 }
+      defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 },
+      images:{ logoFrafer: FRAFER_LOGO, logoMorsa: MORSA_LOGO }
     };
 
     // Obtener blob para descargar Y subir a Storage
