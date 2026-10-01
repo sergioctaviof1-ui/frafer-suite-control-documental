@@ -3020,9 +3020,10 @@ async function generatePDF(download=true) {
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
 
-    // Paleta
-    const NAVY='#1C2B3A', MAUVE='#9A6070', GRAY='#9C8E84', ORANGE='#C84B31';
-    const CREAM='#F0E8DC', BORDER='#C8BFB5', GREEN='#2D6B47', WHITE='#FFFFFF';
+    // Paleta — identidad Grupo Morsa
+    const MORSA='#203A8F', NAVY='#1C2B3A', GRAY='#6B7280';
+    const CREAM='#F0F4FC', BORDER='#C5CCE0', GREEN='#2D6B47', WHITE='#FFFFFF';
+    const ORANGE = MORSA; // alias — sin naranja en documentos Morsa
     const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
 
     // Helpers de layout
@@ -3038,7 +3039,7 @@ async function generatePDF(download=true) {
       const lines = has ? body.split('\n') : ['[ Completar este campo ]'];
       return [
         { table:{ widths:['*'], body:[[{text:`${sNum}. ${title.toUpperCase()}`,bold:true,color:WHITE,fontSize:8.5,margin:[6,3,6,3]}]] },
-          layout:{ fillColor:()=>NAVY, hLineWidth:()=>0, vLineWidth:()=>0 }, margin:[0,6,0,0] },
+          layout:{ fillColor:()=>MORSA, hLineWidth:()=>0, vLineWidth:()=>0 }, margin:[0,6,0,0] },
         ...lines.map(l => ({ text:l||' ', fontSize:9.5, color:has?'#1a1a1a':GRAY, italics:!has, margin:[8,1,6,1] })),
         { text:'', margin:[0,4,0,0] }
       ];
@@ -3047,7 +3048,7 @@ async function generatePDF(download=true) {
     const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
 
     // Badge de estado + logo Morsa (portada)
-    const statusColors = { borrador:'#E65100', en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
+    const statusColors = { borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
     const statusLabels = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
     const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||'#E65100', alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
     const logoMorsaPol = { image:'logoMorsa', width:100, alignment:'center', margin:[0,8,0,4] };
@@ -3058,10 +3059,10 @@ async function generatePDF(download=true) {
         [
           { stack:[
               {text:'GRUPO MORSA',bold:true,color:WHITE,fontSize:10.5,margin:[6,8,0,2]},
-              {text:'Control Documental  ·  Política Organizacional',color:MAUVE,fontSize:6,margin:[6,0,0,8]}
-            ], fillColor:NAVY },
+              {text:'Control Documental  ·  Política Organizacional',color:'#C5CCE0',fontSize:6,margin:[6,0,0,8]}
+            ], fillColor:MORSA },
           { stack:[
-              {text:dk(d.folio),bold:true,color:MAUVE,fontSize:13,font:'Roboto',alignment:'right',margin:[0,8,6,2]},
+              {text:dk(d.folio),bold:true,color:MORSA,fontSize:13,font:'Roboto',alignment:'right',margin:[0,8,6,2]},
               {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Roboto'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
             ], fillColor:CREAM }
         ],
@@ -3071,7 +3072,7 @@ async function generatePDF(download=true) {
         ctrlRow('VIGENCIA',d.vigenciaMeses?`${d.vigenciaMeses} meses`:null,'ELABORÓ',d.respElab),
         ctrlRow('FECHA AUTORIZACIÓN',d.fechaAutorizacion,'AUTORIZÓ',d.autorizadoPor),
         ctrlRow('VIGENTE HASTA',d.fechaVencimiento,'COLABORADORES',d.colaboradores),
-        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,fontSize:7,colSpan:2,margin:[6,3,6,3],fillColor:GREEN},{}]
+        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,fontSize:7,colSpan:2,margin:[6,3,6,3],fillColor:MORSA},{}]
       ]},
       layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
     };
@@ -3079,7 +3080,7 @@ async function generatePDF(download=true) {
     // Firmas
     const sigTable = { margin:[0,14,0,0],
       table:{ widths:['33.33%','33.33%','33.34%'], body:[
-        [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:NAVY},{},{}],
+        [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:MORSA},{},{}],
         [{text:'ELABORÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'REVISÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'AUTORIZÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]}],
         [{text:'\n\n\n'},{text:'\n\n\n'},{text:'\n\n\n'}],
         [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:'___________________________',alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
@@ -3098,7 +3099,7 @@ async function generatePDF(download=true) {
     ];
     const histTable = { margin:[0,14,0,0],
       table:{ widths:[28,62,38,50,'*','*'], body:[
-        [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:NAVY},{},{},{},{},{}],
+        [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:MORSA},{},{},{},{},{}],
         ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'].map(h=>({text:h,bold:true,color:GRAY,fontSize:6.5,alignment:'center',fillColor:CREAM,margin:[3,3,3,3]})),
         ...histRows.map((row,ri)=>{ const last=ri===histRows.length-1; return row.map((v,i)=>({
           text:v, fontSize:8, bold:i===0||last, font:'Roboto',
@@ -3113,20 +3114,21 @@ async function generatePDF(download=true) {
     const dd = {
       pageSize:'LETTER', pageMargins:[45,90,45,60],
       header:(currentPage) => ({ stack:[
-        { table:{ widths:['*',62], body:[[
+        { table:{ widths:['*',75], body:[[
             { stack:[
-                {text:'FRAFER CONSULTING',bold:true,color:ORANGE,fontSize:9},
-                {text:`POLÍTICA ORGANIZACIONAL · ${dk(d.folio)} · Grupo Morsa`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
+                {text:'GRUPO MORSA',bold:true,color:MORSA,fontSize:10,letterSpacing:1},
+                {text:`Política Organizacional · ${dk(d.folio)}`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
               ], border:[false,false,false,false] },
-            { image:'logoFrafer', width:62, alignment:'right', border:[false,false,false,false] }
-          ]]}, layout:'noBorders', margin:[45,12,45,0]
+            { image:'logoMorsa', width:75, alignment:'right', border:[false,false,false,false] }
+          ]]}, layout:'noBorders', margin:[45,10,45,0]
         },
-        { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:0.5,lineColor:'#C8C0B8'}], margin:[45,5,45,0] }
+        { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:1,lineColor:MORSA}], margin:[45,4,45,0] }
       ]}),
       footer:(currentPage, pageCount) => ({ stack:[
-        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:'#C8C0B8'}], margin:[0,0,0,4] },
+        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,4] },
         { columns:[
-          {text:`Frafer Consulting · Grupo Morsa · Control Documental · Uso Interno`,color:GRAY,fontSize:7,margin:[45,0,0,0]},
+          {text:`Grupo Morsa · Control Documental · Uso Interno`,color:GRAY,fontSize:7,margin:[45,0,0,0]},
+          {text:`Elaborado por Frafer Consulting`,color:GRAY,fontSize:6.5,italics:true,alignment:'center',width:160},
           {text:`Pág. ${currentPage} | ${pageCount}`,alignment:'right',color:GRAY,fontSize:7,bold:true,margin:[0,0,45,0]}
         ]}
       ]}),
