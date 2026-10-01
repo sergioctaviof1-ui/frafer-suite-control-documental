@@ -4168,22 +4168,31 @@ async function saveEditarDepto() {
 
   const dept    = departamentos.find(d => d.id === deptId);
   const newArea = areas.find(a => a.id === areaId);
-  const areaChanged  = dept && dept.area_id !== areaId;
-  const codeMismatch = dept?.codigo && newArea && !dept.codigo.startsWith(newArea.numero + '-');
-  const needsCodigo  = areaChanged || codeMismatch;
+  const areaChanged    = dept && dept.area_id !== areaId;
+  const codeMismatch   = dept?.codigo && newArea && !dept.codigo.startsWith(newArea.numero + '-');
+  const currentSuffix  = dept?.codigo?.split('-').pop() || '';
+  const suffixTooLong  = currentSuffix.length > 2;
+  const needsCodigo    = areaChanged || codeMismatch || suffixTooLong;
 
   const payload = { nombre, area_id: areaId };
 
   if (needsCodigo && newArea) {
-    const { data: existingDepts } = await sb.from('pol_departamentos')
-      .select('codigo').eq('area_id', areaId).not('codigo','is',null).neq('id', deptId);
-    let nextSeq = 1;
-    if (existingDepts?.length > 0) {
-      const maxSeq = Math.max(...existingDepts.map(d => parseInt(d.codigo?.split('-').pop())||0));
-      nextSeq = maxSeq + 1;
+    if (suffixTooLong && !areaChanged && !codeMismatch) {
+      // Mismo área, mismo número — solo normalizar dígitos: 006 → 06
+      const seq = parseInt(currentSuffix);
+      payload.codigo = `${newArea.numero}-${String(seq).padStart(2,'0')}`;
+      payload.orden  = seq;
+    } else {
+      const { data: existingDepts } = await sb.from('pol_departamentos')
+        .select('codigo').eq('area_id', areaId).not('codigo','is',null).neq('id', deptId);
+      let nextSeq = 1;
+      if (existingDepts?.length > 0) {
+        const maxSeq = Math.max(...existingDepts.map(d => parseInt(d.codigo?.split('-').pop())||0));
+        nextSeq = maxSeq + 1;
+      }
+      payload.codigo = `${newArea.numero}-${String(nextSeq).padStart(2,'0')}`;
+      payload.orden  = nextSeq;
     }
-    payload.codigo = `${newArea.numero}-${String(nextSeq).padStart(2,'0')}`;
-    payload.orden  = nextSeq;
   }
 
   const { error } = await sb.from('pol_departamentos').update(payload).eq('id', deptId);
