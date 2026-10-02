@@ -3211,6 +3211,10 @@ async function generatePDF(download=true) {
         fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
         elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
       });
+      const { data: pubUrl } = sb.storage.from('politicas-docs').getPublicUrl(storagePath);
+      if (pubUrl?.publicUrl) {
+        await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', d.politicaId);
+      }
       loadCatalogo();
     }
 
