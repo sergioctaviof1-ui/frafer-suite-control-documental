@@ -3009,6 +3009,12 @@ ${HIST}
 }
 
 async function generatePDF(download=true) {
+  // Garantizar datos de Gobierno antes de leer el DOM
+  if (!_gcCurrent) {
+    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
+      .select('*').order('version', { ascending: false }).limit(1);
+    if (gcData?.length) _gcCurrent = gcData[0];
+  }
   const d = _getDocData();
   if (!d) { if (download) alert('Selecciona una política primero.'); return; }
   const btn = download ? document.getElementById('btn-gen-pdf') : null;
@@ -3481,6 +3487,11 @@ async function _generateWordCore(d, download=true) {
 }
 
 async function generateWord() {
+  if (!_gcCurrent) {
+    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
+      .select('*').order('version', { ascending: false }).limit(1);
+    if (gcData?.length) _gcCurrent = gcData[0];
+  }
   const d = _getDocData();
   if (!d) { alert('Selecciona una política primero.'); return; }
   const btn = document.getElementById('btn-gen-word');
@@ -3499,7 +3510,15 @@ async function generateWordFromCatalogo(catId) {
   const r = window._catRowMap?.[catId];
   if (!r) { alert('No se encontró la política en el catálogo.'); return; }
 
-  // Construir objeto de datos con campos de origen, contenido en blanco
+  // Garantizar datos de Gobierno
+  if (!_gcCurrent) {
+    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
+      .select('*').order('version', { ascending: false }).limit(1);
+    if (gcData?.length) _gcCurrent = gcData[0];
+  }
+  const gc = _gcCurrent || {};
+  const pol = r.pol || {};
+
   const fmtDate = s => s ? new Date(s+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}) : '—';
   const d = {
     folio:            r.cat?.codigo_documento || r.proposed,
@@ -3508,17 +3527,29 @@ async function generateWordFromCatalogo(catId) {
     area:             r.area.nombre,
     dept:             r.dept.nombre,
     act:              r.act.nombre,
-    objeto:'', alcance:'', definiciones:'', contenido:'',
-    sanciones:'', excepciones:'', numReglas:'',
-    respDir:'', respElab:'', autorizadoPor:'', colaboradores:'',
-    canal:'', capacitacion:'', directrices:'',
-    vigenciaMeses:'',
-    fechaAutorizacion: fmtDate(r.pol?.fecha_inicio_vigencia),
-    fechaVencimiento:  fmtDate(r.pol?.fecha_vencimiento),
-    version: r.pol?.version || 1,
-    status:  r.pol ? (STATUS_LABEL[r.pol.status] || r.pol.status) : 'En Catálogo',
+    objeto:      pol.objeto       || '',
+    alcance:     pol.alcance      || '',
+    definiciones:pol.definiciones || '',
+    contenido:   pol.contenido    || '',
+    sanciones:   pol.sanciones    || '',
+    excepciones: pol.excepciones  || '',
+    numReglas:   pol.num_reglas   || '',
+    respDir:     pol.responsable_direccion  || '',
+    respElab:    pol.responsable_elaboracion|| '',
+    autorizadoPor: pol.autorizado_por       || '',
+    colaboradores: pol.colaboradores        || '',
+    canal:       pol.canal_comunicacion   || gc.canal_comunicacion   || '',
+    capacitacion:pol.esquema_capacitacion || gc.esquema_capacitacion || '',
+    directrices: pol.directrices_valores  || gc.directrices_valores  || '',
+    marcoNormativo: pol.marco_normativo   || gc.marco_normativo      || '',
+    vigenciaMeses: pol.vigencia_meses     || '',
+    fechaAutorizacion: fmtDate(pol.fecha_inicio_vigencia),
+    fechaVencimiento:  fmtDate(pol.fecha_vencimiento),
+    version:  pol.version || 1,
+    status:   pol.id ? (STATUS_LABEL[pol.status] || pol.status) : 'En Catálogo',
+    statusRaw: pol.status || 'en_catalogo',
     generadoEl: new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),
-    politicaId: r.pol?.id || null,
+    politicaId: pol.id || null,
     isTemplate: true
   };
 
@@ -4576,7 +4607,20 @@ let _gcCurrent = null;
 async function loadGobiernoCorporativo() {
   const { data, error } = await sb.from('pol_gobierno_corporativo')
     .select('*').order('version', { ascending: false });
-  if (error || !data?.length) return;
+
+  if (error) { console.error('[GC] Error al leer:', error.message); return; }
+
+  // Si la tabla está vacía, crear el registro inicial
+  if (!data?.length) {
+    const { data: nuevo, error: ie } = await sb.from('pol_gobierno_corporativo')
+      .insert({ version: 1, status: 'borrador' }).select().single();
+    if (ie) { console.error('[GC] Error al crear registro inicial:', ie.message); return; }
+    _gcCurrent = nuevo;
+    document.getElementById('gc-version-label').textContent = 'Versión 1';
+    document.getElementById('gc-fecha-label').textContent =
+      `Creado: ${new Date(nuevo.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
+    return;
+  }
 
   _gcCurrent = data[0]; // versión más reciente
   const d = _gcCurrent;
@@ -4636,7 +4680,10 @@ async function loadGobiernoCorporativo() {
 }
 
 async function saveGobiernoCorporativo() {
-  if (!_gcCurrent) return;
+  if (!_gcCurrent) {
+    alert('Error: no se ha cargado el registro de Gobierno Corporativo. Recarga la página e intenta de nuevo.');
+    return;
+  }
   const patch = {
     marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
     directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
@@ -4644,10 +4691,11 @@ async function saveGobiernoCorporativo() {
     esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null,
     updated_at:           new Date().toISOString()
   };
-  const { error } = await sb.from('pol_gobierno_corporativo').update(patch).eq('id', _gcCurrent.id);
+  const { error, count } = await sb.from('pol_gobierno_corporativo')
+    .update(patch).eq('id', _gcCurrent.id).select();
   if (error) { alert('Error al guardar: ' + error.message); return; }
   Object.assign(_gcCurrent, patch);
-  alert('Guardado correctamente.');
+  alert('✓ Gobierno Corporativo guardado correctamente en Supabase.');
 }
 
 async function autorizarGC() {
