@@ -4680,22 +4680,29 @@ async function loadGobiernoCorporativo() {
 }
 
 async function saveGobiernoCorporativo() {
-  if (!_gcCurrent) {
-    alert('Error: no se ha cargado el registro de Gobierno Corporativo. Recarga la página e intenta de nuevo.');
-    return;
-  }
-  const patch = {
-    marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
-    directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
-    canal_comunicacion:   document.getElementById('gc-canal').value.trim()        || null,
-    esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null,
+  const payload = {
+    marco_normativo:      document.getElementById('gc-marco')?.value?.trim()        || null,
+    directrices_valores:  document.getElementById('gc-valores')?.value?.trim()      || null,
+    canal_comunicacion:   document.getElementById('gc-canal')?.value?.trim()        || null,
+    esquema_capacitacion: document.getElementById('gc-capacitacion')?.value?.trim() || null,
     updated_at:           new Date().toISOString()
   };
-  const { error, count } = await sb.from('pol_gobierno_corporativo')
-    .update(patch).eq('id', _gcCurrent.id).select();
-  if (error) { alert('Error al guardar: ' + error.message); return; }
-  Object.assign(_gcCurrent, patch);
-  alert('✓ Gobierno Corporativo guardado correctamente en Supabase.');
+
+  if (_gcCurrent?.id) {
+    // Registro existe — actualizar
+    const { error } = await sb.from('pol_gobierno_corporativo')
+      .update(payload).eq('id', _gcCurrent.id);
+    if (error) { alert('Error al guardar: ' + error.message); return; }
+    Object.assign(_gcCurrent, payload);
+  } else {
+    // No hay registro — crear el primero
+    const { data, error } = await sb.from('pol_gobierno_corporativo')
+      .insert({ version: 1, status: 'borrador', ...payload })
+      .select().single();
+    if (error) { alert('Error al crear registro: ' + error.message); return; }
+    _gcCurrent = data;
+  }
+  alert('✓ Guardado en Supabase.');
 }
 
 async function autorizarGC() {
