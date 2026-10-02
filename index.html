@@ -3233,7 +3233,7 @@ async function _generateWordCore(d, download=true) {
     }
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
             Header, Footer, AlignmentType, BorderStyle, ShadingType,
-            VerticalAlign, WidthType, HeightRule, PageNumber } = window._docxLib;
+            VerticalAlign, WidthType, HeightRule, PageNumber, ImageRun } = window._docxLib;
 
     // ── Versión: calcular PRIMERO para usar en todo el documento ────────────
     let versiones = [];
@@ -3262,18 +3262,29 @@ async function _generateWordCore(d, download=true) {
     const TW=9720, Q=Math.round(TW*.25), H=Math.round(TW*.5), Q3=Math.round(TW*.75);
     const W3=Math.round(TW/3), W3b=Math.round(TW*2/3);
 
-    // ── ENCABEZADO (repite cada página) ─────────────────────────────────────
+    // ── ENCABEZADO (repite cada página) — idéntico al PDF ───────────────────
     const isAuth = d.statusRaw==='autorizado'||d.statusRaw==='publicado';
+    // Convertir logo base64 a Uint8Array para ImageRun
+    const _mB64 = MORSA_LOGO.split(',')[1];
+    const _mBin = atob(_mB64);
+    const _mBytes = new Uint8Array(_mBin.length);
+    for (let i=0;i<_mBin.length;i++) _mBytes[i]=_mBin.charCodeAt(i);
+
     const docHeader = new Header({ children:[
       new Table({ width:{size:TW,type:WidthType.DXA},
-        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:MORSA}, insideH:{style:BorderStyle.NONE,size:0,color:'auto'}, insideV:{style:BorderStyle.NONE,size:0,color:'auto'}},
+        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:12,color:MORSA},
+                 insideH:{style:BorderStyle.NONE,size:0,color:'auto'},
+                 insideV:{style:BorderStyle.NONE,size:0,color:'auto'}},
         rows:[ new TableRow({ children:[
-          new TableCell({ width:{size:Math.round(TW*.30),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
-            children:[new Paragraph({ spacing:{after:60}, children:[new TextRun({text:dk(d.folio),bold:true,color:MORSA,font:'Courier New',size:17})] })] }),
-          new TableCell({ width:{size:Math.round(TW*.42),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
-            children:[new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:60}, children:[new TextRun({text:String(d.nombre||'').slice(0,46),color:NAVY,font:'Calibri',size:16})] })] }),
-          new TableCell({ width:{size:Math.round(TW*.28),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
-            children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{after:60}, children:[new TextRun({text:'GRUPO MORSA',bold:true,color:MORSA,font:'Calibri',size:19})] })] }),
+          new TableCell({ width:{size:Math.round(TW*.76),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
+            children:[
+              new Paragraph({ spacing:{after:30}, children:[new TextRun({text:'GRUPO MORSA',bold:true,color:MORSA,font:'Calibri',size:20})] }),
+              new Paragraph({ spacing:{after:50}, children:[new TextRun({text:`${dk(d.folio)}  ·  ${String(d.nombre||'').slice(0,70)}`,color:GRAY,font:'Calibri',size:13})] })
+            ] }),
+          new TableCell({ width:{size:Math.round(TW*.24),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
+            children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{after:40}, children:[
+              new ImageRun({ data:_mBytes, transformation:{width:95,height:25}, type:'png' })
+            ]})] }),
         ]})]
       })
     ]});
