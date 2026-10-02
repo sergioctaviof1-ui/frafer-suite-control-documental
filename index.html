@@ -3247,13 +3247,13 @@ async function _generateWordCore(d, download=true) {
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
 
-    // ── Paleta ──────────────────────────────────────────────────────────────
-    const NAVY='1C2B3A', MAUVE='9A6070', GRAY='9C8E84';
-    const CREAM='F0E8DC', BORDER='C8BFB5', GREEN='2D6B47', WHITE='FFFFFF';
+    // ── Paleta Morsa (idéntica al PDF) ──────────────────────────────────────
+    const MORSA='203A8F', NAVY='1C2B3A', GRAY='6B7280';
+    const CREAM='F0F4FC', BORDER='C5CCE0', GREEN='2D6B47', WHITE='FFFFFF';
     const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
 
-    const BN = { top:{style:BorderStyle.SINGLE,size:18,color:NAVY}, bottom:{style:BorderStyle.SINGLE,size:18,color:NAVY},
-                 left:{style:BorderStyle.SINGLE,size:18,color:NAVY}, right:{style:BorderStyle.SINGLE,size:18,color:NAVY} };
+    const BN = { top:{style:BorderStyle.SINGLE,size:18,color:MORSA}, bottom:{style:BorderStyle.SINGLE,size:18,color:MORSA},
+                 left:{style:BorderStyle.SINGLE,size:18,color:MORSA}, right:{style:BorderStyle.SINGLE,size:18,color:MORSA} };
     const BT = { top:{style:BorderStyle.SINGLE,size:8,color:BORDER}, bottom:{style:BorderStyle.SINGLE,size:8,color:BORDER},
                  left:{style:BorderStyle.SINGLE,size:8,color:BORDER}, right:{style:BorderStyle.SINGLE,size:8,color:BORDER} };
     const BX = { top:{style:BorderStyle.NONE}, bottom:{style:BorderStyle.NONE},
@@ -3263,28 +3263,32 @@ async function _generateWordCore(d, download=true) {
     const W3=Math.round(TW/3), W3b=Math.round(TW*2/3);
 
     // ── ENCABEZADO (repite cada página) ─────────────────────────────────────
+    const isAuth = d.statusRaw==='autorizado'||d.statusRaw==='publicado';
     const docHeader = new Header({ children:[
       new Table({ width:{size:TW,type:WidthType.DXA},
-        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:NAVY}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
+        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:MORSA}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
         rows:[ new TableRow({ children:[
           new TableCell({ width:{size:Math.round(TW*.30),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
-            children:[new Paragraph({ spacing:{after:60}, children:[new TextRun({text:dk(d.folio),bold:true,color:MAUVE,font:'Courier New',size:17})] })] }),
+            children:[new Paragraph({ spacing:{after:60}, children:[new TextRun({text:dk(d.folio),bold:true,color:MORSA,font:'Courier New',size:17})] })] }),
           new TableCell({ width:{size:Math.round(TW*.42),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
             children:[new Paragraph({ alignment:AlignmentType.CENTER, spacing:{after:60}, children:[new TextRun({text:String(d.nombre||'').slice(0,46),color:NAVY,font:'Calibri',size:16})] })] }),
           new TableCell({ width:{size:Math.round(TW*.28),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
-            children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{after:60}, children:[new TextRun({text:'GRUPO MORSA',bold:true,color:NAVY,font:'Calibri',size:19})] })] }),
+            children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{after:60}, children:[new TextRun({text:'GRUPO MORSA',bold:true,color:MORSA,font:'Calibri',size:19})] })] }),
         ]})]
       })
     ]});
 
-    // ── PIE DE PÁGINA (repite cada página) ──────────────────────────────────
+    // ── PIE DE PÁGINA condicional (igual que PDF) ────────────────────────────
+    const footerText = isAuth
+      ? `v${parseInt(d.version)||1} · ${dk(d.status).toUpperCase()} · Elaboró: ${dk(d.respElab)} · Autorizó: ${dk(d.autorizadoPor)} · Vigencia: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`
+      : `v${parseInt(d.version)||1} · ${dk(d.status).toUpperCase()} · Elaboró: ${dk(d.respElab)}`;
     const docFooter = new Footer({ children:[
       new Table({ width:{size:TW,type:WidthType.DXA},
         borders:{...BX, top:{style:BorderStyle.SINGLE,size:8,color:BORDER}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
         rows:[
           new TableRow({ children:[
             new TableCell({ width:{size:Math.round(TW*.78),type:WidthType.DXA}, borders:BX,
-              children:[new Paragraph({ spacing:{before:60}, children:[new TextRun({text:`Elaboró: ${dk(d.respElab)}  ·  Autorizó: ${dk(d.autorizadoPor)}  ·  Vigente: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`,color:GRAY,font:'Calibri',size:13})] })] }),
+              children:[new Paragraph({ spacing:{before:60}, children:[new TextRun({text:footerText,color:GRAY,font:'Calibri',size:13})] })] }),
             new TableCell({ width:{size:Math.round(TW*.22),type:WidthType.DXA}, borders:BX,
               children:[new Paragraph({ alignment:AlignmentType.RIGHT, spacing:{before:60}, children:[
                 new TextRun({text:'Pág. ',color:GRAY,font:'Calibri',size:15}),
@@ -3301,7 +3305,7 @@ async function _generateWordCore(d, download=true) {
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     const navyBar = (text, cs=4) => new TableRow({ children:[new TableCell({
-      columnSpan:cs, shading:{type:ShadingType.SOLID,color:NAVY}, borders:BN,
+      columnSpan:cs, shading:{type:ShadingType.SOLID,color:MORSA}, borders:BN,
       children:[new Paragraph({ spacing:{before:60,after:60}, children:[new TextRun({text:`  ${text}`,bold:true,color:WHITE,font:'Calibri',size:18})] })]
     })]});
 
@@ -3338,17 +3342,17 @@ async function _generateWordCore(d, download=true) {
     // ── BLOQUE DE TÍTULO ─────────────────────────────────────────────────────
     const titleTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
       new TableRow({ children:[
-        new TableCell({ columnSpan:2, width:{size:Math.round(TW*.62),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:NAVY}, borders:BN,
+        new TableCell({ columnSpan:2, width:{size:Math.round(TW*.62),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:MORSA}, borders:BN,
           children:[
             new Paragraph({spacing:{before:80},children:[new TextRun({text:'  GRUPO MORSA',bold:true,color:WHITE,font:'Calibri',size:22})]}),
-            new Paragraph({spacing:{after:80},children:[new TextRun({text:'  Control Documental  ·  Política Organizacional',color:MAUVE,font:'Calibri',size:13})]}),
+            new Paragraph({spacing:{after:80},children:[new TextRun({text:'  Control Documental  ·  Política Organizacional',color:CREAM,font:'Calibri',size:13})]}),
           ]}),
         new TableCell({ columnSpan:2, width:{size:Math.round(TW*.38),type:WidthType.DXA}, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN, verticalAlign:VerticalAlign.CENTER,
           children:[
-            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:60},children:[new TextRun({text:`${dk(d.folio)}  `,bold:true,color:MAUVE,font:'Courier New',size:26})]}),
+            new Paragraph({alignment:AlignmentType.RIGHT,spacing:{before:60},children:[new TextRun({text:`${dk(d.folio)}  `,bold:true,color:MORSA,font:'Courier New',size:26})]}),
             new Paragraph({alignment:AlignmentType.RIGHT,spacing:{after:60},children:[
               new TextRun({text:`Versión `,color:GRAY,font:'Calibri',size:20}),
-              new TextRun({text:`${versionNum}`,bold:true,color:NAVY,font:'Courier New',size:24}),
+              new TextRun({text:`${versionNum}`,bold:true,color:MORSA,font:'Courier New',size:24}),
               new TextRun({text:`  ·  Uso Interno  `,color:GRAY,font:'Calibri',size:16}),
             ]}),
           ]}),
@@ -3372,7 +3376,7 @@ async function _generateWordCore(d, download=true) {
     const sigSpace = w => new TableCell({width:{size:w,type:WidthType.DXA},borders:BT,
       height:{value:900,rule:HeightRule.ATLEAST}, children:[new Paragraph({text:''})] });
     const sigTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
-      new TableRow({children:[new TableCell({columnSpan:3,shading:{type:ShadingType.SOLID,color:NAVY},borders:BN,
+      new TableRow({children:[new TableCell({columnSpan:3,shading:{type:ShadingType.SOLID,color:MORSA},borders:BN,
         children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  CONTROL DE APROBACIONES',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
       new TableRow({children:['ELABORÓ','REVISÓ','AUTORIZÓ'].map((r,i)=>new TableCell({
         width:{size:i<2?W3:TW-W3b,type:WidthType.DXA},shading:{type:ShadingType.SOLID,color:CREAM},borders:BT,
