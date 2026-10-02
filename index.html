@@ -3011,9 +3011,10 @@ ${HIST}
 async function generatePDF(download=true) {
   // Garantizar datos de Gobierno antes de leer el DOM
   if (!_gcCurrent) {
-    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
-      .select('*').order('version', { ascending: false }).limit(1);
-    if (gcData?.length) _gcCurrent = gcData[0];
+    const { data: gcData } = await sb.from('pol_entrevista_dg')
+      .select('*').eq('entrevistado','__GOBIERNO_CORPORATIVO__')
+      .order('created_at',{ascending:false}).limit(1);
+    if (gcData?.length) _gcCurrent = _gcFromRow(gcData[0]);
   }
   const d = _getDocData();
   if (!d) { if (download) alert('Selecciona una política primero.'); return; }
@@ -3488,9 +3489,10 @@ async function _generateWordCore(d, download=true) {
 
 async function generateWord() {
   if (!_gcCurrent) {
-    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
-      .select('*').order('version', { ascending: false }).limit(1);
-    if (gcData?.length) _gcCurrent = gcData[0];
+    const { data: gcData } = await sb.from('pol_entrevista_dg')
+      .select('*').eq('entrevistado','__GOBIERNO_CORPORATIVO__')
+      .order('created_at',{ascending:false}).limit(1);
+    if (gcData?.length) _gcCurrent = _gcFromRow(gcData[0]);
   }
   const d = _getDocData();
   if (!d) { alert('Selecciona una política primero.'); return; }
@@ -3512,9 +3514,10 @@ async function generateWordFromCatalogo(catId) {
 
   // Garantizar datos de Gobierno
   if (!_gcCurrent) {
-    const { data: gcData } = await sb.from('pol_gobierno_corporativo')
-      .select('*').order('version', { ascending: false }).limit(1);
-    if (gcData?.length) _gcCurrent = gcData[0];
+    const { data: gcData } = await sb.from('pol_entrevista_dg')
+      .select('*').eq('entrevistado','__GOBIERNO_CORPORATIVO__')
+      .order('created_at',{ascending:false}).limit(1);
+    if (gcData?.length) _gcCurrent = _gcFromRow(gcData[0]);
   }
   const gc = _gcCurrent || {};
   const pol = r.pol || {};
@@ -4601,28 +4604,56 @@ async function saveAutorizarDir() {
   await generarPDFConfirmacion(dirId);
 }
 
-// ── GOBIERNO CORPORATIVO ──────────────────────────────────────────────────────
+// ── GOBIERNO CORPORATIVO ─────────────────────────────────────────────────────
+// Almacena en pol_entrevista_dg (tabla existente con RLS correcto).
+// Cada versión = una fila con entrevistado='__GOBIERNO_CORPORATIVO__'.
+// Todos los campos van en respuestas jsonb; _gcCurrent expone los mismos
+// atributos planos que el resto del código espera.
 let _gcCurrent = null;
 
+function _gcFromRow(row) {
+  const r = row?.respuestas || {};
+  return {
+    id:                  row.id,
+    created_at:          row.created_at,
+    updated_at:          row.updated_at,
+    version:             r.version             ?? 1,
+    status:              r.status              ?? 'borrador',
+    autorizado_por:      r.autorizado_por      ?? null,
+    firmado_dg_at:       r.firmado_dg_at       ?? null,
+    url_documento:       r.url_documento       ?? null,
+    marco_normativo:     r.marco_normativo     ?? null,
+    directrices_valores: r.directrices_valores ?? null,
+    canal_comunicacion:  r.canal_comunicacion  ?? null,
+    esquema_capacitacion:r.esquema_capacitacion?? null,
+  };
+}
+
 async function loadGobiernoCorporativo() {
-  const { data, error } = await sb.from('pol_gobierno_corporativo')
-    .select('*').order('version', { ascending: false });
+  const { data, error } = await sb.from('pol_entrevista_dg')
+    .select('*')
+    .eq('entrevistado', '__GOBIERNO_CORPORATIVO__')
+    .order('created_at', { ascending: false });
 
   if (error) { console.error('[GC] Error al leer:', error.message); return; }
 
-  // Si la tabla está vacía, crear el registro inicial
   if (!data?.length) {
-    const { data: nuevo, error: ie } = await sb.from('pol_gobierno_corporativo')
-      .insert({ version: 1, status: 'borrador' }).select().single();
+    // Primera vez — crear registro inicial
+    const { data: nuevo, error: ie } = await sb.from('pol_entrevista_dg')
+      .insert({
+        entrevistado: '__GOBIERNO_CORPORATIVO__',
+        cargo:        'Marco Institucional',
+        respuestas:   { version: 1, status: 'borrador' }
+      }).select().single();
     if (ie) { console.error('[GC] Error al crear registro inicial:', ie.message); return; }
-    _gcCurrent = nuevo;
+    _gcCurrent = _gcFromRow(nuevo);
     document.getElementById('gc-version-label').textContent = 'Versión 1';
     document.getElementById('gc-fecha-label').textContent =
       `Creado: ${new Date(nuevo.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
     return;
   }
 
-  _gcCurrent = data[0]; // versión más reciente
+  _gcCurrent = _gcFromRow(data[0]);
   const d = _gcCurrent;
 
   document.getElementById('gc-marco').value        = d.marco_normativo      || '';
@@ -4633,14 +4664,13 @@ async function loadGobiernoCorporativo() {
   document.getElementById('gc-fecha-label').textContent   =
     `Creado: ${new Date(d.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
 
-  const statusLabel = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', firmado_dg:'FIRMADO · DG', firmado_all:'FIRMADO · TODAS LAS DIRECCIONES' };
+  const statusLabel  = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', firmado_dg:'FIRMADO · DG', firmado_all:'FIRMADO · TODAS LAS DIRECCIONES' };
   const statusColors = { borrador:'var(--ember-glow)', autorizado:'#2e7d32', firmado_dg:'#1565c0', firmado_all:'#1565c0' };
   const badge = document.getElementById('gc-status-badge');
-  badge.textContent = statusLabel[d.status] || d.status.toUpperCase();
-  badge.style.color = statusColors[d.status] || 'var(--ember-glow)';
+  badge.textContent  = statusLabel[d.status] || d.status.toUpperCase();
+  badge.style.color  = statusColors[d.status] || 'var(--ember-glow)';
   badge.style.borderColor = statusColors[d.status] ? statusColors[d.status]+'66' : 'rgba(241,90,34,.4)';
 
-  // Mostrar autorizador si aplica
   let autorizadorInfo = document.getElementById('gc-autorizador-info');
   if (!autorizadorInfo) {
     autorizadorInfo = document.createElement('div');
@@ -4652,13 +4682,11 @@ async function loadGobiernoCorporativo() {
     ? `Autorizado por: ${d.autorizado_por} · ${new Date(d.firmado_dg_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}`
     : '';
 
-  // Botón Autorizar solo en borrador
   const btnAutorizar = document.getElementById('btn-gc-autorizar');
   if (btnAutorizar) btnAutorizar.style.display = d.status === 'borrador' ? 'inline-block' : 'none';
 
-  // Historial
+  // Historial — todas las versiones
   const hist = document.getElementById('gc-historial');
-  if (!data.length) { hist.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--fog)">Sin versiones</div>'; return; }
   hist.innerHTML = `<table style="width:100%;border-collapse:collapse">
     <thead><tr style="background:var(--bg)">
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">VER.</th>
@@ -4667,40 +4695,50 @@ async function loadGobiernoCorporativo() {
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">FECHA</th>
       <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--fog)">DOCUMENTO</th>
     </tr></thead>
-    <tbody>${data.map((v,i)=>`<tr style="border-top:1px solid var(--stone);background:${i===0?'var(--linen)':'var(--bg)'}">
+    <tbody>${data.map((row,i)=>{ const v=_gcFromRow(row); return `<tr style="border-top:1px solid var(--stone);background:${i===0?'var(--linen)':'var(--bg)'}">
       <td style="padding:8px 14px;font-family:var(--ff-mono);font-size:11px;font-weight:700;color:var(--navy)">v${v.version}</td>
       <td style="padding:8px 14px;font-size:11px;color:${statusColors[v.status]||'var(--fog)'}">${statusLabel[v.status]||v.status}</td>
       <td style="padding:8px 14px;font-size:11px;color:var(--ink)">${v.autorizado_por||'—'}</td>
-      <td style="padding:8px 14px;font-size:11px;color:var(--fog)">${new Date(v.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td style="padding:8px 14px;font-size:11px;color:var(--fog)">${new Date(row.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</td>
       <td style="padding:8px 14px">${v.url_documento
         ? `<a href="${v.url_documento}" target="_blank" style="font-size:10px;font-weight:700;color:var(--navy);border:1px solid var(--navy);border-radius:4px;padding:2px 8px;text-decoration:none">📄 PDF</a>`
         : '<span style="font-size:10px;color:var(--fog)">Sin PDF</span>'}</td>
-    </tr>`).join('')}</tbody>
+    </tr>`; }).join('')}</tbody>
   </table>`;
 }
 
 async function saveGobiernoCorporativo() {
-  const payload = {
+  const campos = {
     marco_normativo:      document.getElementById('gc-marco')?.value?.trim()        || null,
     directrices_valores:  document.getElementById('gc-valores')?.value?.trim()      || null,
     canal_comunicacion:   document.getElementById('gc-canal')?.value?.trim()        || null,
     esquema_capacitacion: document.getElementById('gc-capacitacion')?.value?.trim() || null,
-    updated_at:           new Date().toISOString()
   };
 
   if (_gcCurrent?.id) {
-    // Registro existe — actualizar
-    const { error } = await sb.from('pol_gobierno_corporativo')
-      .update(payload).eq('id', _gcCurrent.id);
+    // Actualizar respuestas jsonb del registro activo
+    const nuevoRespuestas = {
+      version:        _gcCurrent.version,
+      status:         _gcCurrent.status,
+      autorizado_por: _gcCurrent.autorizado_por,
+      firmado_dg_at:  _gcCurrent.firmado_dg_at,
+      url_documento:  _gcCurrent.url_documento,
+      ...campos
+    };
+    const { error } = await sb.from('pol_entrevista_dg')
+      .update({ respuestas: nuevoRespuestas })
+      .eq('id', _gcCurrent.id);
     if (error) { alert('Error al guardar: ' + error.message); return; }
-    Object.assign(_gcCurrent, payload);
+    Object.assign(_gcCurrent, campos);
   } else {
-    // No hay registro — crear el primero
-    const { data, error } = await sb.from('pol_gobierno_corporativo')
-      .insert({ version: 1, status: 'borrador', ...payload })
-      .select().single();
+    const { data, error } = await sb.from('pol_entrevista_dg')
+      .insert({
+        entrevistado: '__GOBIERNO_CORPORATIVO__',
+        cargo:        'Marco Institucional',
+        respuestas:   { version: 1, status: 'borrador', ...campos }
+      }).select().single();
     if (error) { alert('Error al crear registro: ' + error.message); return; }
-    _gcCurrent = data;
+    _gcCurrent = _gcFromRow(data);
   }
   alert('✓ Guardado en Supabase.');
 }
@@ -4710,30 +4748,38 @@ async function autorizarGC() {
   if (_gcCurrent.status !== 'borrador') { alert('Esta versión ya fue autorizada.'); return; }
   const nombre = prompt('Nombre completo del autorizador (Dirección General):');
   if (!nombre || !nombre.trim()) return;
-  const patch = {
+  const nuevoRespuestas = {
+    ..._gcCurrent,
     status:        'autorizado',
     autorizado_por: nombre.trim(),
     firmado_dg_at: new Date().toISOString()
   };
-  const { error } = await sb.from('pol_gobierno_corporativo').update(patch).eq('id', _gcCurrent.id);
+  const { error } = await sb.from('pol_entrevista_dg')
+    .update({ respuestas: nuevoRespuestas })
+    .eq('id', _gcCurrent.id);
   if (error) { alert('Error: ' + error.message); return; }
-  Object.assign(_gcCurrent, patch);
+  _gcCurrent = { ..._gcCurrent, ...nuevoRespuestas };
   await loadGobiernoCorporativo();
 }
 
 async function nuevaVersionGC() {
   if (!_gcCurrent) return;
   if (!confirm('¿Crear una nueva versión a partir de la actual? La versión actual se conserva en el historial.')) return;
-  const { data, error } = await sb.from('pol_gobierno_corporativo').insert({
-    version:              _gcCurrent.version + 1,
-    status:               'borrador',
-    marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
-    directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
-    canal_comunicacion:   document.getElementById('gc-canal').value.trim()        || null,
-    esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null
-  }).select().single();
+  const { data, error } = await sb.from('pol_entrevista_dg')
+    .insert({
+      entrevistado: '__GOBIERNO_CORPORATIVO__',
+      cargo:        'Marco Institucional',
+      respuestas: {
+        version:              _gcCurrent.version + 1,
+        status:               'borrador',
+        marco_normativo:      document.getElementById('gc-marco').value.trim()        || null,
+        directrices_valores:  document.getElementById('gc-valores').value.trim()      || null,
+        canal_comunicacion:   document.getElementById('gc-canal').value.trim()        || null,
+        esquema_capacitacion: document.getElementById('gc-capacitacion').value.trim() || null,
+      }
+    }).select().single();
   if (error) { alert('Error: ' + error.message); return; }
-  _gcCurrent = data;
+  _gcCurrent = _gcFromRow(data);
   await loadGobiernoCorporativo();
 }
 
@@ -4812,7 +4858,14 @@ async function generarPDFGobiernoCorporativo() {
       .upload(storagePath, blob, { contentType:'application/pdf', upsert:true });
     if (upErr) { console.error('[GC] Storage error:', upErr.message); return; }
     const { data: urlData } = sb.storage.from('confirmaciones').getPublicUrl(storagePath);
-    await sb.from('pol_gobierno_corporativo').update({ url_documento: urlData.publicUrl }).eq('id', gc.id);
+    const nuevoRespURLDoc = {
+      version:              gc.version,              status:        gc.status,
+      autorizado_por:       gc.autorizado_por,       firmado_dg_at: gc.firmado_dg_at,
+      marco_normativo:      gc.marco_normativo,      directrices_valores: gc.directrices_valores,
+      canal_comunicacion:   gc.canal_comunicacion,   esquema_capacitacion: gc.esquema_capacitacion,
+      url_documento: urlData.publicUrl
+    };
+    await sb.from('pol_entrevista_dg').update({ respuestas: nuevoRespURLDoc }).eq('id', gc.id);
     _gcCurrent.url_documento = urlData.publicUrl;
     await loadGobiernoCorporativo();
   });
@@ -5347,10 +5400,12 @@ async function registerUser() {
 async function initApp() {
   const [{ data: dirs }, { data: gcData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').order('orden'),
-    sb.from('pol_gobierno_corporativo').select('*').order('version', { ascending: false }).limit(1)
+    sb.from('pol_entrevista_dg').select('*')
+      .eq('entrevistado','__GOBIERNO_CORPORATIVO__')
+      .order('created_at',{ascending:false}).limit(1)
   ]);
   direcciones = dirs || [];
-  if (gcData?.length) _gcCurrent = gcData[0];
+  if (gcData?.length) _gcCurrent = _gcFromRow(gcData[0]);
   loadDashboard();
 }
 
