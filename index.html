@@ -4604,17 +4604,37 @@ async function saveAutorizarDir() {
 // ── GOBIERNO CORPORATIVO ──────────────────────────────────────────────────────
 let _gcCurrent = null;
 
+function _gcShowSQLBanner(errMsg) {
+  let b = document.getElementById('gc-sql-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'gc-sql-banner';
+    b.style.cssText = 'background:#450a0a;color:#fca5a5;border:1px solid #f87171;border-radius:6px;padding:16px 20px;margin:16px 0;font-size:13px;line-height:1.7';
+    const anchor = document.getElementById('gc-historial') || document.getElementById('gc-marco');
+    if (anchor) anchor.closest('section,div')?.prepend(b);
+  }
+  b.innerHTML = `<strong style="font-size:14px">⚠ GOBIERNO: política RLS faltante</strong><br>
+La tabla <code>pol_gobierno_corporativo</code> existe en Supabase pero bloquea escritura a usuarios autenticados.<br>
+<strong>Solución — ejecuta estas 2 líneas en
+<a href="https://supabase.com/dashboard/project/lygpotmaneqgewjcetzw/editor" target="_blank" style="color:#fca5a5;text-decoration:underline">Supabase → SQL Editor → New query</a>
+y recarga la app:</strong>
+<pre style="background:#1a0000;padding:12px;border-radius:4px;margin:10px 0 6px;font-size:12px;overflow-x:auto;white-space:pre-wrap">drop policy if exists "auth_all" on pol_gobierno_corporativo;
+create policy "auth_all" on pol_gobierno_corporativo
+  for all to authenticated using (true) with check (true);</pre>
+<span style="font-size:11px;color:#f87171">Error: ${errMsg}</span>`;
+}
+
 async function loadGobiernoCorporativo() {
   const { data, error } = await sb.from('pol_gobierno_corporativo')
     .select('*').order('version', { ascending: false });
 
-  if (error) { console.error('[GC] Error al leer:', error.message); return; }
+  if (error) { console.error('[GC] Error al leer:', error.message); _gcShowSQLBanner(error.message); return; }
 
   // Si la tabla está vacía, crear el registro inicial
   if (!data?.length) {
     const { data: nuevo, error: ie } = await sb.from('pol_gobierno_corporativo')
       .insert({ version: 1, status: 'borrador' }).select().single();
-    if (ie) { console.error('[GC] Error al crear registro inicial:', ie.message); return; }
+    if (ie) { console.error('[GC] Error al crear registro inicial:', ie.message); _gcShowSQLBanner(ie.message); return; }
     _gcCurrent = nuevo;
     document.getElementById('gc-version-label').textContent = 'Versión 1';
     document.getElementById('gc-fecha-label').textContent =
@@ -4692,16 +4712,17 @@ async function saveGobiernoCorporativo() {
     // Registro existe — actualizar
     const { error } = await sb.from('pol_gobierno_corporativo')
       .update(payload).eq('id', _gcCurrent.id);
-    if (error) { alert('Error al guardar: ' + error.message); return; }
+    if (error) { _gcShowSQLBanner(error.message); alert('Error al guardar: ' + error.message); return; }
     Object.assign(_gcCurrent, payload);
   } else {
     // No hay registro — crear el primero
     const { data, error } = await sb.from('pol_gobierno_corporativo')
       .insert({ version: 1, status: 'borrador', ...payload })
       .select().single();
-    if (error) { alert('Error al crear registro: ' + error.message); return; }
+    if (error) { _gcShowSQLBanner(error.message); alert('Error al crear registro: ' + error.message); return; }
     _gcCurrent = data;
   }
+  const b = document.getElementById('gc-sql-banner'); if (b) b.remove();
   alert('✓ Guardado en Supabase.');
 }
 
