@@ -2180,13 +2180,23 @@ async function openPolitica(catalogoId, polId) {
 }
 
 function fillPoliticaForm(pol) {
+  // Campos de gobierno corporativo heredan de pol_gobierno_corporativo si la política no los tiene
+  const gc = _gcCurrent || {};
+  const govFallback = {
+    marco_normativo:      pol.marco_normativo      || gc.marco_normativo      || '',
+    directrices_valores:  pol.directrices_valores  || gc.directrices_valores  || '',
+    canal_comunicacion:   pol.canal_comunicacion   || gc.canal_comunicacion   || '',
+    esquema_capacitacion: pol.esquema_capacitacion || gc.esquema_capacitacion || '',
+  };
+  const polWithGov = { ...pol, ...govFallback };
+
   const fields = ['objeto','alcance','marco_normativo','definiciones','responsabilidades',
     'contenido','controles_cumplimiento','sanciones','excepciones',
     'canal_comunicacion','esquema_capacitacion','directrices_valores',
     'levantado_por','revisado_por','autorizado_por'];
   fields.forEach(f => {
     const el = document.getElementById('pol-' + f.replace(/_/g,'-'));
-    if (el) el.value = pol[f] || '';
+    if (el) el.value = polWithGov[f] || '';
   });
   const map = {
     'pol-resp-dir':'responsable_direccion',
@@ -2648,7 +2658,7 @@ function _getDocData() {
     act:              t('pol-ident-act'),
     objeto:           g('pol-objeto'),
     alcance:          g('pol-alcance'),
-    marcoNormativo:   g('pol-marco-normativo'),
+    marcoNormativo:   g('pol-marco-normativo')      || (_gcCurrent?.marco_normativo)      || '',
     definiciones:     g('pol-definiciones'),
     responsabilidades:g('pol-responsabilidades'),
     contenido:        g('pol-contenido'),
@@ -2660,15 +2670,16 @@ function _getDocData() {
     respElab:         g('pol-resp-elab'),
     autorizadoPor:    g('pol-autorizado-por'),
     colaboradores:    g('pol-colab'),
-    canal:            g('pol-canal-comunicacion'),
-    capacitacion:     g('pol-esquema-capacitacion'),
-    directrices:      g('pol-directrices-valores'),
+    canal:            g('pol-canal-comunicacion')   || (_gcCurrent?.canal_comunicacion)   || '',
+    capacitacion:     g('pol-esquema-capacitacion') || (_gcCurrent?.esquema_capacitacion) || '',
+    directrices:      g('pol-directrices-valores')  || (_gcCurrent?.directrices_valores)  || '',
     vigenciaMeses:    g('pol-vigencia-meses'),
     fechaAutorizacion:fmtDate(g('pol-fecha-inicio')),
     fechaVencimiento: fmtDate(g('pol-fecha-venc')),
     fechaVencimientoRaw: g('pol-fecha-venc'),
     version:          politicaActual.version || 1,
     status:           STATUS_LABEL[politicaActual.status] || politicaActual.status,
+    statusRaw:        politicaActual.status || 'borrador',
     generadoEl:       new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),
     politicaId:       politicaActual.id || null
   };
@@ -2698,47 +2709,47 @@ function _buildDocHTML(d, forWord) {
   const CV_vigFrom = cv(d.fechaAutorizacion||'—');
   const CV_vigTo   = cv(d.fechaVencimiento||'—');
 
-  // CSS compartido entre PDF y Word (body/secciones/tablas)
+  // CSS compartido entre PDF y Word (body/secciones/tablas) — paleta Morsa #203A8F
   const css = `*{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#1a1a1a;background:#fff;line-height:1.55}
 /* Bloque de título */
-.tb{width:100%;border-collapse:collapse;border:1.5px solid #1C2B3A;margin-bottom:20px}
-.tb td{border:1px solid #C8BFB5}
-.tb-brand{background:#1C2B3A;padding:10px 14px;vertical-align:middle}
+.tb{width:100%;border-collapse:collapse;border:1.5px solid #203A8F;margin-bottom:20px}
+.tb td{border:1px solid #C5CCE0}
+.tb-brand{background:#203A8F;padding:10px 14px;vertical-align:middle}
 .tb-gm{font-size:10.5pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;display:block}
-.tb-sub{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:#E0B8C8;display:block;margin-top:2px}
-.tb-fc{padding:10px 14px;text-align:right;vertical-align:middle;background:#F8F5F0;white-space:nowrap}
-.tb-folio{font-family:'Courier New',monospace;font-size:14pt;font-weight:700;color:#9a6070;display:block;letter-spacing:.06em}
-.tb-ver{font-size:8pt;color:#9c8e84;display:block;margin-top:3px}
-.tb-tc{padding:12px 14px;background:#F0E8DC;border-top:1.5px solid #1C2B3A;border-bottom:1.5px solid #1C2B3A}
-.tb-dt{font-size:12.5pt;font-weight:700;color:#1C2B3A;text-transform:uppercase;letter-spacing:.02em}
-.tb-ds{font-size:8pt;color:#9c8e84;margin-top:3px;letter-spacing:.04em}
+.tb-sub{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:#9BB5E8;display:block;margin-top:2px}
+.tb-fc{padding:10px 14px;text-align:right;vertical-align:middle;background:#F0F4FC;white-space:nowrap}
+.tb-folio{font-family:'Courier New',monospace;font-size:14pt;font-weight:700;color:#203A8F;display:block;letter-spacing:.06em}
+.tb-ver{font-size:8pt;color:#6B7280;display:block;margin-top:3px}
+.tb-tc{padding:12px 14px;background:#F0F4FC;border-top:1.5px solid #203A8F;border-bottom:1.5px solid #203A8F}
+.tb-dt{font-size:12.5pt;font-weight:700;color:#203A8F;text-transform:uppercase;letter-spacing:.02em}
+.tb-ds{font-size:8pt;color:#6B7280;margin-top:3px;letter-spacing:.04em}
 /* Tabla de control */
 .ctrl{width:100%;border-collapse:collapse}
-.ctl{background:#F5F1EA;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#3c3632;padding:5px 10px;border:1px solid #C8BFB5;white-space:nowrap;vertical-align:middle;width:20%}
-.ctv{font-size:9.5pt;padding:5px 10px;border:1px solid #C8BFB5;vertical-align:middle}
-.hier-c{padding:6px 12px;border:1px solid #C8BFB5;background:#EAF4EE;font-size:8.5pt;color:#2D6B47}
+.ctl{background:#F0F4FC;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#203A8F;padding:5px 10px;border:1px solid #C5CCE0;white-space:nowrap;vertical-align:middle;width:20%}
+.ctv{font-size:9.5pt;padding:5px 10px;border:1px solid #C5CCE0;vertical-align:middle}
+.hier-c{padding:6px 12px;border:1px solid #C5CCE0;background:#EAF4EE;font-size:8.5pt;color:#2D6B47}
 .hier-l{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5A9E72;margin-right:6px}
 /* Grupo de secciones */
-.sg{font-size:7.5pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#9c8e84;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #C8BFB5}
+.sg{font-size:7.5pt;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#6B7280;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #C5CCE0}
 /* Secciones tipo formulario */
-.sec{margin:0 0 8px;border:1px solid #C8BFB5;border-radius:2px;page-break-inside:avoid;overflow:hidden}
-.sh{background:#1C2B3A;color:#fff;padding:6px 12px;font-size:9pt;font-weight:700;letter-spacing:.04em}
+.sec{margin:0 0 8px;border:1px solid #C5CCE0;border-radius:2px;page-break-inside:avoid;overflow:hidden}
+.sh{background:#203A8F;color:#fff;padding:6px 12px;font-size:9pt;font-weight:700;letter-spacing:.04em}
 .sb{padding:11px 12px;font-size:10pt;line-height:1.75;min-height:44px;color:#1a1a1a}
 /* Tabla de firmas */
-.sign-t{width:100%;border-collapse:collapse;margin-top:20px;border:1.5px solid #1C2B3A;page-break-inside:avoid}
-.sign-hdr{background:#1C2B3A;color:#E0B8C8;font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;text-align:left}
-.sbox{width:33%;border:1px solid #C8BFB5;vertical-align:top}
-.srole{background:#F5F1EA;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3c3632;padding:5px 10px;border-bottom:1px solid #C8BFB5;text-align:center}
-.ssp{height:52px;border-bottom:1px solid #9c8e84;margin:0 16px}
-.sname{padding:6px 10px;font-size:9.5pt;font-weight:700;color:#1C2B3A;text-align:center}
-.sdate{padding:4px 10px;font-size:8pt;color:#9c8e84;text-align:center;border-top:1px solid #C8BFB5}
+.sign-t{width:100%;border-collapse:collapse;margin-top:20px;border:1.5px solid #203A8F;page-break-inside:avoid}
+.sign-hdr{background:#203A8F;color:#fff;font-size:8pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:7px 12px;text-align:left}
+.sbox{width:33%;border:1px solid #C5CCE0;vertical-align:top}
+.srole{background:#F0F4FC;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#203A8F;padding:5px 10px;border-bottom:1px solid #C5CCE0;text-align:center}
+.ssp{height:52px;border-bottom:1px solid #6B7280;margin:0 16px}
+.sname{padding:6px 10px;font-size:9.5pt;font-weight:700;color:#203A8F;text-align:center}
+.sdate{padding:4px 10px;font-size:8pt;color:#6B7280;text-align:center;border-top:1px solid #C5CCE0}
 /* Historial */
 .hist-t{width:100%;border-collapse:collapse;font-size:9pt;margin-top:8px}
-.hist-t th{background:#1C2B3A;color:#E0B8C8;padding:5px 10px;font-size:8pt;letter-spacing:.06em;font-weight:700;text-align:left}
-.hist-t td{padding:5px 10px;border:1px solid #C8BFB5}
-.hist-t tr:nth-child(even) td{background:#F8F5F0}
-.divider{height:1.5px;background:#1C2B3A;margin:20px 0}`;
+.hist-t th{background:#203A8F;color:#fff;padding:5px 10px;font-size:8pt;letter-spacing:.06em;font-weight:700;text-align:left}
+.hist-t td{padding:5px 10px;border:1px solid #C5CCE0}
+.hist-t tr:nth-child(even) td{background:#F0F4FC}
+.divider{height:1.5px;background:#203A8F;margin:20px 0}`;
 
   // Bloque de título (igual para PDF y Word)
   const TB = `<table class="tb" cellpadding="0" cellspacing="0">
@@ -2814,12 +2825,12 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
     const W3a = Math.round(TW / 3);
     const W3b = Math.round(TW * 2 / 3);
 
-    // Bordes y celdas (colores: 1=navy 4=crema 5=borde 6=verde 7=blanco)
+    // Bordes y celdas (colores: 1=Morsa#203A8F 4=creamBlue 5=border 6=verde 7=blanco)
     const B   = (ci,w=10) => `\\brdrs\\brdrw${w}\\brdrclr${ci}`;
     const BD  = (ci,w=10) => `\\clbrdrt${B(ci,w)}\\clbrdrl${B(ci,w)}\\clbrdrb${B(ci,w)}\\clbrdrr${B(ci,w)}`;
-    const NC  = x => `${BD(1,18)}\\clcbpat1\\cellx${x}`;   // navy
-    const CC  = x => `${BD(1,15)}\\clcbpat4\\cellx${x}`;   // cream borde grueso
-    const LC  = x => `${BD(5, 8)}\\clcbpat4\\cellx${x}`;   // etiqueta (cream)
+    const NC  = x => `${BD(1,18)}\\clcbpat1\\cellx${x}`;   // Morsa blue
+    const CC  = x => `${BD(1,15)}\\clcbpat4\\cellx${x}`;   // blue-cream borde grueso
+    const LC  = x => `${BD(5, 8)}\\clcbpat4\\cellx${x}`;   // etiqueta (blue-cream)
     const VC  = x => `${BD(5, 8)}\\cellx${x}`;              // valor (blanco)
     const GC  = x => `${BD(5, 8)}\\clcbpat6\\cellx${x}`;   // verde
 
@@ -2903,22 +2914,28 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
       `\\pard\\intbl\\ql\\f1\\fs18 ${dr(d.respElab)}\\cell` +
       `\\pard\\intbl\\ql\\f1\\fs18 ${dr(d.autorizadoPor)}\\cell\\row\n`;
 
+    // Footer tracking — condicional igual que PDF
+    const isAuth = d.statusRaw==='autorizado'||d.statusRaw==='publicado';
+    const footerTrack = isAuth
+      ? `v${parseInt(d.version)||1} \\u183? ${rt(d.status)} \\u183? Elabor\\'f3: ${dr(d.respElab)} \\u183? Autoriz\\'f3: ${dr(d.autorizadoPor)} \\u183? Vigencia: ${dr(d.fechaAutorizacion)} \\u8211? ${dr(d.fechaVencimiento)}`
+      : `v${parseInt(d.version)||1} \\u183? ${rt(d.status)} \\u183? Elabor\\'f3: ${dr(d.respElab)}`;
+
     return `{\\rtf1\\ansi\\ansicpg1252\\deff0\\nouicompat
 {\\fonttbl{\\f0\\froman Times New Roman;}{\\f1\\fswiss Arial;}{\\f2\\fmodern Courier New;}}
-{\\colortbl;\\red28\\green43\\blue58;\\red154\\green96\\blue112;\\red156\\green142\\blue132;\\red240\\green232\\blue220;\\red200\\green191\\blue181;\\red45\\green107\\blue71;\\red255\\green255\\blue255;}
+{\\colortbl;\\red32\\green58\\blue143;\\red107\\green114\\blue128;\\red107\\green114\\blue128;\\red240\\green244\\blue252;\\red197\\green204\\blue224;\\red45\\green107\\blue71;\\red255\\green255\\blue255;}
 {\\*\\generator Frafer Suite Control Documental;}
 
 {\\header
-\\pard\\plain\\f1\\fs16\\tqc\\tx${H}\\tqr\\tx${TW}
-{\\b\\f2\\fs17\\cf2 ${rt(d.folio)}}\\tab{\\f1\\fs16\\cf1 ${rt(trunc(d.nombre||'',46))}}\\tab{\\b\\f1\\fs19 GRUPO MORSA}\\par
+\\pard\\plain\\f1\\fs16\\tqr\\tx${TW}
+{\\b\\f1\\fs20\\cf1 GRUPO MORSA}\\tab{\\field{\\*\\fldinst{ PAGE  \\\\* MERGEFORMAT }}{\\fldrslt{1}}} / {\\field{\\*\\fldinst{ NUMPAGES  \\\\* MERGEFORMAT }}{\\fldrslt{1}}}\\par
+{\\f2\\fs14\\cf2 ${rt(d.folio)}}  {\\f1\\fs14\\cf2 ${rt(trunc(d.nombre||'',58))}}\\par
 \\pard\\plain\\brdrb\\brdrs\\brdrw18\\brdrclr1\\f1\\fs4  \\par}
 
 {\\footer
 \\pard\\plain\\brdrb\\brdrs\\brdrw8\\brdrclr5\\f1\\fs4  \\par
-\\pard\\plain\\f1\\fs13\\cf3\\tqr\\tx${TW}
-Elabor\\'f3: ${dr(d.respElab)} \\u183? Autoriz\\'f3: ${dr(d.autorizadoPor)} \\u183? Vigente: ${dr(d.fechaAutorizacion)} \\u8211? ${dr(d.fechaVencimiento)}\\tab
-P\\'e1g. {\\field{\\*\\fldinst{ PAGE  \\\\* MERGEFORMAT }}{\\fldrslt{1}}} / {\\field{\\*\\fldinst{ NUMPAGES  \\\\* MERGEFORMAT }}{\\fldrslt{1}}}\\par
-{\\f1\\fs11\\cf3 Grupo Morsa \\u183? Control Documental \\u183? Uso Interno \\u183? Generado el ${rt(d.generadoEl)}}\\par}
+\\pard\\plain\\f1\\fs13\\cf2
+${footerTrack}\\par
+{\\f1\\fs11\\cf2 Grupo Morsa \\u183? Control Documental \\u183? Uso Interno \\u183? Elaborado por Frafer Consulting}\\par}
 
 \\paperw12240\\paperh15840\\margl1440\\margr1080\\margt1440\\margb1440
 \\headery720\\footery720\\widowctrl\\hyphauto0
@@ -4392,11 +4409,12 @@ async function setPorAutorizar(dirId) {
   const toCreate = cats.filter(c=>!existingSet.has(c.id));
   let inserted = 0;
   if (toCreate.length) {
+    const gc = _gcCurrent || {};
     const govData = {
-      marco_normativo:     dir.marco_normativo     || null,
-      directrices_valores: dir.directrices_valores || null,
-      canal_comunicacion:  dir.canal_comunicacion  || null,
-      esquema_capacitacion:dir.esquema_capacitacion|| null,
+      marco_normativo:     dir.marco_normativo     || gc.marco_normativo     || null,
+      directrices_valores: dir.directrices_valores || gc.directrices_valores || null,
+      canal_comunicacion:  dir.canal_comunicacion  || gc.canal_comunicacion  || null,
+      esquema_capacitacion:dir.esquema_capacitacion|| gc.esquema_capacitacion|| null,
     };
     const stubs = toCreate.map(c=>({ catalogo_id:c.id, status:'borrador', version:1, borrador_at:now, ...govData }));
     for (let i=0; i<stubs.length; i+=50) {
@@ -5272,8 +5290,12 @@ async function registerUser() {
 }
 
 async function initApp() {
-  const { data: dirs } = await sb.from('pol_direcciones').select('*').order('orden');
+  const [{ data: dirs }, { data: gcData }] = await Promise.all([
+    sb.from('pol_direcciones').select('*').order('orden'),
+    sb.from('pol_gobierno_corporativo').select('*').order('version', { ascending: false }).limit(1)
+  ]);
   direcciones = dirs || [];
+  if (gcData?.length) _gcCurrent = gcData[0];
   loadDashboard();
 }
 
