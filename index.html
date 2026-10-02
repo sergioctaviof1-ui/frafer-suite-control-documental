@@ -3359,7 +3359,7 @@ async function _generateWordCore(d, download=true) {
       ]}),
       new TableRow({ children:[new TableCell({ columnSpan:4, shading:{type:ShadingType.SOLID,color:CREAM}, borders:BN,
         children:[
-          new Paragraph({spacing:{before:100},children:[new TextRun({text:`  ${dk(d.nombre)}`,bold:true,color:NAVY,font:'Calibri',size:26})]}),
+          new Paragraph({spacing:{before:100},children:[new TextRun({text:`  ${dk(d.nombre)}`,bold:true,color:MORSA,font:'Calibri',size:26})]}),
           new Paragraph({spacing:{after:100},children:[new TextRun({text:`  ${dk(d.dir)}`,color:GRAY,font:'Calibri',size:13})]}),
         ]})] }),
       ctRow('ESTADO',             d.status,                        'DIRECCIÓN RESPONSABLE', d.respDir),
@@ -3415,13 +3415,29 @@ async function _generateWordCore(d, download=true) {
           color:isLast&&i===0?GREEN:'1a1a1a'})] })]
     });
     const histTable = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
-      new TableRow({children:[new TableCell({columnSpan:6,shading:{type:ShadingType.SOLID,color:NAVY},borders:BN,
+      new TableRow({children:[new TableCell({columnSpan:6,shading:{type:ShadingType.SOLID,color:MORSA},borders:BN,
         children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  CONTROL DE CAMBIOS',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
       new TableRow({children:hCols.map((l,i)=>new TableCell({
         width:{size:hW2[i],type:WidthType.DXA},shading:{type:ShadingType.SOLID,color:CREAM},borders:BT,
         children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:40,after:40},
           children:[new TextRun({text:l,bold:true,color:GRAY,font:'Calibri',size:14})]})]})) }),
       ...histRows2.map((row,ri)=>new TableRow({children:row.map((v,i)=>mkHC(v,i,ri===histRows2.length-1))}))
+    ]});
+
+    // ── BANNER DE ESTADO (igual que PDF) ────────────────────────────────────
+    const statusColorMap = { borrador:MORSA, en_revision:'B45309', autorizado:'2D6B47', publicado:'1a6b2e', vencido:'7c2424' };
+    const statusLabelMap = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO', vencido:'VENCIDO' };
+    const rawStatus = (d.statusRaw||'borrador').toLowerCase();
+    const bannerColor = statusColorMap[rawStatus] || MORSA;
+    const bannerText  = statusLabelMap[rawStatus] || rawStatus.toUpperCase();
+    const statusBanner = new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
+      new TableRow({ children:[new TableCell({
+        columnSpan:1, shading:{type:ShadingType.SOLID,color:bannerColor}, borders:BX,
+        children:[new Paragraph({
+          alignment:AlignmentType.CENTER, spacing:{before:80,after:80},
+          children:[new TextRun({text:bannerText,bold:true,color:WHITE,font:'Calibri',size:24,allCaps:true})]
+        })]
+      })]})
     ]});
 
     // ── ARMAR DOCUMENTO ──────────────────────────────────────────────────────
@@ -3431,6 +3447,8 @@ async function _generateWordCore(d, download=true) {
           margin:{top:1440,right:1080,bottom:1440,left:1440,header:720,footer:720} } },
         headers:{default:docHeader}, footers:{default:docFooter},
         children:[
+          statusBanner,
+          new Paragraph({spacing:{before:120,after:0},text:''}),
           titleTable,
           new Paragraph({spacing:{before:160,after:0},text:''}),
           grpLabel('Contenido de la Política'),
