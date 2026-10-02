@@ -3256,8 +3256,8 @@ async function _generateWordCore(d, download=true) {
                  left:{style:BorderStyle.SINGLE,size:18,color:MORSA}, right:{style:BorderStyle.SINGLE,size:18,color:MORSA} };
     const BT = { top:{style:BorderStyle.SINGLE,size:8,color:BORDER}, bottom:{style:BorderStyle.SINGLE,size:8,color:BORDER},
                  left:{style:BorderStyle.SINGLE,size:8,color:BORDER}, right:{style:BorderStyle.SINGLE,size:8,color:BORDER} };
-    const BX = { top:{style:BorderStyle.NONE}, bottom:{style:BorderStyle.NONE},
-                 left:{style:BorderStyle.NONE}, right:{style:BorderStyle.NONE} };
+    const BX = { top:{style:BorderStyle.NONE,size:0,color:'auto'}, bottom:{style:BorderStyle.NONE,size:0,color:'auto'},
+                 left:{style:BorderStyle.NONE,size:0,color:'auto'}, right:{style:BorderStyle.NONE,size:0,color:'auto'} };
 
     const TW=9720, Q=Math.round(TW*.25), H=Math.round(TW*.5), Q3=Math.round(TW*.75);
     const W3=Math.round(TW/3), W3b=Math.round(TW*2/3);
@@ -3266,7 +3266,7 @@ async function _generateWordCore(d, download=true) {
     const isAuth = d.statusRaw==='autorizado'||d.statusRaw==='publicado';
     const docHeader = new Header({ children:[
       new Table({ width:{size:TW,type:WidthType.DXA},
-        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:MORSA}, insideH:{style:BorderStyle.NONE}, insideV:{style:BorderStyle.NONE}},
+        borders:{...BX, bottom:{style:BorderStyle.SINGLE,size:20,color:MORSA}, insideH:{style:BorderStyle.NONE,size:0,color:'auto'}, insideV:{style:BorderStyle.NONE,size:0,color:'auto'}},
         rows:[ new TableRow({ children:[
           new TableCell({ width:{size:Math.round(TW*.30),type:WidthType.DXA}, borders:BX, verticalAlign:VerticalAlign.BOTTOM,
             children:[new Paragraph({ spacing:{after:60}, children:[new TextRun({text:dk(d.folio),bold:true,color:MORSA,font:'Courier New',size:17})] })] }),
