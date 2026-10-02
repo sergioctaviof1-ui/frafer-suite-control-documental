@@ -2160,18 +2160,18 @@ async function openPolitica(catalogoId, polId) {
   }
 
   if (polId) {
-    const { data: pol } = await sb.from('pol_politicas').select('*').eq('id', polId).single();
+    const { data: pol, error: polErr } = await sb.from('pol_politicas').select('*').eq('id', polId).single();
     if (pol) {
       politicaActual = pol;
       fillPoliticaForm(pol);
     } else {
-      // Fetch falló (RLS u otro error) — mostrar en_catalogo virtual
+      console.error('[openPolitica] polId:', polId, '— error:', polErr?.message, '— data null, fallback en_catalogo');
       politicaActual = { status: 'en_catalogo', catalogo_id: catalogoId };
       document.getElementById('status-flow').innerHTML = renderFlow(politicaActual);
       document.getElementById('pol-badge').innerHTML = badge('en_catalogo');
     }
   } else {
-    // Sin registro en BD aún — en_catalogo es estado virtual (no se guarda en DB)
+    console.warn('[openPolitica] polId es null — política sin registro en BD todavía');
     politicaActual = { status: 'en_catalogo', catalogo_id: catalogoId };
     document.getElementById('status-flow').innerHTML = renderFlow(politicaActual);
     document.getElementById('pol-badge').innerHTML = badge('en_catalogo');
