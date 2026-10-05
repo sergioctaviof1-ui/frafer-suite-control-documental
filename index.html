@@ -5085,7 +5085,11 @@ async function generarPDFConfirmacion(dirId) {
   const catalogoRows = dirActs.map((act,i) => {
     const dept = deptById[act.departamento_id];
     const area = dept ? areaById[dept.area_id] : null;
-    const plt  = catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT');
+    // Calcular folio directamente — no depender del código almacenado en BD
+    const actIdx = dept ? actIndexInDept(act.id, dept.id) : -1;
+    const fol = (area && dept && actIdx >= 0)
+      ? computeFolio('PLT', dir, area, dept, actIdx)
+      : (catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT')?.codigo_documento || 'Pendiente');
     const shade = i%2===0;
     const bg = shade?'#F9F6F3':WHITE;
     return { table:{ widths:CAT_W, body:[[
@@ -5093,7 +5097,7 @@ async function generarPDFConfirmacion(dirId) {
       {text:area?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
       {text:dept?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
       {text:act.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
-      {text:plt?.codigo_documento||'Pendiente',fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
+      {text:fol,fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
     ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
   });
 
