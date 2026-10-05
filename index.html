@@ -1522,6 +1522,12 @@ async function loadCatalogo() {
   direcciones = dirsData||[]; areas = areasData||[];
   departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
 
+  // Reparar y recargar antes de mostrar — garantiza un solo código correcto
+  await repairExistingFolios();
+  await generateMissingFolios();
+  const { data: _freshCatalog } = await sb.from('pol_catalogo').select('*').eq('activo',true).order('numero');
+  catalogo = _freshCatalog||[];
+
   const latestPols = {};
   (pols||[]).forEach(p => {
     if (!latestPols[p.catalogo_id] || p.version > latestPols[p.catalogo_id].version)
