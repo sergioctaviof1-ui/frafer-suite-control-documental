@@ -1663,7 +1663,7 @@ async function loadCatalogo() {
 
 // Calcula el folio canónico desde la jerarquía — nunca desde act.codigo
 function computeFolio(tipo, dir, area, dept, actIdxInDept) {
-  const deptSeq = String(dept.orden).padStart(2,'0');
+  const deptSeq = String(dept.orden).padStart(3,'0');
   const actSeq  = String(actIdxInDept + 1).padStart(2,'0');
   return `${tipo}-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
 }
@@ -5072,13 +5072,29 @@ async function generarPDFConfirmacion(dirId) {
     estructuraRows.push(tdRow([dir.nombre, area?.nombre||'—', dept.nombre, 'Primaria'], i%2===0));
   });
 
-  // ── SECCIÓN 2: Catálogo de Actividades ──────────────────────────────────────
-  const catalogoRows = [];
-  dirActs.forEach((act,i) => {
+  // ── SECCIÓN 2: Catálogo de Actividades (tabla con #) ────────────────────────
+  const CAT_W = [14, '*', '*', '*', 82];
+  const catHeaderRow = { table:{ widths:CAT_W, body:[[
+    {text:'#',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[2,4,2,4]},
+    {text:'Área',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
+    {text:'Departamento',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
+    {text:'Actividad',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
+    {text:'Código PLT',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[5,4,5,4]},
+  ]]}, layout:{hLineWidth:()=>0,vLineWidth:()=>0.5,vLineColor:()=>WHITE}, margin:[0,0,0,0] };
+
+  const catalogoRows = dirActs.map((act,i) => {
     const dept = deptById[act.departamento_id];
     const area = dept ? areaById[dept.area_id] : null;
     const plt  = catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT');
-    catalogoRows.push(tdRow([area?.nombre||'—', dept?.nombre||'—', act.nombre, plt?.codigo_documento||'Pendiente'], i%2===0));
+    const shade = i%2===0;
+    const bg = shade?'#F9F6F3':WHITE;
+    return { table:{ widths:CAT_W, body:[[
+      {text:`${i+1}`,fontSize:7.5,color:ORANGE,bold:true,alignment:'center',fillColor:bg,margin:[2,3,2,3]},
+      {text:area?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+      {text:dept?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+      {text:act.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+      {text:plt?.codigo_documento||'Pendiente',fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
+    ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
   });
 
   // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
@@ -5218,7 +5234,7 @@ async function generarPDFConfirmacion(dirId) {
           { text:`${dirActs.length}`, fontSize:13, bold:true, color:ORANGE, alignment:'right', width:40 }
         ], margin:[0,0,0,6] },
       { canvas:[{ type:'line', x1:0, y1:0, x2:505, y2:0, lineWidth:0.5, lineColor:BORDER }], margin:[0,0,0,8] },
-      thRow(['Área','Departamento','Actividad','Código PLT']),
+      catHeaderRow,
       ...catalogoRows,
 
       // SECCIÓN 3 — AUTORIZACIÓN
