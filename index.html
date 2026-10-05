@@ -5085,11 +5085,9 @@ async function generarPDFConfirmacion(dirId) {
   const catalogoRows = dirActs.map((act,i) => {
     const dept = deptById[act.departamento_id];
     const area = dept ? areaById[dept.area_id] : null;
-    // Calcular folio directamente — no depender del código almacenado en BD
     const actIdx = dept ? actIndexInDept(act.id, dept.id) : -1;
-    const fol = (area && dept && actIdx >= 0)
-      ? computeFolio('PLT', dir, area, dept, actIdx)
-      : (catalogo.find(c=>c.actividad_id===act.id && c.tipo_documento==='PLT')?.codigo_documento || 'Pendiente');
+    // Folio canónico calculado — única fuente de verdad
+    const fol = (area && dept && actIdx >= 0) ? computeFolio('PLT', dir, area, dept, actIdx) : '—';
     const shade = i%2===0;
     const bg = shade?'#F9F6F3':WHITE;
     return { table:{ widths:CAT_W, body:[[
@@ -5100,6 +5098,9 @@ async function generarPDFConfirmacion(dirId) {
       {text:fol,fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
     ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
   });
+
+  // Sincronizar BD con folios corregidos (silencioso, paralelo a la generación del PDF)
+  repairExistingFolios().catch(()=>{});
 
   // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
   const sigBox = (label) => ({
