@@ -5096,7 +5096,11 @@ async function generarPDFConfirmacion(dirId) {
   const catalogoRows = dirActs.map((act,i) => {
     const dept = deptById[act.departamento_id];
     const area = dept ? areaById[dept.area_id] : null;
-    const fol = _pltMap[act.id] || '—';  // BD ya reparada — un solo código
+    // Calcular folio directo desde jerarquía — no depende de lo guardado en BD
+    const actIdx = actIndexInDept(act.id, act.departamento_id);
+    const fol = (dept && area && actIdx >= 0)
+      ? computeFolio('PLT', dir, area, dept, actIdx)
+      : (_pltMap[act.id] || '—');
     const shade = i%2===0;
     const bg = shade?'#F9F6F3':WHITE;
     return { table:{ widths:CAT_W, body:[[
