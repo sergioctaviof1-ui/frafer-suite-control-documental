@@ -1738,9 +1738,16 @@ async function repairExistingFolios() {
   });
 
   if (!toFix.length) return 0;
-  // Upsert en lote (un solo viaje de red en vez de N seriales)
-  await sb.from('pol_catalogo').upsert(toFix, { onConflict: 'id' });
-  return toFix.length;
+  // UPDATE explícito con verificación — más confiable que upsert en batch
+  const errs = [];
+  for (const fix of toFix) {
+    const { error } = await sb.from('pol_catalogo')
+      .update({ codigo_documento: fix.codigo_documento, nombre: fix.nombre })
+      .eq('id', fix.id);
+    if (error) errs.push(`${fix.codigo_documento}: ${error.message}`);
+  }
+  if (errs.length) console.error('[repair] errores:', errs);
+  return toFix.length - errs.length;
 }
 
 // ── REPOSITORIO DE DOCUMENTOS ─────────────────────────────────────────────────
