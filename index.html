@@ -5442,6 +5442,23 @@ async function initApp() {
   direcciones = dirs || [];
   if (gcData?.length) _gcCurrent = gcData[0];
   loadDashboard();
+  // Reparar BD en background — no bloquea UI
+  _backgroundRepair();
+}
+
+async function _backgroundRepair() {
+  try {
+    const [{ data: areasData }, { data: deptos }, { data: acts }] = await Promise.all([
+      sb.from('pol_areas').select('*').eq('activa',true),
+      sb.from('pol_departamentos').select('*').eq('activo',true),
+      sb.from('pol_actividades').select('*').eq('activa',true)
+    ]);
+    if (!areas.length)         areas         = areasData  || [];
+    if (!departamentos.length) departamentos = deptos      || [];
+    if (!actividades.length)   actividades   = acts        || [];
+    await repairExistingFolios();
+    await generateMissingFolios();
+  } catch(e) { /* silencioso — repair es best-effort */ }
 }
 
 (async () => {
