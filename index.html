@@ -5032,6 +5032,11 @@ async function generarPDFConfirmacion(dirId) {
     await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
   }
 
+  // Garantizar que BD y computeFolio() estén sincronizados ANTES de leer
+  await repairExistingFolios();
+  const { data: _freshCat } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento,codigo_documento').eq('activo',true);
+  const _pltMap = Object.fromEntries((_freshCat||[]).filter(c=>c.tipo_documento==='PLT').map(c=>[c.actividad_id, c.codigo_documento]));
+
   const dir      = direcciones.find(d=>d.id===dirId);
   const dirAreas = areas.filter(a=>a.direccion_id===dirId).sort((a,b)=>parseInt(a.numero)-parseInt(b.numero));
   const areaById = Object.fromEntries(dirAreas.map(a=>[a.id,a]));
@@ -5085,9 +5090,7 @@ async function generarPDFConfirmacion(dirId) {
   const catalogoRows = dirActs.map((act,i) => {
     const dept = deptById[act.departamento_id];
     const area = dept ? areaById[dept.area_id] : null;
-    const actIdx = dept ? actIndexInDept(act.id, dept.id) : -1;
-    // Folio canónico calculado — única fuente de verdad
-    const fol = (area && dept && actIdx >= 0) ? computeFolio('PLT', dir, area, dept, actIdx) : '—';
+    const fol = _pltMap[act.id] || '—';  // BD ya reparada — un solo código
     const shade = i%2===0;
     const bg = shade?'#F9F6F3':WHITE;
     return { table:{ widths:CAT_W, body:[[
@@ -5098,9 +5101,6 @@ async function generarPDFConfirmacion(dirId) {
       {text:fol,fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
     ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
   });
-
-  // Sincronizar BD con folios corregidos (silencioso, paralelo a la generación del PDF)
-  repairExistingFolios().catch(()=>{});
 
   // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
   const sigBox = (label) => ({
