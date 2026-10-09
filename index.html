@@ -4235,7 +4235,12 @@ async function loadAdmin() {
                 <td><span class="code-tag">${area.numero}</span> ${area.nombre}</td>
                 <td style="font-size:11px">${dept.nombre}</td>
                 <td style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);white-space:nowrap">${act.codigo||'—'}</td>
-                <td>${act.nombre}</td>
+                <td>
+                  <div>${act.nombre}</div>
+                  ${act.objetivo_politica
+                    ? `<div style="font-size:10px;color:var(--fog);margin-top:2px;font-style:italic">${act.objetivo_politica.length>80?act.objetivo_politica.slice(0,80)+'…':act.objetivo_politica}</div>`
+                    : `<div style="font-size:10px;color:var(--stone);margin-top:2px">Sin objetivo</div>`}
+                </td>
                 <td style="white-space:nowrap">${btnEditar('openEditarAct',act.id,act.activa,'pol_actividades','activa')}</td>
               </tr>`);
             });
