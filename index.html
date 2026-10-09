@@ -5094,8 +5094,6 @@ async function generarPDFConfirmacion(dirId) {
     await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
   }
 
-  // Garantizar que BD y computeFolio() estén sincronizados ANTES de leer
-  await repairExistingFolios();
   const { data: _freshCat } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento,codigo_documento').eq('activo',true);
   const _pltMap = Object.fromEntries((_freshCat||[]).filter(c=>c.tipo_documento==='PLT').map(c=>[c.actividad_id, c.codigo_documento]));
 
@@ -5304,8 +5302,31 @@ async function generarPDFConfirmacion(dirId) {
       catHeaderRow,
       ...catalogoRows,
 
-      // SECCIÓN 3 — AUTORIZACIÓN
-      secTitle('5.  AUTORIZACIÓN'),
+      // SECCIÓN 5 — OBJETIVOS DE POLÍTICA (solo si hay al menos uno capturado)
+      ...(() => {
+        const conObj = dirActs.filter(a => a.objetivo_politica?.trim());
+        if (!conObj.length) return [];
+        const OW = [14, 75, '*', '*'];
+        const objHeader = { table:{ widths:OW, body:[[
+          {text:'#',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[2,4,2,4]},
+          {text:'Código PLT',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[5,4,5,4]},
+          {text:'Política',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
+          {text:'Objetivo',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
+        ]]}, layout:{hLineWidth:()=>0,vLineWidth:()=>0.5,vLineColor:()=>WHITE}, margin:[0,0,0,0] };
+        const objRows = conObj.map((act,i) => {
+          const bg = i%2===0?'#F9F6F3':WHITE;
+          return { table:{ widths:OW, body:[[
+            {text:`${i+1}`,fontSize:7.5,color:ORANGE,bold:true,alignment:'center',fillColor:bg,margin:[2,3,2,3]},
+            {text:_pltMap[act.id]||'—',fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
+            {text:`Política de ${act.nombre}`,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+            {text:act.objetivo_politica,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+          ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
+        });
+        return [ secTitle('5.  OBJETIVOS DE POLÍTICA'), objHeader, ...objRows ];
+      })(),
+
+      // SECCIÓN 6 — AUTORIZACIÓN
+      secTitle('6.  AUTORIZACIÓN'),
       { text:`Al firmar el presente documento, el Director(a) de ${dir.nombre} confirma y valida la estructura organizacional y el catálogo de actividades y políticas establecidos en este entregable, con fecha ${fecha}.`,
         fontSize:9, color:NAVY, margin:[0,0,0,24], lineHeight:1.5 },
       { columns:[ sigBox('Nombre'), sigBox('Cargo'), sigBox('Firma'), sigBox('Fecha') ], margin:[0,0,0,0] }
