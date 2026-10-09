@@ -3035,6 +3035,135 @@ ${HIST}
 </body></html>`;
 }
 
+function _buildPolicyPDFDef(d, versHist) {
+  const versionNum = parseInt(d.version) || 1;
+  const MORSA='#203A8F', NAVY='#1C2B3A', GRAY='#6B7280';
+  const CREAM='#F0F4FC', BORDER='#C5CCE0', GREEN='#2D6B47', WHITE='#FFFFFF';
+  const ORANGE = MORSA;
+  const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
+  const ctrlRow = (l1,v1,l2,v2) => ([
+    { columns:[{text:l1,bold:true,color:GRAY,fontSize:6.5,width:'40%'},{text:dk(v1),fontSize:8.5,width:'60%'}], fillColor:CREAM, margin:[6,3,0,3] },
+    { columns:[{text:l2,bold:true,color:GRAY,fontSize:6.5,width:'45%'},{text:dk(v2),fontSize:8.5,width:'55%'}], fillColor:WHITE, margin:[6,3,6,3] }
+  ]);
+  let sNum = 0;
+  const mkSec = (title, body) => {
+    const has = body?.trim();
+    sNum++;
+    const lines = has ? body.split('\n') : ['[ Completar este campo ]'];
+    return [
+      { table:{ widths:['*'], body:[[{text:`${sNum}. ${title.toUpperCase()}`,bold:true,color:WHITE,fontSize:8.5,margin:[6,3,6,3]}]] },
+        layout:{ fillColor:()=>MORSA, hLineWidth:()=>0, vLineWidth:()=>0 }, margin:[0,6,0,0] },
+      ...lines.map(l => ({ text:l||' ', fontSize:9.5, color:has?'#1a1a1a':GRAY, italics:!has, margin:[8,1,6,1] })),
+      { text:'', margin:[0,4,0,0] }
+    ];
+  };
+  const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
+  const statusColors = { en_catalogo:MORSA, borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
+  const statusLabels = { en_catalogo:'EN CATÁLOGO', borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
+  const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||MORSA, alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
+  const titleBlock = { margin:[0,0,0,10],
+    table:{ widths:['62%','38%'], body:[
+      [
+        { stack:[
+            {text:'GRUPO MORSA',bold:true,color:WHITE,fontSize:10.5,margin:[6,8,0,2]},
+            {text:'Control Documental  ·  Política Organizacional',color:'#C5CCE0',fontSize:6,margin:[6,0,0,8]}
+          ], fillColor:MORSA },
+        { stack:[
+            {text:dk(d.folio),bold:true,color:MORSA,fontSize:13,font:'Roboto',alignment:'right',margin:[0,8,6,2]},
+            {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Roboto'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
+          ], fillColor:CREAM }
+      ],
+      [{text:dk(d.nombre),bold:true,color:NAVY,fontSize:12,colSpan:2,margin:[6,8,6,4],fillColor:CREAM},{}],
+      [{text:`${dk(d.dir)}  ›  ${dk(d.area)}`,color:GRAY,fontSize:6.5,colSpan:2,margin:[6,0,6,6],fillColor:CREAM},{}],
+      ctrlRow('ESTADO',d.status,'DIR. RESPONSABLE',d.respDir),
+      ctrlRow('VIGENCIA',d.vigenciaMeses?`${d.vigenciaMeses} meses`:null,'ELABORÓ',d.respElab),
+      ctrlRow('FECHA AUTORIZACIÓN',d.fechaAutorizacion,'AUTORIZÓ',d.autorizadoPor),
+      ctrlRow('VIGENTE HASTA',d.fechaVencimiento,'COLABORADORES',d.colaboradores),
+      [{text:`${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,fontSize:7,colSpan:2,margin:[6,3,6,3],fillColor:MORSA},{}]
+    ]},
+    layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+  };
+  const sigTable = { margin:[0,14,0,0],
+    table:{ widths:['33.33%','33.33%','33.34%'], body:[
+      [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:MORSA},{},{}],
+      [{text:'ELABORÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'REVISÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'AUTORIZÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]}],
+      [{text:'\n\n\n'},{text:'\n\n\n'},{text:'\n\n\n'}],
+      [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:'___________________________',alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
+      [{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]}]
+    ]},
+    layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+  };
+  const nowDt = new Date();
+  const fmtFD = iso => new Date(iso).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  const fmtFH = iso => new Date(iso).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const histRows = [
+    ...versHist.map(v=>[String(v.version),fmtFD(v.created_at),fmtFH(v.created_at),v.fuente==='adjuntado'?'Adjuntado':'Generado',dk(v.elaboro),dk(v.autorizo)]),
+    [String(versionNum),fmtFD(nowDt.toISOString()),fmtFH(nowDt.toISOString()),'Generado',dk(d.respElab),dk(d.autorizadoPor)]
+  ];
+  const histTable = { margin:[0,14,0,0],
+    table:{ widths:[28,62,38,50,'*','*'], body:[
+      [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:MORSA},{},{},{},{},{}],
+      ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'].map(h=>({text:h,bold:true,color:GRAY,fontSize:6.5,alignment:'center',fillColor:CREAM,margin:[3,3,3,3]})),
+      ...histRows.map((row,ri)=>{ const last=ri===histRows.length-1; return row.map((v,i)=>({
+        text:v, fontSize:8, bold:i===0||last, font:'Roboto',
+        color:last&&i===0?GREEN:'#1a1a1a', fillColor:last?'#EAF4EE':WHITE,
+        alignment:i<3?'center':'left', margin:[3,3,3,3]
+      }));})
+    ]},
+    layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+  };
+  return {
+    pageSize:'LETTER', pageMargins:[45,90,45,60],
+    header:(currentPage) => ({ stack:[
+      { table:{ widths:['*', 80], body:[[
+          { stack:[
+              {text:'GRUPO MORSA',bold:true,color:MORSA,fontSize:10},
+              {text:`${dk(d.folio)}  ·  ${String(d.nombre||'').slice(0,70)}`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
+            ], border:[false,false,false,false] },
+          { image:'logoMorsa', width:78, alignment:'right', border:[false,false,false,false] }
+        ]]}, layout:'noBorders', margin:[45,10,45,0]
+      },
+      { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:1,lineColor:MORSA}], margin:[45,4,45,0] }
+    ]}),
+    footer:(currentPage, pageCount) => {
+      const isAutorizado = d.status==='autorizado'||d.status==='publicado';
+      const trackLeft = isAutorizado
+        ? `v${versionNum} · ${statusLabels[d.status]||''} · Elaboró: ${dk(d.respElab)} · Autorizó: ${dk(d.autorizadoPor)} · Vigencia: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`
+        : `v${versionNum} · ${statusLabels[d.status]||'BORRADOR'} · Elaboró: ${dk(d.respElab)}`;
+      return { stack:[
+        { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,3] },
+        { columns:[
+          {text:trackLeft, color:GRAY, fontSize:6, margin:[45,0,0,0], width:'*'},
+          {text:`Pág. ${currentPage} | ${pageCount}`, alignment:'right', color:GRAY, fontSize:7, bold:true, margin:[0,0,45,0]}
+        ]},
+        {text:`Grupo Morsa · Control Documental · Uso Interno · Elaborado por Frafer Consulting`, color:GRAY, fontSize:5.5, italics:true, alignment:'center', margin:[45,1,45,0]}
+      ]};
+    },
+    content:[
+      statusBadge,
+      titleBlock,
+      grpLabel('Contenido de la Política'),
+      ...mkSec('Propósito y Objetivo',           d.objeto),
+      ...mkSec('Alcance',                        d.alcance),
+      ...mkSec('Marco Normativo y Referencias',  d.marcoNormativo),
+      ...mkSec('Definiciones y Terminología',    d.definiciones),
+      ...mkSec('Responsabilidades',              d.responsabilidades),
+      ...mkSec('Lineamientos y Reglas',          d.contenido),
+      ...mkSec('Controles y Monitoreo',          d.controles),
+      ...mkSec('Sanciones por Incumplimiento',   d.sanciones),
+      ...mkSec('Excepciones y Casos Especiales', d.excepciones),
+      grpLabel('Comunicación e Implementación'),
+      ...mkSec('Canal de Comunicación',          d.canal),
+      ...mkSec('Esquema de Capacitación',        d.capacitacion),
+      ...mkSec('Directrices y Valores Asociados',d.directrices),
+      sigTable,
+      histTable
+    ],
+    defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 },
+    images:{ logoFrafer: FRAFER_LOGO, logoMorsa: MORSA_LOGO }
+  };
+}
+
 async function generatePDF(download=true) {
   // Garantizar datos de Gobierno antes de leer el DOM
   if (!_gcCurrent) {
@@ -3069,147 +3198,7 @@ async function generatePDF(download=true) {
     }
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
-
-    // Paleta — identidad Grupo Morsa
-    const MORSA='#203A8F', NAVY='#1C2B3A', GRAY='#6B7280';
-    const CREAM='#F0F4FC', BORDER='#C5CCE0', GREEN='#2D6B47', WHITE='#FFFFFF';
-    const ORANGE = MORSA; // alias — sin naranja en documentos Morsa
-    const dk = s => (s && String(s).trim()) ? String(s).trim() : '—';
-
-    // Helpers de layout
-    const ctrlRow = (l1,v1,l2,v2) => ([
-      { columns:[{text:l1,bold:true,color:GRAY,fontSize:6.5,width:'40%'},{text:dk(v1),fontSize:8.5,width:'60%'}], fillColor:CREAM, margin:[6,3,0,3] },
-      { columns:[{text:l2,bold:true,color:GRAY,fontSize:6.5,width:'45%'},{text:dk(v2),fontSize:8.5,width:'55%'}], fillColor:WHITE, margin:[6,3,6,3] }
-    ]);
-
-    let sNum = 0;
-    const mkSec = (title, body) => {
-      const has = body?.trim();
-      sNum++;
-      const lines = has ? body.split('\n') : ['[ Completar este campo ]'];
-      return [
-        { table:{ widths:['*'], body:[[{text:`${sNum}. ${title.toUpperCase()}`,bold:true,color:WHITE,fontSize:8.5,margin:[6,3,6,3]}]] },
-          layout:{ fillColor:()=>MORSA, hLineWidth:()=>0, vLineWidth:()=>0 }, margin:[0,6,0,0] },
-        ...lines.map(l => ({ text:l||' ', fontSize:9.5, color:has?'#1a1a1a':GRAY, italics:!has, margin:[8,1,6,1] })),
-        { text:'', margin:[0,4,0,0] }
-      ];
-    };
-
-    const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
-
-    // Badge de estado + logo Morsa (portada)
-    const statusColors = { en_catalogo:MORSA, borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
-    const statusLabels = { en_catalogo:'EN CATÁLOGO', borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
-    const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||MORSA, alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
-
-    // Bloque de título
-    const titleBlock = { margin:[0,0,0,10],
-      table:{ widths:['62%','38%'], body:[
-        [
-          { stack:[
-              {text:'GRUPO MORSA',bold:true,color:WHITE,fontSize:10.5,margin:[6,8,0,2]},
-              {text:'Control Documental  ·  Política Organizacional',color:'#C5CCE0',fontSize:6,margin:[6,0,0,8]}
-            ], fillColor:MORSA },
-          { stack:[
-              {text:dk(d.folio),bold:true,color:MORSA,fontSize:13,font:'Roboto',alignment:'right',margin:[0,8,6,2]},
-              {columns:[{text:'Versión ',color:GRAY,fontSize:9},{text:String(versionNum),bold:true,color:NAVY,fontSize:12,font:'Roboto'},{text:'  · Uso Interno',color:GRAY,fontSize:7.5}],alignment:'right',margin:[0,0,6,8]}
-            ], fillColor:CREAM }
-        ],
-        [{text:dk(d.nombre),bold:true,color:NAVY,fontSize:12,colSpan:2,margin:[6,8,6,4],fillColor:CREAM},{}],
-        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}`,color:GRAY,fontSize:6.5,colSpan:2,margin:[6,0,6,6],fillColor:CREAM},{}],
-        ctrlRow('ESTADO',d.status,'DIR. RESPONSABLE',d.respDir),
-        ctrlRow('VIGENCIA',d.vigenciaMeses?`${d.vigenciaMeses} meses`:null,'ELABORÓ',d.respElab),
-        ctrlRow('FECHA AUTORIZACIÓN',d.fechaAutorizacion,'AUTORIZÓ',d.autorizadoPor),
-        ctrlRow('VIGENTE HASTA',d.fechaVencimiento,'COLABORADORES',d.colaboradores),
-        [{text:`${dk(d.dir)}  ›  ${dk(d.area)}  ›  ${dk(d.dept)}  ›  ${dk(d.act)}`,color:WHITE,fontSize:7,colSpan:2,margin:[6,3,6,3],fillColor:MORSA},{}]
-      ]},
-      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
-    };
-
-    // Firmas
-    const sigTable = { margin:[0,14,0,0],
-      table:{ widths:['33.33%','33.33%','33.34%'], body:[
-        [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:MORSA},{},{}],
-        [{text:'ELABORÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'REVISÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'AUTORIZÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]}],
-        [{text:'\n\n\n'},{text:'\n\n\n'},{text:'\n\n\n'}],
-        [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:'___________________________',alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
-        [{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]}]
-      ]},
-      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
-    };
-
-    // Control de cambios
-    const nowDt = new Date();
-    const fmtFD = iso => new Date(iso).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-    const fmtFH = iso => new Date(iso).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    const histRows = [
-      ...versHist.map(v=>[String(v.version),fmtFD(v.created_at),fmtFH(v.created_at),v.fuente==='adjuntado'?'Adjuntado':'Generado',dk(v.elaboro),dk(v.autorizo)]),
-      [String(versionNum),fmtFD(nowDt.toISOString()),fmtFH(nowDt.toISOString()),'Generado',dk(d.respElab),dk(d.autorizadoPor)]
-    ];
-    const histTable = { margin:[0,14,0,0],
-      table:{ widths:[28,62,38,50,'*','*'], body:[
-        [{text:'CONTROL DE CAMBIOS',bold:true,color:WHITE,fontSize:8.5,colSpan:6,margin:[6,3,6,3],fillColor:MORSA},{},{},{},{},{}],
-        ['Ver.','Fecha','Hora','Fuente','Elaboró','Autorizó'].map(h=>({text:h,bold:true,color:GRAY,fontSize:6.5,alignment:'center',fillColor:CREAM,margin:[3,3,3,3]})),
-        ...histRows.map((row,ri)=>{ const last=ri===histRows.length-1; return row.map((v,i)=>({
-          text:v, fontSize:8, bold:i===0||last, font:'Roboto',
-          color:last&&i===0?GREEN:'#1a1a1a', fillColor:last?'#EAF4EE':WHITE,
-          alignment:i<3?'center':'left', margin:[3,3,3,3]
-        }));})
-      ]},
-      layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
-    };
-
-    // Definición completa del documento
-    const dd = {
-      pageSize:'LETTER', pageMargins:[45,90,45,60],
-      header:(currentPage) => ({ stack:[
-        { table:{ widths:['*', 80], body:[[
-            { stack:[
-                {text:'GRUPO MORSA',bold:true,color:MORSA,fontSize:10},
-                {text:`${dk(d.folio)}  ·  ${String(d.nombre||'').slice(0,70)}`,fontSize:6.5,color:GRAY,margin:[0,2,0,0]}
-              ], border:[false,false,false,false] },
-            { image:'logoMorsa', width:78, alignment:'right', border:[false,false,false,false] }
-          ]]}, layout:'noBorders', margin:[45,10,45,0]
-        },
-        { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:1,lineColor:MORSA}], margin:[45,4,45,0] }
-      ]}),
-      footer:(currentPage, pageCount) => {
-        const isAutorizado = d.status==='autorizado'||d.status==='publicado';
-        const trackLeft = isAutorizado
-          ? `v${parseInt(d.version)||1} · ${statusLabels[d.status]||''} · Elaboró: ${dk(d.respElab)} · Autorizó: ${dk(d.autorizadoPor)} · Vigencia: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`
-          : `v${parseInt(d.version)||1} · ${statusLabels[d.status]||'BORRADOR'} · Elaboró: ${dk(d.respElab)}`;
-        return { stack:[
-          { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,3] },
-          { columns:[
-            {text:trackLeft, color:GRAY, fontSize:6, margin:[45,0,0,0], width:'*'},
-            {text:`Pág. ${currentPage} | ${pageCount}`, alignment:'right', color:GRAY, fontSize:7, bold:true, margin:[0,0,45,0]}
-          ]},
-          {text:`Grupo Morsa · Control Documental · Uso Interno · Elaborado por Frafer Consulting`, color:GRAY, fontSize:5.5, italics:true, alignment:'center', margin:[45,1,45,0]}
-        ]};
-      },
-      content:[
-        statusBadge,
-        titleBlock,
-        grpLabel('Contenido de la Política'),
-        ...mkSec('Propósito y Objetivo',           d.objeto),
-        ...mkSec('Alcance',                        d.alcance),
-        ...mkSec('Marco Normativo y Referencias',  d.marcoNormativo),
-        ...mkSec('Definiciones y Terminología',    d.definiciones),
-        ...mkSec('Responsabilidades',              d.responsabilidades),
-        ...mkSec('Lineamientos y Reglas',          d.contenido),
-        ...mkSec('Controles y Monitoreo',          d.controles),
-        ...mkSec('Sanciones por Incumplimiento',   d.sanciones),
-        ...mkSec('Excepciones y Casos Especiales', d.excepciones),
-        grpLabel('Comunicación e Implementación'),
-        ...mkSec('Canal de Comunicación',          d.canal),
-        ...mkSec('Esquema de Capacitación',        d.capacitacion),
-        ...mkSec('Directrices y Valores Asociados',d.directrices),
-        sigTable,
-        histTable
-      ],
-      defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 },
-      images:{ logoFrafer: FRAFER_LOGO, logoMorsa: MORSA_LOGO }
-    };
+    const dd = _buildPolicyPDFDef(d, versHist);
 
     // Obtener blob para descargar Y subir a Storage
     const fileName = `${d.folio}_v${versionNum}.pdf`;
@@ -4554,8 +4543,66 @@ async function setPorAutorizar(dirId) {
     }
   }
 
-  renderAdmin();
-  alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados en Borrador.\n${existingSet.size} ya tenían documento (${toSeed.length} sembrados con objetivo).`);
+  // Generar PDF v1 borrador para cada política y activar repositorios
+  try {
+    if (!window.pdfMake) {
+      const _ls = src => new Promise((res,rej) => { const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js');
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js');
+    }
+    const { data: freshPols } = await sb.from('pol_politicas')
+      .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
+      .in('catalogo_id', catIds);
+    const { data: fullCats } = await sb.from('pol_catalogo')
+      .select('id,actividad_id,codigo_documento,nombre').in('id', catIds).eq('activo', true);
+    const fullCatMap = Object.fromEntries((fullCats||[]).map(c=>[c.id,c]));
+    const actMap    = Object.fromEntries(actividades.map(a=>[a.id,a]));
+    const deptMap   = Object.fromEntries(departamentos.map(dep=>[dep.id,dep]));
+    const areaMap   = Object.fromEntries(areas.map(ar=>[ar.id,ar]));
+    let pdfCount = 0;
+    for (const pol of (freshPols||[])) {
+      const cat  = fullCatMap[pol.catalogo_id]; if (!cat)  continue;
+      const act  = actMap[cat.actividad_id];    if (!act)  continue;
+      const dept = deptMap[act.departamento_id];if (!dept) continue;
+      const area = areaMap[dept.area_id];       if (!area) continue;
+      const vN   = pol.version || 1;
+      const folio = cat.codigo_documento || '—';
+      const dObj = {
+        folio, nombre: cat.nombre || `Política de ${act.nombre}`,
+        dir: dir.nombre, area: area.nombre, dept: dept.nombre, act: act.nombre,
+        objeto: pol.objeto || '', alcance: '', marcoNormativo: pol.marco_normativo || '',
+        definiciones: '', responsabilidades: '', contenido: '', controles: '',
+        sanciones: '', excepciones: '',
+        respDir: '', respElab: '', autorizadoPor: '', colaboradores: '',
+        canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
+        directrices: pol.directrices_valores || '',
+        vigenciaMeses: '', fechaAutorizacion: '—', fechaVencimiento: '—',
+        version: vN, status: 'borrador', politicaId: pol.id
+      };
+      try {
+        const dd = _buildPolicyPDFDef(dObj, []);
+        const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
+        const fileName = `${folio}_v${vN}.pdf`;
+        const storagePath = `${pol.id}/${fileName}`;
+        await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob, { contentType:'application/pdf', upsert:true });
+        await sb.from('pol_versiones').delete().eq('politica_id', pol.id).eq('version', vN).ilike('nombre_archivo','%.pdf');
+        await sb.from('pol_versiones').insert({
+          politica_id: pol.id, version: vN, folio,
+          fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
+          elaboro: null, autorizo: null
+        });
+        const { data: pubUrl } = sb.storage.from('politicas-docs').getPublicUrl(storagePath);
+        if (pubUrl?.publicUrl) await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', pol.id);
+        pdfCount++;
+      } catch(pe) { console.error(`[setPorAutorizar] PDF ${folio}:`, pe); }
+    }
+    renderAdmin();
+    alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados · ${pdfCount} PDFs v1 activados en repositorio.`);
+  } catch(e) {
+    console.error('[setPorAutorizar] batch PDF:', e);
+    renderAdmin();
+    alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados.\n⚠ Error al generar PDFs: ${e.message}`);
+  }
 }
 
 function renderAdminBorrador() {
@@ -5530,7 +5577,7 @@ async function _backgroundRepair() {
     if (!actividades.length)   actividades   = acts        || [];
     await repairExistingFolios();
     await generateMissingFolios();
-  } catch(e) { /* silencioso — repair es best-effort */ }
+  } catch(e) { console.error('[_backgroundRepair]', e); }
 }
 
 (async () => {
