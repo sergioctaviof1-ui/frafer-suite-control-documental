@@ -4048,6 +4048,7 @@ async function loadAdmin() {
         <button onclick="generarPDFConfirmacion('${d.id}')" style="margin-left:4px;border:1px solid var(--navy);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--navy);cursor:pointer">📄 PDF</button>
         ${getDirStatus(d)==='levantamiento'?`<button onclick="setPorAutorizar('${d.id}')" style="margin-left:4px;border:1px solid var(--ember-deep);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--ember-deep);cursor:pointer;font-weight:600">📤 Por Autorizar</button>`:''}
         ${getDirStatus(d)==='por_autorizar'?`<button onclick="openAutorizarDir('${d.id}')" style="margin-left:4px;border:1px solid #2E7D32;border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:#2E7D32;cursor:pointer;font-weight:600">✓ Autorizar</button>`:''}
+        ${getDirStatus(d)==='por_autorizar'?`<button onclick="regenerarPDFsDir('${d.id}')" style="margin-left:4px;border:1px solid #6B7280;border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:#6B7280;cursor:pointer">🔄 PDFs</button>`:''}
       </td>
     </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
@@ -4602,6 +4603,80 @@ async function setPorAutorizar(dirId) {
     console.error('[setPorAutorizar] batch PDF:', e);
     renderAdmin();
     alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados.\n⚠ Error al generar PDFs: ${e.message}`);
+  }
+}
+
+async function regenerarPDFsDir(dirId) {
+  const dir = direcciones.find(d=>d.id===dirId);
+  if (!dir) return;
+  if (!confirm(`¿Regenerar los PDFs v1 de "${dir.nombre}"?\n\nSe sobreescribirán los archivos actuales con los datos de hoy (incluidos los objetivos guardados).`)) return;
+
+  const areaIds  = areas.filter(a=>a.direccion_id===dirId).map(a=>a.id);
+  const deptIds  = departamentos.filter(d=>areaIds.includes(d.area_id)).map(d=>d.id);
+  const dirActIds= actividades.filter(a=>deptIds.includes(a.departamento_id)&&a.activa).map(a=>a.id);
+  if (!dirActIds.length) { alert('Sin actividades en esta dirección.'); return; }
+
+  const { data: cats } = await sb.from('pol_catalogo')
+    .select('id,actividad_id,codigo_documento,nombre').in('actividad_id', dirActIds).eq('tipo_documento','PLT').eq('activo',true);
+  if (!cats?.length) { alert('Sin catálogo PLT para esta dirección.'); return; }
+
+  const catIds = cats.map(c=>c.id);
+  const { data: pols } = await sb.from('pol_politicas')
+    .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
+    .in('catalogo_id', catIds);
+  if (!pols?.length) { alert('Sin políticas creadas. Presiona Por Autorizar primero.'); return; }
+
+  try {
+    if (!window.pdfMake) {
+      const _ls = src => new Promise((res,rej) => { const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js');
+      await _ls('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js');
+    }
+    const catMap  = Object.fromEntries(cats.map(c=>[c.id,c]));
+    const actMap  = Object.fromEntries(actividades.map(a=>[a.id,a]));
+    const deptMap = Object.fromEntries(departamentos.map(d=>[d.id,d]));
+    const areaMap = Object.fromEntries(areas.map(a=>[a.id,a]));
+    let ok = 0, fail = 0;
+    for (const pol of pols) {
+      const cat  = catMap[pol.catalogo_id];     if (!cat)  continue;
+      const act  = actMap[cat.actividad_id];    if (!act)  continue;
+      const dept = deptMap[act.departamento_id];if (!dept) continue;
+      const area = areaMap[dept.area_id];       if (!area) continue;
+      const vN   = pol.version || 1;
+      const folio = cat.codigo_documento || '—';
+      const dObj = {
+        folio, nombre: cat.nombre || `Política de ${act.nombre}`,
+        dir: dir.nombre, area: area.nombre, dept: dept.nombre, act: act.nombre,
+        objeto: pol.objeto || '', alcance: '', marcoNormativo: pol.marco_normativo || '',
+        definiciones: '', responsabilidades: '', contenido: '', controles: '',
+        sanciones: '', excepciones: '',
+        respDir: '', respElab: '', autorizadoPor: '', colaboradores: '',
+        canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
+        directrices: pol.directrices_valores || '',
+        vigenciaMeses: '', fechaAutorizacion: '—', fechaVencimiento: '—',
+        version: vN, status: 'borrador', politicaId: pol.id
+      };
+      try {
+        const dd = _buildPolicyPDFDef(dObj, []);
+        const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
+        const fileName = `${folio}_v${vN}.pdf`;
+        const storagePath = `${pol.id}/${fileName}`;
+        await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob, { contentType:'application/pdf', upsert:true });
+        await sb.from('pol_versiones').delete().eq('politica_id', pol.id).eq('version', vN).ilike('nombre_archivo','%.pdf');
+        await sb.from('pol_versiones').insert({
+          politica_id: pol.id, version: vN, folio,
+          fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
+          elaboro: null, autorizo: null
+        });
+        const { data: pubUrl } = sb.storage.from('politicas-docs').getPublicUrl(storagePath);
+        if (pubUrl?.publicUrl) await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', pol.id);
+        ok++;
+      } catch(pe) { console.error(`[regenerarPDFsDir] ${folio}:`, pe); fail++; }
+    }
+    alert(`✓ ${dir.nombre} — ${ok} PDFs regenerados.${fail?`\n⚠ ${fail} fallaron (ver consola).`:''}`);
+  } catch(e) {
+    console.error('[regenerarPDFsDir]', e);
+    alert('Error al regenerar PDFs: ' + e.message);
   }
 }
 
