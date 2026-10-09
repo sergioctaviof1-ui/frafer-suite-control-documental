@@ -491,6 +491,10 @@ input,textarea,select{font-family:inherit}
         <label>Nombre de la Actividad</label>
         <input id="mact-nombre" placeholder="Ej: Evaluación de proveedores estratégicos">
       </div>
+      <div class="form-group full">
+        <label>Objetivo de la Política <span style="font-size:10px;color:var(--fog)">(opcional · se pre-llena en Documentar)</span></label>
+        <textarea id="mact-objetivo" rows="3" placeholder="Ej: Establecer los lineamientos para la evaluación y selección de proveedores..." style="resize:vertical"></textarea>
+      </div>
       <div class="form-group full" style="background:var(--linen);border:1px solid var(--stone);border-radius:8px;padding:10px 14px">
         <div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);font-family:var(--ff-mono);margin-bottom:4px">Código que se asignará</div>
         <div id="mact-codigo-preview" style="font-family:var(--ff-mono);font-size:16px;color:var(--gold);font-weight:500">—</div>
@@ -570,6 +574,10 @@ input,textarea,select{font-family:inherit}
     <div class="form-group" style="margin-bottom:14px">
       <label>Nombre de la Actividad</label>
       <input id="mract-nombre" placeholder="Nombre de la actividad">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Objetivo de la Política <span style="font-size:10px;color:var(--fog)">(sincroniza con Documentar)</span></label>
+      <textarea id="mract-objetivo" rows="3" style="resize:vertical"></textarea>
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="saveEditarAct()">Guardar</button>
@@ -2300,6 +2308,12 @@ async function savePolitica() {
     const { data: newPol, error } = await sb.from('pol_politicas').insert(payload).select().single();
     if (!error && newPol) {
       politicaActual = newPol;
+      const _catSync = catalogo.find(c => c.id === politicaActual.catalogo_id);
+      if (_catSync?.actividad_id) {
+        sb.from('pol_actividades').update({ objetivo_politica: payload.objeto || null })
+          .eq('id', _catSync.actividad_id)
+          .then(() => { const _a = actividades.find(a => a.id === _catSync.actividad_id); if (_a) _a.objetivo_politica = payload.objeto || null; });
+      }
       fillPoliticaForm(newPol);
       loadCatalogo();
       sEl.textContent = 'Guardado · Generando documentos…'; sEl.classList.add('show');
@@ -2320,6 +2334,12 @@ async function savePolitica() {
   if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
   else {
     politicaActual = { ...politicaActual, ...payload, version: newVersion };
+    const _catSync2 = catalogo.find(c => c.id === politicaActual.catalogo_id);
+    if (_catSync2?.actividad_id) {
+      sb.from('pol_actividades').update({ objetivo_politica: payload.objeto || null })
+        .eq('id', _catSync2.actividad_id)
+        .then(() => { const _a = actividades.find(a => a.id === _catSync2.actividad_id); if (_a) _a.objetivo_politica = payload.objeto || null; });
+    }
     fillPoliticaForm(politicaActual);
     loadCatalogo();
     sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show');
@@ -3915,6 +3935,7 @@ function openModalActividad() {
   document.getElementById('mact-area').innerHTML = '<option value="">— Selecciona Área —</option>';
   document.getElementById('mact-dept').innerHTML = '<option value="">— Selecciona Departamento —</option>';
   document.getElementById('mact-nombre').value = '';
+  document.getElementById('mact-objetivo').value = '';
   document.getElementById('mact-codigo-preview').textContent = '—';
   document.getElementById('mact-error').classList.remove('show');
   document.getElementById('modal-actividad').classList.add('open');
@@ -3935,7 +3956,8 @@ async function saveActividad() {
       nextSeq = maxSeq + 1;
     }
   }
-  const payload = { departamento_id, area_id, nombre, tipo: 'actividad' };
+  const objetivo_politica = document.getElementById('mact-objetivo').value.trim() || null;
+  const payload = { departamento_id, area_id, nombre, tipo: 'actividad', objetivo_politica };
   if (dept?.codigo) payload.codigo = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
   const { error } = await sb.from('pol_actividades').insert(payload);
   if (error) { showModalError('mact-error', error.message); return; }
@@ -4364,6 +4386,8 @@ function openEditarAct(actId) {
   const dirAct  = areaAct ? direcciones.find(d=>d.id===areaAct.direccion_id) : null;
   document.getElementById('mract-act-id').value = actId;
   document.getElementById('mract-nombre').value = act.nombre;
+  document.getElementById('mract-objetivo').value = act.objetivo_politica || '';
+  document.getElementById('mract-objetivo').dataset.inicial = act.objetivo_politica || '';
   document.getElementById('mract-dir').innerHTML =
     [...direcciones].sort((a,b)=>a.orden-b.orden)
       .map(d=>`<option value="${d.id}"${dirAct&&d.id===dirAct.id?' selected':''}>${d.codigo} · ${d.nombre}</option>`)
@@ -4414,7 +4438,9 @@ async function saveEditarAct() {
   const codeMismatch = act?.codigo && dept?.codigo && !act.codigo.startsWith(dept.codigo + '-');
   const needsCodigo  = deptChanged || codeMismatch;
 
-  const payload = { nombre, departamento_id: deptId, area_id: areaId };
+  const objetivoNuevo   = document.getElementById('mract-objetivo').value.trim() || null;
+  const objetivoInicial = document.getElementById('mract-objetivo').dataset.inicial || null;
+  const payload = { nombre, departamento_id: deptId, area_id: areaId, objetivo_politica: objetivoNuevo };
 
   if (needsCodigo && dept?.codigo) {
     const { data: existingActs } = await sb.from('pol_actividades')
@@ -4429,6 +4455,16 @@ async function saveEditarAct() {
 
   const { error } = await sb.from('pol_actividades').update(payload).eq('id', actId);
   if (error) { showModalError('mract-error', error.message); return; }
+  if (objetivoNuevo !== objetivoInicial) {
+    const cat = catalogo.find(c => c.actividad_id === actId && c.tipo_documento === 'PLT');
+    if (cat) {
+      const { error: syncErr } = await sb.from('pol_politicas')
+        .update({ objeto: objetivoNuevo }).eq('catalogo_id', cat.id);
+      if (syncErr) console.error('[saveEditarAct] sync objeto:', syncErr.message);
+    }
+    const actMem = actividades.find(a => a.id === actId);
+    if (actMem) actMem.objetivo_politica = objetivoNuevo;
+  }
   closeModal('modal-reasignar-act');
   await loadAdmin();
   renderEstructura();
@@ -4477,7 +4513,7 @@ async function setPorAutorizar(dirId) {
 
   // 4. ¿Cuáles ya tienen pol_politicas?
   const catIds = cats.map(c=>c.id);
-  const { data: existingPols } = await sb.from('pol_politicas').select('catalogo_id').in('catalogo_id', catIds);
+  const { data: existingPols } = await sb.from('pol_politicas').select('id,catalogo_id,objeto').in('catalogo_id', catIds);
   const existingSet = new Set((existingPols||[]).map(p=>p.catalogo_id));
 
   // 5. Crear stubs solo para los que faltan
@@ -4491,7 +4527,9 @@ async function setPorAutorizar(dirId) {
       canal_comunicacion:  dir.canal_comunicacion  || gc.canal_comunicacion  || null,
       esquema_capacitacion:dir.esquema_capacitacion|| gc.esquema_capacitacion|| null,
     };
-    const stubs = toCreate.map(c=>({ catalogo_id:c.id, status:'borrador', version:1, borrador_at:now, ...govData }));
+    const actById = Object.fromEntries(actividades.map(a=>[a.id,a]));
+    const stubs = toCreate.map(c=>({ catalogo_id:c.id, status:'borrador', version:1, borrador_at:now, ...govData,
+      objeto: actById[c.actividad_id]?.objetivo_politica || null }));
     for (let i=0; i<stubs.length; i+=50) {
       const { error:se } = await sb.from('pol_politicas').insert(stubs.slice(i,i+50));
       if (!se) inserted += Math.min(50, stubs.length-i);
@@ -4499,8 +4537,20 @@ async function setPorAutorizar(dirId) {
     }
   }
 
+  // Sembrar objeto en stubs existentes que aún lo tienen vacío
+  const actById2 = Object.fromEntries(actividades.map(a=>[a.id,a]));
+  const toSeed = (existingPols||[]).filter(p => !p.objeto);
+  for (const p of toSeed) {
+    const cat = cats.find(c=>c.id===p.catalogo_id);
+    const act = cat ? actById2[cat.actividad_id] : null;
+    if (act?.objetivo_politica) {
+      const {error:seedErr} = await sb.from('pol_politicas').update({objeto:act.objetivo_politica}).eq('id',p.id);
+      if (seedErr) console.error('[setPorAutorizar] seed objeto:', seedErr.message);
+    }
+  }
+
   renderAdmin();
-  alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados en Borrador.\n${existingSet.size} ya tenían documento (no modificados).`);
+  alert(`✓ ${dir.nombre} marcada como Por Autorizar.\n${inserted} stubs creados en Borrador.\n${existingSet.size} ya tenían documento (${toSeed.length} sembrados con objetivo).`);
 }
 
 function renderAdminBorrador() {
