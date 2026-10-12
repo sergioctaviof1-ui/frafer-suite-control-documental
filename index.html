@@ -5278,27 +5278,18 @@ async function generarPDFConfirmacion(dirId) {
     margin:[0,18,0,6]
   });
 
-  // ── TABLA: Áreas y cobertura de responsabilidades ────────────────────────────
-  const RESP_W = [110, 160, '*'];
+  // ── TABLA: Áreas de responsabilidad de la dirección ─────────────────────────
+  const RESP_W = [40, '*'];
   const respHeader = { table:{ widths: RESP_W, body:[[
-    {text:'Área', bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, margin:[5,4,5,4]},
-    {text:'Dónde queda atendida', bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, margin:[5,4,5,4]},
-    {text:'Cómo queda atendida', bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, margin:[5,4,5,4]},
+    {text:'Área', bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, alignment:'center', margin:[4,4,4,4]},
+    {text:'Responsabilidad de la División', bold:true, color:WHITE, fontSize:7.5, fillColor:ORANGE, margin:[8,4,8,4]},
   ]]}, layout:{hLineWidth:()=>0, vLineWidth:()=>0.5, vLineColor:()=>WHITE}, margin:[0,0,0,0] };
 
   const respRows = dirAreas.map((area, i) => {
-    const areaDepts = dirDepts.filter(d => d.area_id === area.id);
-    const areaActs  = dirActs.filter(a => areaDepts.some(d => d.id === a.departamento_id));
-    const dondeTxt  = areaDepts.map(d => `• ${d.nombre}`).join('\n');
-    const comoTxt   = areaActs.map(a => a.objetivo_politica?.trim() || null).filter(Boolean)
-                        .filter((v,idx,arr) => arr.indexOf(v) === idx) // sin duplicados
-                        .slice(0,3)                                      // máx 3 para no saturar
-                        .map(v => `• ${v}`).join('\n\n');
     const bg = i%2===0 ? '#F9F6F3' : WHITE;
     return { table:{ widths: RESP_W, body:[[
-      {text: area.nombre, fontSize:8, color:NAVY, bold:true, fillColor:bg, margin:[5,4,5,4]},
-      {text: dondeTxt||'—', fontSize:7.5, color:NAVY, fillColor:bg, margin:[5,3,5,3], lineHeight:1.4},
-      {text: comoTxt||'—', fontSize:7.5, color:GRAY, fillColor:bg, margin:[5,3,5,3], lineHeight:1.3},
+      {text: area.numero, fontSize:8, color:ORANGE, bold:true, alignment:'center', fillColor:bg, margin:[4,5,4,5]},
+      {text: area.nombre, fontSize:8.5, color:NAVY, bold:true, fillColor:bg, margin:[8,5,8,5]},
     ]]}, layout:{hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER} };
   });
 
@@ -5461,7 +5452,7 @@ async function generarPDFConfirmacion(dirId) {
 
       // SECCIÓN 3
       secTitle('3.  ESTRUCTURA ORGANIZACIONAL ACORDADA'),
-      { text:`La segmentación de áreas de ${dir.nombre} responde a las responsabilidades primarias que la División debe ejercer. Cada área existe porque hay un conjunto de responsabilidades que sin ella quedarían sin cobertura formal en el sistema de políticas.`, fontSize:9, color:GRAY, italics:true, margin:[0,0,0,8], lineHeight:1.4 },
+      { text:`${dir.nombre} opera a través de ${dirAreas.length} áreas de responsabilidad. Cada área concentra un conjunto de funciones y políticas que le dan cobertura formal dentro del sistema de control documental del Grupo.`, fontSize:9, color:GRAY, italics:true, margin:[0,0,0,8], lineHeight:1.4 },
       respHeader,
       ...respRows,
       { text:'Detalle de estructura por departamento:', fontSize:8.5, color:NAVY, bold:true, margin:[0,16,0,6] },
