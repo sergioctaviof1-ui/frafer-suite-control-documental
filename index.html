@@ -5241,9 +5241,8 @@ async function generarPDFConfirmacion(dirId) {
     await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
   }
 
-  const { data: _freshCat } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento,codigo_documento,nombre').eq('activo',true);
-  const _pltMap      = Object.fromEntries((_freshCat||[]).filter(c=>c.tipo_documento==='PLT').map(c=>[c.actividad_id, c.codigo_documento]));
-  const _pltNombreMap = Object.fromEntries((_freshCat||[]).filter(c=>c.tipo_documento==='PLT').map(c=>[c.actividad_id, c.nombre]));
+  const { data: _freshCat } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento,codigo_documento').eq('activo',true);
+  const _pltMap = Object.fromEntries((_freshCat||[]).filter(c=>c.tipo_documento==='PLT').map(c=>[c.actividad_id, c.codigo_documento]));
 
   const dir      = direcciones.find(d=>d.id===dirId);
   const dirAreas = areas.filter(a=>a.direccion_id===dirId).sort((a,b)=>parseInt(a.numero)-parseInt(b.numero));
