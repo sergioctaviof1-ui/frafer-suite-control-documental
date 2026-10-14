@@ -5111,7 +5111,7 @@ async function loadConsulta() {
       sb.from('pol_direcciones').select('id,codigo,nombre,tipo').eq('activa', true),
       sb.from('pol_areas').select('id,numero,nombre,direccion_id').eq('activa', true),
       sb.from('pol_catalogo').select('area_id').not('area_id', 'is', null),
-      sb.from('pol_catalogo').select('nombre,codigo_documento').eq('tipo_documento','PLT').order('codigo_documento')
+      sb.from('pol_catalogo').select('nombre,codigo_documento,pol_actividades!actividad_id(objetivo_politica)').eq('tipo_documento','PLT').order('codigo_documento')
     ]);
 
     // Estructura orgánica con conteos reales
@@ -5135,9 +5135,12 @@ async function loadConsulta() {
       _orgContext = ctx.trim();
     }
 
-    // Catálogo PLT completo — el AI lo usa para identificar documentos por nombre, sin keyword matching
+    // Catálogo PLT completo con propósito — el AI responde preguntas de contenido aunque la política esté en borrador
     if (pltItems) {
-      _catalogoPLT = pltItems.map(p => `[${p.codigo_documento}] ${p.nombre}`).join('\n');
+      _catalogoPLT = pltItems.map(p => {
+        const obj = p.pol_actividades?.objetivo_politica;
+        return `[${p.codigo_documento}] ${p.nombre}${obj ? '\n  Propósito: '+obj : ''}`;
+      }).join('\n');
     }
   } catch(_e) {}
 }
