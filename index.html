@@ -3225,7 +3225,11 @@ async function generatePDF(download=true) {
     const dd = _buildPolicyPDFDef(d, versHist);
 
     // Obtener blob para descargar Y subir a Storage
-    const fileName = `${d.folio}_v${versionNum}.pdf`;
+    const _slug = (d.nombre || d.titulo || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .replace(/[^a-zA-Z0-9 ]/g,'').trim()
+      .replace(/\s+/g,'-').slice(0, 40);
+    const fileName = `${d.folio}${_slug ? '_'+_slug : ''}_v${versionNum}.pdf`;
     const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
 
     // Descarga directa al navegador (solo si se solicitó)
