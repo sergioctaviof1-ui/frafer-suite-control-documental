@@ -1686,8 +1686,15 @@ function actIndexInDept(actId, deptId) {
 
 async function generateMissingFolios() {
   if (!actividades.length || !direcciones.length) return 0;
-  const { data: existing } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento');
+  const { data: existing } = await sb.from('pol_catalogo').select('actividad_id,tipo_documento,area_id,numero');
   const existingSet = new Set((existing||[]).map(e=>`${e.actividad_id}:${e.tipo_documento}`));
+
+  // Track max numero per (area_id, tipo_documento) to avoid unique constraint violation
+  const maxNumero = {};
+  (existing||[]).forEach(e => {
+    const key = `${e.area_id}:${e.tipo_documento}`;
+    maxNumero[key] = Math.max(maxNumero[key]||0, e.numero||0);
+  });
 
   const toInsert = [];
   departamentos.forEach(dept => {
@@ -1702,9 +1709,11 @@ async function generateMissingFolios() {
       ['PLT','PCS','PCD'].forEach(tipo => {
         if (existingSet.has(`${act.id}:${tipo}`)) return;
         const prefix = tipo==='PLT' ? 'Política' : tipo==='PCS' ? 'Proceso' : 'Procedimiento';
+        const key = `${area.id}:${tipo}`;
+        maxNumero[key] = (maxNumero[key]||0) + 1;
         toInsert.push({
           area_id: area.id, actividad_id: act.id,
-          tipo_documento: tipo, numero: idx + 1,
+          tipo_documento: tipo, numero: maxNumero[key],
           codigo_documento: computeFolio(tipo, dir, area, dept, idx),
           nombre: `${prefix} de ${act.nombre}`,
           prioridad: 'media'
