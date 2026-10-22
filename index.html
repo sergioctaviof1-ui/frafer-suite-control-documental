@@ -5308,11 +5308,20 @@ async function generarPDFConfirmacion(dirId) {
     ]]}, layout:{hLineWidth:()=>0.3, vLineWidth:()=>0.3, hLineColor:()=>BORDER, vLineColor:()=>BORDER} };
   });
 
-  // ── SECCIÓN 1: Estructura ────────────────────────────────────────────────────
+  // ── SECCIÓN 1: Estructura (agrupada por área) ────────────────────────────────
   const estructuraRows = [];
-  dirDepts.forEach((dept,i) => {
-    const area = areaById[dept.area_id];
-    estructuraRows.push(tdRow([dir.nombre, area?.nombre||'—', dept.nombre, 'Primaria'], i%2===0));
+  dirAreas.forEach(area => {
+    const areaDepts = dirDepts.filter(d => d.area_id === area.id);
+    if (!areaDepts.length) return;
+    estructuraRows.push({ table:{ widths:['*','*','*','*'], body:[[
+      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:NAVY, margin:[8,5,8,5], colSpan:4 }, {},{},{}
+    ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER}, margin:[0,4,0,0] });
+    areaDepts.forEach((dept,i) => {
+      estructuraRows.push(tdRow([dir.nombre, area.nombre, dept.nombre, 'Primaria'], i%2===0));
+    });
+    estructuraRows.push({ table:{ widths:['*','*','*','*'], body:[[
+      { text:`${areaDepts.length} departamento${areaDepts.length!==1?'s':''}`, fontSize:7.5, color:ORANGE, bold:true, alignment:'right', fillColor:'#FFF3EC', margin:[8,3,8,3], colSpan:4 }, {},{},{}
+    ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} });
   });
 
   // ── SECCIÓN 2: Catálogo de Actividades (tabla con #) ────────────────────────
@@ -5325,19 +5334,37 @@ async function generarPDFConfirmacion(dirId) {
     {text:'Código PLT',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[5,4,5,4]},
   ]]}, layout:{hLineWidth:()=>0,vLineWidth:()=>0.5,vLineColor:()=>WHITE}, margin:[0,0,0,0] };
 
-  const catalogoRows = dirActs.map((act,i) => {
-    const dept = deptById[act.departamento_id];
-    const area = dept ? areaById[dept.area_id] : null;
-    const fol = _pltMap[act.id] || '—';
-    const shade = i%2===0;
-    const bg = shade?'#F9F6F3':WHITE;
-    return { table:{ widths:CAT_W, body:[[
-      {text:`${i+1}`,fontSize:7.5,color:ORANGE,bold:true,alignment:'center',fillColor:bg,margin:[2,3,2,3]},
-      {text:area?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
-      {text:dept?.nombre||'—',fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
-      {text:act.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
-      {text:fol,fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
-    ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} };
+  const catalogoRows = [];
+  let _actNum = 0;
+  dirAreas.forEach(area => {
+    const areaActIds = dirDepts.filter(d=>d.area_id===area.id).map(d=>d.id);
+    const areaActs = dirActs.filter(a=>areaActIds.includes(a.departamento_id));
+    if (!areaActs.length) return;
+    catalogoRows.push({ table:{ widths:CAT_W, body:[[
+      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:NAVY, margin:[8,5,8,5], colSpan:5 }, {},{},{},{}
+    ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER}, margin:[0,6,0,0] });
+    dirDepts.filter(d=>d.area_id===area.id).forEach(dept => {
+      const deptActs = areaActs.filter(a=>a.departamento_id===dept.id);
+      if (!deptActs.length) return;
+      catalogoRows.push({ table:{ widths:CAT_W, body:[[
+        { text:dept.nombre, bold:true, fontSize:7.5, color:NAVY, fillColor:'#EEE8E0', margin:[14,3,8,3], colSpan:5 }, {},{},{},{}
+      ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} });
+      deptActs.forEach((act,i) => {
+        _actNum++;
+        const fol = _pltMap[act.id] || '—';
+        const bg = i%2===0?'#F9F6F3':WHITE;
+        catalogoRows.push({ table:{ widths:CAT_W, body:[[
+          {text:`${_actNum}`,fontSize:7.5,color:ORANGE,bold:true,alignment:'center',fillColor:bg,margin:[2,3,2,3]},
+          {text:area.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+          {text:dept.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+          {text:act.nombre,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
+          {text:fol,fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
+        ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} });
+      });
+      catalogoRows.push({ table:{ widths:CAT_W, body:[[
+        { text:`${deptActs.length} actividad${deptActs.length!==1?'es':''}`, fontSize:7.5, color:ORANGE, bold:true, alignment:'right', fillColor:'#FFF3EC', margin:[8,3,8,3], colSpan:5 }, {},{},{},{}
+      ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} });
+    });
   });
 
   // ── SECCIÓN 3: Firmas ────────────────────────────────────────────────────────
@@ -5488,17 +5515,21 @@ async function generarPDFConfirmacion(dirId) {
       ...(() => {
         const conObj = dirActs.filter(a => a.objetivo_politica?.trim());
         if (!conObj.length) return [];
-        const OW = [14, 75, '*', '*'];
+        const OW = [14, 60, 68, '*', '*'];
         const objHeader = { table:{ widths:OW, body:[[
           {text:'#',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[2,4,2,4]},
+          {text:'Área',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
           {text:'Código PLT',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,alignment:'center',margin:[5,4,5,4]},
           {text:'Política',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
           {text:'Objetivo',bold:true,color:WHITE,fontSize:7.5,fillColor:ORANGE,margin:[5,4,5,4]},
         ]]}, layout:{hLineWidth:()=>0,vLineWidth:()=>0.5,vLineColor:()=>WHITE}, margin:[0,0,0,0] };
         const objRows = conObj.map((act,i) => {
+          const _dept = deptById[act.departamento_id];
+          const _area = _dept ? areaById[_dept.area_id] : null;
           const bg = i%2===0?'#F9F6F3':WHITE;
           return { table:{ widths:OW, body:[[
             {text:`${i+1}`,fontSize:7.5,color:ORANGE,bold:true,alignment:'center',fillColor:bg,margin:[2,3,2,3]},
+            {text:_area?.nombre||'—',fontSize:7.5,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
             {text:_pltMap[act.id]||'—',fontSize:7,color:NAVY,fillColor:bg,alignment:'center',margin:[3,3,3,3]},
             {text:`Política de ${act.nombre}`,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
             {text:act.objetivo_politica,fontSize:8,color:NAVY,fillColor:bg,margin:[5,3,5,3]},
