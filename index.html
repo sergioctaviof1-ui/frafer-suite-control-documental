@@ -4654,10 +4654,27 @@ async function regenerarPDFsDir(dirId) {
   if (!cats?.length) { alert('Sin catálogo PLT para esta dirección.'); return; }
 
   const catIds = cats.map(c=>c.id);
-  const { data: pols } = await sb.from('pol_politicas')
+  let { data: pols } = await sb.from('pol_politicas')
     .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
     .in('catalogo_id', catIds);
   if (!pols?.length) { alert('Sin políticas creadas. Presiona Por Autorizar primero.'); return; }
+
+  // Crear stubs faltantes para actividades agregadas después de "Por Autorizar"
+  const existingCatIds = new Set(pols.map(p=>p.catalogo_id));
+  const missingCats = cats.filter(c=>!existingCatIds.has(c.id));
+  if (missingCats.length) {
+    const actById = Object.fromEntries(actividades.map(a=>[a.id,a]));
+    const newStubRows = missingCats.map(c=>({ catalogo_id:c.id, version:1, status:'borrador', objeto:actById[c.actividad_id]?.objetivo_politica||null }));
+    for (let i=0; i<newStubRows.length; i+=50) {
+      const { error:se } = await sb.from('pol_politicas').insert(newStubRows.slice(i,i+50));
+      if (se) console.error('[regenerarPDFsDir] stub insert:', se.message);
+    }
+    const { data: polsActualizados } = await sb.from('pol_politicas')
+      .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
+      .in('catalogo_id', catIds);
+    if (polsActualizados?.length) pols = polsActualizados;
+    console.log(`[regenerarPDFsDir] ${missingCats.length} stub(s) creados para actividades nuevas.`);
+  }
 
   try {
     if (!window.pdfMake) {
@@ -4710,7 +4727,8 @@ async function regenerarPDFsDir(dirId) {
       } catch(pe) { console.error(`[regenerarPDFsDir] ${folio}:`, pe); fail++; }
     }
     _pdfProgressHide();
-    alert(`✓ ${dir.nombre} — ${ok} PDFs regenerados.${fail?`\n⚠ ${fail} fallaron (ver consola).`:''}`);
+    const stubMsg = missingCats.length ? `\n+ ${missingCats.length} actividad(es) nueva(s) incorporada(s) al repositorio.` : '';
+    alert(`✓ ${dir.nombre} — ${ok} PDFs regenerados.${stubMsg}${fail?`\n⚠ ${fail} fallaron (ver consola).`:''}`);
   } catch(e) {
     console.error('[regenerarPDFsDir]', e);
     _pdfProgressHide();
