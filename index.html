@@ -4478,7 +4478,48 @@ async function saveEditarAct() {
 
   const { error } = await sb.from('pol_actividades').update(payload).eq('id', actId);
   if (error) { showModalError('mract-error', error.message); return; }
-  if (objetivoNuevo !== objetivoInicial) {
+
+  if (deptChanged) {
+    // Ciclo de vida reasignación: la política original muere, se crea nueva en la nueva dirección.
+    // 1. Obtener catálogo viejo → borrar pol_politicas vinculadas → borrar pol_catalogo
+    const { data: oldCats } = await sb.from('pol_catalogo')
+      .select('id').eq('actividad_id', actId);
+    if (oldCats?.length) {
+      const oldIds = oldCats.map(c=>c.id);
+      // Primero eliminar documentos (pol_politicas) ligados a los catálogos viejos
+      await sb.from('pol_politicas').delete().in('catalogo_id', oldIds);
+      // Luego eliminar los catálogos viejos
+      await sb.from('pol_catalogo').delete().in('id', oldIds);
+    }
+    const newArea = areas.find(a=>a.id===areaId);
+    const newDir  = newArea ? direcciones.find(d=>d.id===newArea.direccion_id) : null;
+    if (newArea && newDir) {
+      const { data: existingNewCats } = await sb.from('pol_catalogo')
+        .select('tipo_documento,numero').eq('area_id', areaId);
+      const maxNumMap = {};
+      (existingNewCats||[]).forEach(c => {
+        maxNumMap[c.tipo_documento] = Math.max(maxNumMap[c.tipo_documento]||0, c.numero||0);
+      });
+      const deptActsOrdenadas = actividades
+        .filter(a=>a.departamento_id===deptId && a.activa && a.id!==actId)
+        .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      const actIdx = deptActsOrdenadas.length;
+      const newCats = ['PLT','PCS','PCD'].map(tipo => {
+        maxNumMap[tipo] = (maxNumMap[tipo]||0) + 1;
+        const prefix = tipo==='PLT'?'Política':tipo==='PCS'?'Proceso':'Procedimiento';
+        return {
+          area_id: areaId, actividad_id: actId, tipo_documento: tipo,
+          numero: maxNumMap[tipo],
+          codigo_documento: computeFolio(tipo, newDir, newArea, dept, actIdx),
+          nombre: `${prefix} de ${nombre}`,
+          prioridad: 'media'
+        };
+      });
+      const { error: catErr } = await sb.from('pol_catalogo').insert(newCats);
+      if (catErr) console.error('[saveEditarAct] new catalogo insert:', catErr.message);
+    }
+  } else if (objetivoNuevo !== objetivoInicial) {
+    // Solo sincroniza objetivo si no hubo cambio de departamento
     const cat = catalogo.find(c => c.actividad_id === actId && c.tipo_documento === 'PLT');
     if (cat) {
       const { error: syncErr } = await sb.from('pol_politicas')
@@ -4488,6 +4529,7 @@ async function saveEditarAct() {
     const actMem = actividades.find(a => a.id === actId);
     if (actMem) actMem.objetivo_politica = objetivoNuevo;
   }
+
   closeModal('modal-reasignar-act');
   await loadAdmin();
   renderEstructura();
