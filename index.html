@@ -4482,14 +4482,30 @@ async function saveEditarAct() {
   if (deptChanged) {
     // Ciclo de vida reasignación: la política original muere, se crea nueva en la nueva dirección.
     // 1. Obtener catálogo viejo → borrar pol_politicas vinculadas → borrar pol_catalogo
-    const { data: oldCats } = await sb.from('pol_catalogo')
+    const { data: oldCats, error: oldCatsErr } = await sb.from('pol_catalogo')
       .select('id').eq('actividad_id', actId);
+    if (oldCatsErr) { console.error('[reasignar] ERROR leyendo pol_catalogo viejo:', oldCatsErr.message); showModalError('mract-error', 'Error al leer catálogo anterior: ' + oldCatsErr.message); return; }
     if (oldCats?.length) {
       const oldIds = oldCats.map(c=>c.id);
-      // Primero eliminar documentos (pol_politicas) ligados a los catálogos viejos
-      await sb.from('pol_politicas').delete().in('catalogo_id', oldIds);
-      // Luego eliminar los catálogos viejos
-      await sb.from('pol_catalogo').delete().in('id', oldIds);
+      console.log(`[reasignar] ${oldIds.length} catálogo(s) a eliminar:`, oldIds);
+      // 1. Recuperar rutas Storage antes de borrar
+      const { data: oldPols, error: oldPolsErr } = await sb.from('pol_politicas').select('id').in('catalogo_id', oldIds);
+      if (oldPolsErr) console.error('[reasignar] ERROR leyendo pol_politicas:', oldPolsErr.message);
+      if (oldPols?.length) {
+        const oldPolIds = oldPols.map(p=>p.id);
+        const { data: oldVers, error: oldVersErr } = await sb.from('pol_versiones').select('url_storage').in('politica_id', oldPolIds);
+        if (oldVersErr) console.error('[reasignar] ERROR leyendo pol_versiones:', oldVersErr.message);
+        const storagePaths = (oldVers||[]).map(v=>v.url_storage).filter(Boolean);
+        if (storagePaths.length) {
+          const { error: stErr } = await sb.storage.from('politicas-docs').remove(storagePaths);
+          if (stErr) console.error('[reasignar] ERROR borrando Storage:', stErr.message);
+          else console.log(`[reasignar] Storage: ${storagePaths.length} archivo(s) eliminado(s)`);
+        }
+      }
+      // 2. Borrar pol_catalogo — cascada elimina pol_politicas y pol_versiones en DB
+      const { error: delCatErr } = await sb.from('pol_catalogo').delete().in('id', oldIds);
+      if (delCatErr) { console.error('[reasignar] ERROR borrando pol_catalogo:', delCatErr.message); showModalError('mract-error', 'Error al eliminar catálogo anterior: ' + delCatErr.message); return; }
+      console.log(`[reasignar] pol_catalogo eliminado (cascada: pol_politicas, pol_versiones)`);
     }
     const newArea = areas.find(a=>a.id===areaId);
     const newDir  = newArea ? direcciones.find(d=>d.id===newArea.direccion_id) : null;
