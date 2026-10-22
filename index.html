@@ -4781,18 +4781,24 @@ async function regenerarPDFsDir(dirId) {
         const pdfBlob = await new Promise(resolve => window.pdfMake.createPdf(dd).getBlob(resolve));
         const fileName = `${folio}_v${vN}.pdf`;
         const storagePath = `${pol.id}/${fileName}`;
-        await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob, { contentType:'application/pdf', upsert:true });
-        await sb.from('pol_versiones').delete().eq('politica_id', pol.id).eq('version', vN).ilike('nombre_archivo','%.pdf');
-        await sb.from('pol_versiones').insert({
+        const { error: upErr } = await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob, { contentType:'application/pdf', upsert:true });
+        if (upErr) { console.error(`[regenerarPDFsDir] ${folio} Storage upload:`, upErr.message); fail++; continue; }
+        const { error: delVErr } = await sb.from('pol_versiones').delete().eq('politica_id', pol.id).eq('version', vN).ilike('nombre_archivo','%.pdf');
+        if (delVErr) console.error(`[regenerarPDFsDir] ${folio} pol_versiones delete:`, delVErr.message);
+        const { error: insVErr } = await sb.from('pol_versiones').insert({
           politica_id: pol.id, version: vN, folio,
           fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
           elaboro: null, autorizo: null
         });
+        if (insVErr) { console.error(`[regenerarPDFsDir] ${folio} pol_versiones insert:`, insVErr.message); fail++; continue; }
         const { data: pubUrl } = sb.storage.from('politicas-docs').getPublicUrl(storagePath);
-        if (pubUrl?.publicUrl) await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', pol.id);
+        if (pubUrl?.publicUrl) {
+          const { error: updErr } = await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', pol.id);
+          if (updErr) console.error(`[regenerarPDFsDir] ${folio} pol_politicas url_pdf:`, updErr.message);
+        }
         ok++;
         _pdfProgressShow(`🔄 Regenerando PDFs ${dir.nombre}… ${ok} / ${totalR}`);
-      } catch(pe) { console.error(`[regenerarPDFsDir] ${folio}:`, pe); fail++; }
+      } catch(pe) { console.error(`[regenerarPDFsDir] ${folio} excepcion:`, pe); fail++; }
     }
     _pdfProgressHide();
     const stubMsg = missingCats.length ? `\n+ ${missingCats.length} actividad(es) nueva(s) incorporada(s) al repositorio.` : '';
