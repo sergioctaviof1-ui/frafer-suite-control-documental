@@ -5314,7 +5314,7 @@ async function generarPDFConfirmacion(dirId) {
     const areaDepts = dirDepts.filter(d => d.area_id === area.id);
     if (!areaDepts.length) return;
     estructuraRows.push({ table:{ widths:['*','*','*','*'], body:[[
-      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:NAVY, margin:[8,5,8,5], colSpan:4 }, {},{},{}
+      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:ORANGE, margin:[8,5,8,5], colSpan:4 }, {},{},{}
     ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER}, margin:[0,4,0,0] });
     areaDepts.forEach((dept,i) => {
       estructuraRows.push(tdRow([dir.nombre, area.nombre, dept.nombre, 'Primaria'], i%2===0));
@@ -5341,13 +5341,13 @@ async function generarPDFConfirmacion(dirId) {
     const areaActs = dirActs.filter(a=>areaActIds.includes(a.departamento_id));
     if (!areaActs.length) return;
     catalogoRows.push({ table:{ widths:CAT_W, body:[[
-      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:NAVY, margin:[8,5,8,5], colSpan:5 }, {},{},{},{}
+      { text:`${area.numero} · ${area.nombre}`, bold:true, fontSize:8, color:WHITE, fillColor:ORANGE, margin:[8,5,8,5], colSpan:5 }, {},{},{},{}
     ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER}, margin:[0,6,0,0] });
     dirDepts.filter(d=>d.area_id===area.id).forEach(dept => {
       const deptActs = areaActs.filter(a=>a.departamento_id===dept.id);
       if (!deptActs.length) return;
       catalogoRows.push({ table:{ widths:CAT_W, body:[[
-        { text:dept.nombre, bold:true, fontSize:7.5, color:NAVY, fillColor:'#EEE8E0', margin:[14,3,8,3], colSpan:5 }, {},{},{},{}
+        { text:dept.nombre, bold:true, fontSize:7.5, color:ORANGE, fillColor:LIGHT, margin:[14,3,8,3], colSpan:5 }, {},{},{},{}
       ]]}, layout:{hLineWidth:()=>0.3,vLineWidth:()=>0.3,hLineColor:()=>BORDER,vLineColor:()=>BORDER} });
       deptActs.forEach((act,i) => {
         _actNum++;
