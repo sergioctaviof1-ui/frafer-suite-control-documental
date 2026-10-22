@@ -4515,8 +4515,18 @@ async function saveEditarAct() {
           prioridad: 'media'
         };
       });
-      const { error: catErr } = await sb.from('pol_catalogo').insert(newCats);
-      if (catErr) console.error('[saveEditarAct] new catalogo insert:', catErr.message);
+      const { data: insertedCats, error: catErr } = await sb.from('pol_catalogo').insert(newCats).select('id,tipo_documento');
+      if (catErr) { console.error('[saveEditarAct] new catalogo insert:', catErr.message); }
+      else if (insertedCats?.length) {
+        // Crear stubs pol_politicas para los nuevos catálogos inmediatamente
+        const nuevoObjetivo = objetivoNuevo || null;
+        const stubRows = insertedCats.map(c => ({
+          catalogo_id: c.id, version: 1, status: 'borrador',
+          objeto: c.tipo_documento === 'PLT' ? nuevoObjetivo : null
+        }));
+        const { error: stubErr } = await sb.from('pol_politicas').insert(stubRows);
+        if (stubErr) console.error('[saveEditarAct] stub insert:', stubErr.message);
+      }
     }
   } else if (objetivoNuevo !== objetivoInicial) {
     // Solo sincroniza objetivo si no hubo cambio de departamento
