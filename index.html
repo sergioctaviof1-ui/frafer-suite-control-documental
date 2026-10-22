@@ -4436,7 +4436,7 @@ function onEditActDirChange() {
       .sort((a,b)=>parseInt(a.numero)-parseInt(b.numero))
       .map(a=>`<option value="${a.id}">${a.numero} · ${a.nombre}</option>`)
       .join('');
-  document.getElementById('mract-dept').innerHTML = '<option value="">— selecciona área —</option>';
+  onEditActAreaChange();
 }
 
 function onEditActAreaChange() {
@@ -5263,10 +5263,10 @@ async function generarPDFConfirmacion(dirId) {
   const dir      = direcciones.find(d=>d.id===dirId);
   const dirAreas = areas.filter(a=>a.direccion_id===dirId).sort((a,b)=>parseInt(a.numero)-parseInt(b.numero));
   const areaById = Object.fromEntries(dirAreas.map(a=>[a.id,a]));
-  const dirDepts = departamentos.filter(d=>dirAreas.some(a=>a.id===d.area_id)).sort((a,b)=>a.orden-b.orden);
+  const dirDepts = departamentos.filter(d=>dirAreas.some(a=>a.id===d.area_id)).sort((a,b)=>{ const na=parseInt((areaById[a.area_id]||{}).numero)||0,nb=parseInt((areaById[b.area_id]||{}).numero)||0; return na!==nb ? na-nb : (a.orden||0)-(b.orden||0); });
   const deptById = Object.fromEntries(dirDepts.map(d=>[d.id,d]));
   const dirActs  = actividades.filter(a=>dirDepts.some(d=>d.id===a.departamento_id))
-                              .sort((a,b)=>(a.codigo||'').localeCompare(b.codigo||''));
+                              .sort((a,b)=>{ const dA=deptById[a.departamento_id],dB=deptById[b.departamento_id]; const na=parseInt((areaById[dA?.area_id]||{}).numero)||0,nb=parseInt((areaById[dB?.area_id]||{}).numero)||0; if(na!==nb) return na-nb; const oa=dA?.orden||0,ob=dB?.orden||0; if(oa!==ob) return oa-ob; return (a.codigo||'').localeCompare(b.codigo||''); });
 
   const ORANGE='#F15A22', NAVY='#1C2B3A', WHITE='#FFFFFF', LIGHT='#FFF3EC', GRAY='#666666', BORDER='#E0D8D0';
   const fecha = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
