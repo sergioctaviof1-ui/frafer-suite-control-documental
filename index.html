@@ -1795,7 +1795,7 @@ async function loadRepositorio() {
   const polMap  = Object.fromEntries(plcs.map(p   => [p.id,  p]));
   const polByCat= Object.fromEntries(plcs.map(p   => [p.catalogo_id, p]));
 
-  // Agrupar por política: una entrada con latest Word + latest PDF
+  // Agrupar versiones por política: latest Word + latest PDF
   const polDocs = {};
   vers.forEach(v => {
     if (!polDocs[v.politica_id]) polDocs[v.politica_id] = { word: null, pdf: null };
@@ -1804,13 +1804,14 @@ async function loadRepositorio() {
     if (!isPdf && !polDocs[v.politica_id].word) polDocs[v.politica_id].word = v;
   });
 
-  const enriched = Object.entries(polDocs).map(([polId, docs]) => {
-    const pol  = polMap[polId];  if (!pol)  return null;
+  // Construir desde pol_politicas — incluye políticas sin PDF (recién reasignadas o nuevas)
+  const enriched = plcs.map(pol => {
     const cat  = catMap[pol.catalogo_id]; if (!cat)  return null;
     const act  = actvMap[cat.actividad_id]; if (!act) return null;
     const dept = deptMap[act.departamento_id]; if (!dept) return null;
     const area = areaMap[dept.area_id]; if (!area) return null;
     const dir  = dirMap[area.direccion_id]; if (!dir) return null;
+    const docs = polDocs[pol.id] || { word: null, pdf: null };
     return { pol, cat, act, dept, area, dir, word: docs.word, pdf: docs.pdf };
   }).filter(Boolean);
 
