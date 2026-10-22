@@ -3977,8 +3977,45 @@ async function saveActividad() {
   const objetivo_politica = document.getElementById('mact-objetivo').value.trim() || null;
   const payload = { departamento_id, area_id, nombre, tipo: 'actividad', objetivo_politica };
   if (dept?.codigo) payload.codigo = `${dept.codigo}-${String(nextSeq).padStart(2,'0')}`;
-  const { error } = await sb.from('pol_actividades').insert(payload);
+  const { data: inserted, error } = await sb.from('pol_actividades').insert(payload).select('id').single();
   if (error) { showModalError('mact-error', error.message); return; }
+
+  // Crear automáticamente los 3 folios (PLT/PCS/PCD) + stubs en pol_politicas
+  const area  = areas.find(a=>a.id===area_id);
+  const dir   = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
+  if (dir && area && dept && inserted?.id) {
+    const actIdx = nextSeq - 1; // índice 0-based de la nueva actividad en su depto
+    const prefixes = { PLT: 'Política', PCS: 'Proceso', PCD: 'Procedimiento' };
+    const catRows = [];
+    for (const tipo of ['PLT','PCS','PCD']) {
+      const folio = computeFolio(tipo, dir, area, dept, actIdx);
+      const { data: existCat } = await sb.from('pol_catalogo')
+        .select('id').eq('area_id', area_id).eq('tipo_documento', tipo);
+      const numero = (existCat?.length || 0) + 1;
+      const { data: cat, error: catErr } = await sb.from('pol_catalogo').insert({
+        area_id, actividad_id: inserted.id, tipo_documento: tipo,
+        nombre: `${prefixes[tipo]} de ${nombre}`,
+        codigo_documento: folio, numero, prioridad: 'media'
+      }).select('id').single();
+      if (catErr) { console.error(`[saveActividad] pol_catalogo ${tipo}:`, catErr.message); continue; }
+      catRows.push(cat.id);
+    }
+    if (catRows.length) {
+      const stubs = catRows.map(cid => ({ catalogo_id: cid, version: 1, status: 'borrador' }));
+      const { error: stubErr } = await sb.from('pol_politicas').insert(stubs);
+      if (stubErr) {
+        console.error('[saveActividad] pol_politicas stubs:', stubErr.message);
+        alert(`⚠ Actividad guardada pero los stubs de política fallaron.\nRevisa la actividad "${nombre}" en el repositorio.`);
+      }
+    }
+    if (catRows.length < 3) {
+      alert(`⚠ Actividad "${nombre}" guardada, pero solo se crearon ${catRows.length} de 3 folios. Revisa la consola.`);
+    }
+  } else {
+    alert(`⚠ Actividad "${nombre}" guardada sin folio — no se encontró Dirección/Área/Departamento en memoria. Recarga la página e intenta de nuevo.`);
+    console.warn('[saveActividad] Sin dir/area/dept — folios no creados para:', nombre);
+  }
+
   closeModal('modal-actividad');
   loadCatalogo(); loadAdmin();
 }
@@ -4545,16 +4582,57 @@ async function saveEditarAct() {
         if (stubErr) console.error('[saveEditarAct] stub insert:', stubErr.message);
       }
     }
-  } else if (objetivoNuevo !== objetivoInicial) {
-    // Solo sincroniza objetivo si no hubo cambio de departamento
-    const cat = catalogo.find(c => c.actividad_id === actId && c.tipo_documento === 'PLT');
-    if (cat) {
-      const { error: syncErr } = await sb.from('pol_politicas')
-        .update({ objeto: objetivoNuevo }).eq('catalogo_id', cat.id);
-      if (syncErr) console.error('[saveEditarAct] sync objeto:', syncErr.message);
+  } else {
+    // Sin cambio de departamento — verificar que existan folios, crear si faltan
+    const { data: existFolios } = await sb.from('pol_catalogo')
+      .select('id').eq('actividad_id', actId).eq('activo', true);
+    if (!existFolios?.length) {
+      const area   = areas.find(a=>a.id===areaId);
+      const dir    = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
+      if (area && dir && dept) {
+        const actIdx = actIndexInDept(actId, deptId);
+        const pref = {PLT:'Política',PCS:'Proceso',PCD:'Procedimiento'};
+        const newIds = [];
+        for (const tipo of ['PLT','PCS','PCD']) {
+          const folio = computeFolio(tipo, dir, area, dept, actIdx);
+          const {data:cnt} = await sb.from('pol_catalogo').select('id').eq('area_id',areaId).eq('tipo_documento',tipo).eq('activo',true);
+          const {data:nc, error:ce} = await sb.from('pol_catalogo').insert({
+            area_id:areaId, actividad_id:actId, tipo_documento:tipo,
+            nombre:`${pref[tipo]} de ${nombre}`,
+            codigo_documento:folio, numero:(cnt?.length||0)+1, prioridad:'media'
+          }).select('id').single();
+          if (ce) { console.error('[saveEditarAct] folio faltante:', ce.message); continue; }
+          newIds.push(nc.id);
+        }
+        if (newIds.length) {
+          await sb.from('pol_politicas').insert(newIds.map(cid=>({catalogo_id:cid,version:1,status:'borrador',objeto:objetivoNuevo||null})));
+          console.log('[saveEditarAct] folios creados para actividad sin folio:', nombre);
+        } else {
+          alert(`⚠ "${nombre}" guardada pero no se pudieron crear los folios. Revisa la consola.`);
+        }
+      } else {
+        alert(`⚠ "${nombre}" guardada sin folio — no se encontró Dirección/Área en memoria.`);
+      }
+    } else {
+      const nombreCambio = act && act.nombre !== nombre;
+      const objetivoCambio = objetivoNuevo !== objetivoInicial;
+      if (nombreCambio) {
+        const pref = {PLT:'Política',PCS:'Proceso',PCD:'Procedimiento'};
+        const { data: catsAct } = await sb.from('pol_catalogo').select('id,tipo_documento').eq('actividad_id',actId).eq('activo',true);
+        for (const c of (catsAct||[])) {
+          await sb.from('pol_catalogo').update({ nombre:`${pref[c.tipo_documento]} de ${nombre}` }).eq('id',c.id);
+        }
+      }
+      if (objetivoCambio) {
+        const cat = catalogo.find(c => c.actividad_id === actId && c.tipo_documento === 'PLT');
+        if (cat) {
+          const { error: syncErr } = await sb.from('pol_politicas').update({ objeto: objetivoNuevo }).eq('catalogo_id', cat.id);
+          if (syncErr) console.error('[saveEditarAct] sync objeto:', syncErr.message);
+        }
+        const actMem = actividades.find(a => a.id === actId);
+        if (actMem) actMem.objetivo_politica = objetivoNuevo;
+      }
     }
-    const actMem = actividades.find(a => a.id === actId);
-    if (actMem) actMem.objetivo_politica = objetivoNuevo;
   }
 
   closeModal('modal-reasignar-act');
@@ -4708,6 +4786,47 @@ async function setPorAutorizar(dirId) {
   }
 }
 
+async function _crearFoliosFaltantes(dirId) {
+  const aIds = areas.filter(a=>a.direccion_id===dirId).map(a=>a.id);
+  const dIds = departamentos.filter(d=>aIds.includes(d.area_id)).map(d=>d.id);
+  const actIds = actividades.filter(a=>dIds.includes(a.departamento_id)&&a.activa).map(a=>a.id);
+  if (!actIds.length) return;
+  const { data: existing } = await sb.from('pol_catalogo').select('actividad_id').in('actividad_id',actIds).eq('tipo_documento','PLT').eq('activo',true);
+  const existSet = new Set((existing||[]).map(r=>r.actividad_id));
+  const faltantes = actividades.filter(a=>actIds.includes(a.id)&&!existSet.has(a.id));
+  if (!faltantes.length) return;
+  const pref = {PLT:'Política',PCS:'Proceso',PCD:'Procedimiento'};
+  for (const act of faltantes) {
+    const dept=departamentos.find(d=>d.id===act.departamento_id);
+    const area=dept?areas.find(a=>a.id===dept.area_id):null;
+    const dir=area?direcciones.find(d=>d.id===area.direccion_id):null;
+    if (!dept||!area||!dir) continue;
+    const idx=actIndexInDept(act.id,dept.id);
+    const ids=[];
+    for (const t of ['PLT','PCS','PCD']) {
+      const f=computeFolio(t,dir,area,dept,idx);
+      // Si ya existe basura con ese folio, vincularla; si no, insertar nueva
+      const {data:orphan}=await sb.from('pol_catalogo').select('id').eq('codigo_documento',f).is('actividad_id',null).maybeSingle();
+      let catId=null;
+      if (orphan?.id) {
+        const {error:ue}=await sb.from('pol_catalogo').update({actividad_id:act.id,nombre:`${pref[t]} de ${act.nombre}`,activo:true}).eq('id',orphan.id);
+        if (ue){console.error('[_crearFolios] update:',ue.message);continue;}
+        catId=orphan.id;
+      } else {
+        const {data:cnt}=await sb.from('pol_catalogo').select('id').eq('area_id',area.id).eq('tipo_documento',t).eq('activo',true);
+        const {data:c,error:e}=await sb.from('pol_catalogo').insert({area_id:area.id,actividad_id:act.id,tipo_documento:t,nombre:`${pref[t]} de ${act.nombre}`,codigo_documento:f,numero:(cnt?.length||0)+1,prioridad:'media'}).select('id').single();
+        if (e){console.error('[_crearFolios] insert:',e.message);continue;}
+        catId=c.id;
+      }
+      ids.push(catId);
+    }
+    if (ids.length) {
+      await sb.from('pol_politicas').insert(ids.map(cid=>({catalogo_id:cid,version:1,status:'borrador',objeto:act.objetivo_politica||null})));
+      console.log('[_crearFolios] creado:',act.nombre);
+    }
+  }
+}
+
 async function regenerarPDFsDir(dirId) {
   const dir = direcciones.find(d=>d.id===dirId);
   if (!dir) return;
@@ -4717,6 +4836,21 @@ async function regenerarPDFsDir(dirId) {
   const deptIds  = departamentos.filter(d=>areaIds.includes(d.area_id)).map(d=>d.id);
   const dirActIds= actividades.filter(a=>deptIds.includes(a.departamento_id)&&a.activa).map(a=>a.id);
   if (!dirActIds.length) { alert('Sin actividades en esta dirección.'); return; }
+
+  // Inactivar basura: pol_catalogo de esta dirección sin actividad válida
+  if (areaIds.length) {
+    const { data: basura } = await sb.from('pol_catalogo')
+      .select('id,codigo_documento').in('area_id', areaIds).is('actividad_id', null);
+    if (basura?.length) {
+      const basuraIds = basura.map(b=>b.id);
+      console.log(`[regenerarPDFsDir] Inactivando ${basura.length} entradas sin actividad:`, basura.map(b=>b.codigo_documento));
+      const { error: upErr } = await sb.from('pol_catalogo').update({ activo: false }).in('id', basuraIds);
+      if (upErr) console.error('[regenerarPDFsDir] basura inactivar:', upErr.message);
+      else console.log(`[regenerarPDFsDir] ${basura.length} entradas basura inactivadas.`);
+    }
+  }
+
+  await _crearFoliosFaltantes(dirId);
 
   const { data: cats } = await sb.from('pol_catalogo')
     .select('id,actividad_id,codigo_documento,nombre').in('actividad_id', dirActIds).eq('tipo_documento','PLT').eq('activo',true);
