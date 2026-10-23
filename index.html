@@ -2490,11 +2490,15 @@ async function loadHistorial(polId) {
 async function downloadVersion(path, nombre, btn) {
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   const { data: signed } = await sb.storage.from('politicas-docs').createSignedUrl(path, 3600);
-  if (btn) { btn.disabled = false; btn.textContent = '↓ Descargar'; }
-  if (!signed?.signedUrl) { alert('No se pudo generar el enlace de descarga.'); return; }
-  const a = document.createElement('a');
-  a.href = signed.signedUrl; a.download = nombre; a.target = '_blank';
+  if (!signed?.signedUrl) { if (btn) { btn.disabled = false; btn.textContent = '↓ Descargar'; } alert('No se pudo generar el enlace de descarga.'); return; }
+  const resp = await fetch(signed.signedUrl);
+  const blob = await resp.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nombre;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  if (btn) { btn.disabled = false; btn.textContent = '↓ Descargar'; }
 }
 
 async function loadComentarios(polId) {
