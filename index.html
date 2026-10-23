@@ -1624,11 +1624,7 @@ async function loadCatalogo() {
       const lvDocx = r.pol ? latestVersDocx[r.pol.id] : null;
       const lvPDF  = r.pol ? latestVersPDF[r.pol.id]  : null;
       const vtag = r.pol ? _vigenciaTag(r.pol) : '';
-      const chipWord = lvDocx
-        ? `<button onclick="downloadVersion('${lvDocx.url_storage}','${(lvDocx.nombre_archivo||'doc').replace(/'/g,"\\'")}',this)"
-             style="font-size:10px;font-family:var(--ff-mono);font-weight:700;color:var(--navy);background:#EBF2FB;border:1px solid #B0C8E8;border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
-             📝 Word v${lvDocx.version}</button>`
-        : r.cat
+      const chipWord = r.cat
           ? `<button onclick="generateWordFromCatalogo('${r.cat.id}')"
                style="font-size:10px;font-family:var(--ff-mono);color:var(--fog);background:none;border:1px dashed var(--stone);border-radius:4px;padding:2px 8px;cursor:pointer;white-space:nowrap">
                📝 Word</button>`
