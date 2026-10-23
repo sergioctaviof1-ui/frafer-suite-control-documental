@@ -1524,7 +1524,7 @@ async function loadCatalogo() {
     sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
     sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
-    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at,fecha_vencimiento'),
+    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at,fecha_vencimiento,objeto,alcance,marco_normativo,definiciones,responsabilidades,contenido,controles_cumplimiento,sanciones,excepciones,canal_comunicacion,esquema_capacitacion,directrices_valores,responsable_direccion,responsable_elaboracion,autorizado_por,colaboradores,vigencia_meses,fecha_inicio_vigencia,num_reglas'),
     sb.from('pol_versiones').select('politica_id,version,url_storage,nombre_archivo').order('version', { ascending: false })
   ]);
   direcciones = dirsData||[]; areas = areasData||[];
@@ -3531,7 +3531,8 @@ async function _generateWordCore(d, download=true) {
 
     // ── DESCARGAR (solo si se solicitó) ──────────────────────────────────────
     const blob = await Packer.toBlob(doc);
-    const fileName = `${d.folio}_v${versionNum}.docx`;
+    const _wSlug = (d.nombre||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/\s+/g,'-').slice(0,40);
+    const fileName = `${d.folio}${_wSlug?'_'+_wSlug:''}_v${versionNum}.docx`;
     if (download) {
       const url = URL.createObjectURL(blob);
       const a   = document.createElement('a');
@@ -4001,7 +4002,7 @@ async function saveActividad() {
       catRows.push(cat.id);
     }
     if (catRows.length) {
-      const stubs = catRows.map(cid => ({ catalogo_id: cid, version: 1, status: 'borrador' }));
+      const stubs = catRows.map(cid => ({ catalogo_id: cid, version: 1, status: 'borrador', objeto: objetivo_politica || null }));
       const { error: stubErr } = await sb.from('pol_politicas').insert(stubs);
       if (stubErr) {
         console.error('[saveActividad] pol_politicas stubs:', stubErr.message);
