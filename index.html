@@ -3562,8 +3562,6 @@ async function _generateWordCore(d, download=true) {
       });
       if (insErr) {
         console.error('[Word] pol_versiones insert error:', insErr.message);
-      } else {
-        loadCatalogo();
       }
     }
 
@@ -3643,8 +3641,6 @@ async function generateWordFromCatalogo(catId) {
     await _generateWordCore(d);
   } finally {
     politicaActual = savedPol;
-    // Refrescar catálogo para mostrar la nueva versión en la columna Documento
-    loadCatalogo();
   }
 }
 
