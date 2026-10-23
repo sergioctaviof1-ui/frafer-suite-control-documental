@@ -813,6 +813,8 @@ input,textarea,select{font-family:inherit}
     <div class="doc-body">
       <!-- TAB: CONTENIDO -->
       <div class="tab-panel active pol-form-sections" id="tab-contenido">
+        <div class="alert alert-success" id="pol-success" style="margin-bottom:8px"></div>
+        <div class="alert alert-error" id="pol-error" style="margin-bottom:8px"></div>
         <div class="form-section" style="background:var(--linen);border:1px solid var(--stone);border-radius:10px;padding:16px 20px;margin-bottom:4px">
           <div class="form-section-title" style="margin-bottom:8px">Nombre de la Política</div>
           <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
@@ -888,8 +890,6 @@ input,textarea,select{font-family:inherit}
             <div class="form-group"><label>Fecha de Vencimiento</label><input id="pol-fecha-venc" type="date" readonly style="opacity:.6" title="Fecha de Autorización + Vigencia"></div>
           </div>
         </div>
-        <div class="alert alert-success" id="pol-success"></div>
-        <div class="alert alert-error" id="pol-error"></div>
       </div>
 
       <!-- TAB: TRACKING -->
@@ -2326,13 +2326,13 @@ async function savePolitica() {
       }
       fillPoliticaForm(newPol);
       loadCatalogo();
-      sEl.textContent = 'Guardado · Generando documentos…'; sEl.classList.add('show');
+      sEl.textContent = 'Guardado · Generando documentos…'; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
       try {
         await _generateWordCore(_getDocData(), false);
         await generatePDF(false);
         sEl.textContent = '✓ Política creada · Documentos generados v1.';
       } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = 'Contenido guardado (error al generar documentos).'; }
-      setTimeout(() => sEl.classList.remove('show'), 3500);
+      setTimeout(() => sEl.classList.remove('show'), 5000);
     } else {
       eEl.textContent = error?.message || 'Error al guardar'; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000);
     }
@@ -2352,13 +2352,13 @@ async function savePolitica() {
     }
     fillPoliticaForm(politicaActual);
     loadCatalogo();
-    sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show');
+    sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
     try {
       await _generateWordCore(_getDocData(), false);
       await generatePDF(false);
       sEl.textContent = `✓ Cambios guardados · Documentos generados v${newVersion}.`;
     } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = `Contenido guardado v${newVersion} (error al generar documentos).`; }
-    setTimeout(() => sEl.classList.remove('show'), 3500);
+    setTimeout(() => sEl.classList.remove('show'), 5000);
   }
 }
 
