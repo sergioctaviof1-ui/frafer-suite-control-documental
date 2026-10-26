@@ -4809,6 +4809,29 @@ async function regenerarPDFsDir(dirId) {
       if (upErr) console.error('[regenerarPDFsDir] basura inactivar:', upErr.message);
       else console.log(`[regenerarPDFsDir] ${basura.length} entradas basura inactivadas.`);
     }
+
+    // Inactivar duplicados: mismo (actividad_id, tipo_documento) → conservar el más nuevo
+    const { data: todosActivos } = await sb.from('pol_catalogo')
+      .select('id,actividad_id,tipo_documento,created_at').in('area_id', areaIds).eq('activo', true).not('actividad_id','is',null);
+    if (todosActivos?.length) {
+      const grupos = {};
+      todosActivos.forEach(c => {
+        const key = `${c.actividad_id}:${c.tipo_documento}`;
+        if (!grupos[key]) grupos[key] = [];
+        grupos[key].push(c);
+      });
+      const aDuplicados = [];
+      Object.values(grupos).forEach(g => {
+        if (g.length < 2) return;
+        g.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)); // más nuevo primero
+        aDuplicados.push(...g.slice(1).map(c=>c.id)); // inactivar todos menos el más nuevo
+      });
+      if (aDuplicados.length) {
+        const { error: dupErr } = await sb.from('pol_catalogo').update({ activo: false }).in('id', aDuplicados);
+        if (dupErr) console.error('[regenerarPDFsDir] duplicados inactivar:', dupErr.message);
+        else console.log(`[regenerarPDFsDir] ${aDuplicados.length} duplicado(s) inactivados.`);
+      }
+    }
   }
 
   await _crearFoliosFaltantes(dirId);
