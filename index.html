@@ -3977,42 +3977,6 @@ async function saveActividad() {
   const { data: inserted, error } = await sb.from('pol_actividades').insert(payload).select('id').single();
   if (error) { showModalError('mact-error', error.message); return; }
 
-  // Crear automáticamente los 3 folios (PLT/PCS/PCD) + stubs en pol_politicas
-  const area  = areas.find(a=>a.id===area_id);
-  const dir   = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
-  if (dir && area && dept && inserted?.id) {
-    const actIdx = nextSeq - 1; // índice 0-based de la nueva actividad en su depto
-    const prefixes = { PLT: 'Política', PCS: 'Proceso', PCD: 'Procedimiento' };
-    const catRows = [];
-    for (const tipo of ['PLT','PCS','PCD']) {
-      const folio = computeFolio(tipo, dir, area, dept, actIdx);
-      const { data: existCat } = await sb.from('pol_catalogo')
-        .select('id').eq('area_id', area_id).eq('tipo_documento', tipo);
-      const numero = (existCat?.length || 0) + 1;
-      const { data: cat, error: catErr } = await sb.from('pol_catalogo').insert({
-        area_id, actividad_id: inserted.id, tipo_documento: tipo,
-        nombre: `${prefixes[tipo]} de ${nombre}`,
-        codigo_documento: folio, numero, prioridad: 'media'
-      }).select('id').single();
-      if (catErr) { console.error(`[saveActividad] pol_catalogo ${tipo}:`, catErr.message); continue; }
-      catRows.push(cat.id);
-    }
-    if (catRows.length) {
-      const stubs = catRows.map(cid => ({ catalogo_id: cid, version: 1, status: 'borrador', objeto: objetivo_politica || null }));
-      const { error: stubErr } = await sb.from('pol_politicas').insert(stubs);
-      if (stubErr) {
-        console.error('[saveActividad] pol_politicas stubs:', stubErr.message);
-        alert(`⚠ Actividad guardada pero los stubs de política fallaron.\nRevisa la actividad "${nombre}" en el repositorio.`);
-      }
-    }
-    if (catRows.length < 3) {
-      alert(`⚠ Actividad "${nombre}" guardada, pero solo se crearon ${catRows.length} de 3 folios. Revisa la consola.`);
-    }
-  } else {
-    alert(`⚠ Actividad "${nombre}" guardada sin folio — no se encontró Dirección/Área/Departamento en memoria. Recarga la página e intenta de nuevo.`);
-    console.warn('[saveActividad] Sin dir/area/dept — folios no creados para:', nombre);
-  }
-
   closeModal('modal-actividad');
   loadCatalogo(); loadAdmin();
 }
