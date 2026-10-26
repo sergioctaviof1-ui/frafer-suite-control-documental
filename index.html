@@ -2232,6 +2232,14 @@ function fillPoliticaForm(pol) {
   Object.entries(map).forEach(([elId, key]) => {
     const el = document.getElementById(elId); if (el) el.value = pol[key]||'';
   });
+  // Auto-fill Dirección Responsable desde jerarquía si está vacío
+  const respDirEl = document.getElementById('pol-resp-dir');
+  if (respDirEl && !respDirEl.value) {
+    const cat = catalogo.find(c => c.id === pol.catalogo_id);
+    const area = cat ? areas.find(a => a.id === cat.area_id) : null;
+    const dir  = area ? direcciones.find(d => d.id === area.direccion_id) : null;
+    if (dir) respDirEl.value = dir.nombre;
+  }
   // num_reglas
   const nr = document.getElementById('pol-num-reglas');
   if (nr) nr.value = pol.num_reglas ?? '';
