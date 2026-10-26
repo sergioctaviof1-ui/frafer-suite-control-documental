@@ -862,6 +862,10 @@ input,textarea,select{font-family:inherit}
           <div class="form-group full"><textarea id="pol-excepciones" rows="3" placeholder="Casos o situaciones fuera del alcance de esta política"></textarea></div>
         </div>
         <div class="form-section">
+          <div class="form-section-title">Documentos y Políticas Relacionadas</div>
+          <div class="form-group full"><textarea id="pol-documentos-relacionados" rows="3" placeholder="Otras políticas, procesos o documentos relacionados con esta política"></textarea></div>
+        </div>
+        <div class="form-section">
           <div class="form-section-title">Controles y Monitoreo</div>
           <div class="form-group full"><textarea id="pol-controles-cumplimiento" rows="3" placeholder="Indicadores de cumplimiento · Frecuencia de auditoría · Responsable de medición · Evidencias requeridas"></textarea></div>
         </div>
@@ -1524,7 +1528,7 @@ async function loadCatalogo() {
     sb.from('pol_departamentos').select('*').eq('activo',true).order('orden'),
     sb.from('pol_actividades').select('*').eq('activa',true).order('created_at'),
     sb.from('pol_catalogo').select('*').eq('activo',true).order('numero'),
-    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at,fecha_vencimiento,objeto,alcance,marco_normativo,definiciones,responsabilidades,contenido,controles_cumplimiento,sanciones,excepciones,canal_comunicacion,esquema_capacitacion,directrices_valores,responsable_direccion,responsable_elaboracion,autorizado_por,colaboradores,vigencia_meses,fecha_inicio_vigencia,num_reglas'),
+    sb.from('pol_politicas').select('id,catalogo_id,status,version,updated_at,fecha_vencimiento,objeto,alcance,marco_normativo,definiciones,responsabilidades,contenido,controles_cumplimiento,sanciones,excepciones,documentos_relacionados,canal_comunicacion,esquema_capacitacion,directrices_valores,responsable_direccion,responsable_elaboracion,autorizado_por,colaboradores,vigencia_meses,fecha_inicio_vigencia,num_reglas,documento_adjunto_url,documento_adjunto_nombre'),
     sb.from('pol_versiones').select('politica_id,version,url_storage,nombre_archivo').order('version', { ascending: false })
   ]);
   direcciones = dirsData||[]; areas = areasData||[];
@@ -2212,7 +2216,7 @@ function fillPoliticaForm(pol) {
   const polWithGov = { ...pol, ...govFallback };
 
   const fields = ['objeto','alcance','marco_normativo','definiciones','responsabilidades',
-    'contenido','controles_cumplimiento','sanciones','excepciones',
+    'contenido','controles_cumplimiento','sanciones','excepciones','documentos_relacionados',
     'canal_comunicacion','esquema_capacitacion','directrices_valores',
     'levantado_por','revisado_por','autorizado_por'];
   fields.forEach(f => {
@@ -2289,6 +2293,7 @@ async function savePolitica() {
     controles_cumplimiento:   document.getElementById('pol-controles-cumplimiento').value,
     sanciones:                document.getElementById('pol-sanciones').value,
     excepciones:              document.getElementById('pol-excepciones').value,
+    documentos_relacionados:  document.getElementById('pol-documentos-relacionados').value,
     num_reglas:               parseInt(document.getElementById('pol-num-reglas').value)||null,
     responsable_direccion:    document.getElementById('pol-resp-dir').value,
     responsable_elaboracion:  document.getElementById('pol-resp-elab').value,
@@ -2701,8 +2706,9 @@ function _getDocData() {
     contenido:        g('pol-contenido'),
     controles:        g('pol-controles-cumplimiento'),
     sanciones:        g('pol-sanciones'),
-    excepciones:      g('pol-excepciones'),
-    numReglas:        g('pol-num-reglas'),
+    excepciones:          g('pol-excepciones'),
+    documentosRelacionados: g('pol-documentos-relacionados'),
+    numReglas:            g('pol-num-reglas'),
     respDir:          g('pol-resp-dir'),
     respElab:         g('pol-resp-elab'),
     autorizadoPor:    g('pol-autorizado-por'),
@@ -3177,6 +3183,7 @@ function _buildPolicyPDFDef(d, versHist) {
       ...mkSec('Controles y Monitoreo',          d.controles),
       ...mkSec('Sanciones por Incumplimiento',   d.sanciones),
       ...mkSec('Excepciones y Casos Especiales', d.excepciones),
+      ...mkSec('Documentos y Políticas Relacionadas', d.documentosRelacionados),
       grpLabel('Comunicación e Implementación'),
       ...mkSec('Canal de Comunicación',          d.canal),
       ...mkSec('Esquema de Capacitación',        d.capacitacion),
@@ -3517,6 +3524,7 @@ async function _generateWordCore(d, download=true) {
           ...mkSec('Controles y Monitoreo',             d.controles),
           ...mkSec('Sanciones por Incumplimiento',      d.sanciones),
           ...mkSec('Excepciones y Casos Especiales',    d.excepciones),
+          ...mkSec('Documentos y Políticas Relacionadas', d.documentosRelacionados),
           grpLabel('Comunicación e Implementación'),
           ...mkSec('Canal de Comunicación',             d.canal),
           ...mkSec('Esquema de Capacitación',           d.capacitacion),
