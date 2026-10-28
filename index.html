@@ -1125,6 +1125,13 @@ input,textarea,select{font-family:inherit}
       </div>
     </div>
 
+    <!-- CAMPO 8: SANCIONES INSTITUCIONALES -->
+    <div style="border:1px solid var(--stone);border-radius:10px;padding:18px 20px;background:var(--bg);margin-bottom:24px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ember-deep);margin-bottom:6px">CAMPO 8 · SANCIONES INSTITUCIONALES</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Criterios de gravedad, rutas de sanción y corresponsabilidad que aplican a todas las políticas del Grupo (8.4–8.10). La política individual documenta solo las conductas específicas (8.1–8.3).</div>
+      <textarea id="gc-sanciones" rows="22" style="width:100%;font-size:12px;padding:0;border:none;resize:vertical;font-family:var(--ff-body);color:var(--ink);background:transparent;line-height:1.7" placeholder="Documenta los criterios de gravedad y rutas de sanción institucionales…"></textarea>
+    </div>
+
     <!-- HISTORIAL DE VERSIONES -->
     <div style="border:1px solid var(--stone);border-radius:10px;overflow:hidden">
       <div style="background:var(--linen);padding:12px 18px;border-bottom:1px solid var(--stone);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--navy)">HISTORIAL DE VERSIONES</div>
@@ -5135,6 +5142,8 @@ async function loadGobiernoCorporativo() {
   document.getElementById('gc-valores').value      = d.directrices_valores  || '';
   document.getElementById('gc-canal').value        = d.canal_comunicacion   || '';
   document.getElementById('gc-capacitacion').value = d.esquema_capacitacion || '';
+  const GC_SANCIONES_DEFAULT = `8.4 Criterio de gravedad\n8.4.1 Leve: omisión o descuido con efecto nulo.\n8.4.2 Grave: negligencia que afecta la operación, la seguridad o los recursos del Grupo.\n8.4.3 Crítico: acto intencional, o realizado en beneficio particular de quien lo comete.\n8.4.4 La reincidencia sube un nivel, igual que un efecto o una intención mayores a los de la conducta listada.\n8.4.5 Se sanciona al rol responsable de la regla incumplida, conforme a la sección 5.\n8.5 Corresponsabilidad de la jefatura\n8.5.1 La jefatura que encubre un incumplimiento grave o crítico es corresponsable y se sanciona con el nivel de ese incumplimiento.\n8.5.2 El incumplimiento leve afecta solo a su responsable.\n8.6 Ruta de lo leve\n8.6.1 La jefatura directa atiende el caso y lo registra en la Evaluación de desempeño de la Dirección de Talento.\n8.7 Ruta de auditoría\n8.7.1 Auditoría Interna determina la sanción conforme a esta sección.\n8.7.2 Contraloría General la canaliza al Comité de Ética o al Consejo Administrativo, conforme a la política incumplida.\n8.7.3 Contraloría General da seguimiento a la sanción y verifica su aplicación.\n8.8 Ruta de eventualidades graves y críticas\n8.8.1 Quien detecta el incumplimiento, en particular la jefatura directa, lo registra como caso, con la evidencia del control, en el canal de denuncias o en las herramientas de gobernanza de Contraloría General.\n8.8.2 La clasificación al ingreso asigna el nivel.\n8.8.3 Grave: la jefatura directa investiga con la evidencia y la Dirección de Talento aplica la medida del Reglamento Interior de Trabajo.\n8.8.4 Crítico: el Comité de Ética investiga, delibera, determina y aplica la sanción. Escala al Consejo Administrativo cuando el caso lo rebasa por nivel jerárquico o por riesgo legal o reputacional.\n8.8.5 Contraloría General da seguimiento a toda sanción grave documentada y verifica su aplicación; el Comité de Ética da seguimiento a las sanciones críticas.\n8.9 Consecuencia por nivel de gravedad\n8.9.1 Cada nivel se sanciona con la medida disciplinaria que el Reglamento Interior de Trabajo parametriza para ese nivel, y la Dirección de Talento la registra en el expediente del colaborador.\n8.10 Proveedores y terceros\n8.10.1 El incumplimiento se atiende conforme a las cláusulas del contrato y a la política de Conducta para terceros.`;
+  document.getElementById('gc-sanciones').value = d.sanciones_institucionales || GC_SANCIONES_DEFAULT;
   document.getElementById('gc-version-label').textContent = `Versión ${d.version}`;
   document.getElementById('gc-fecha-label').textContent   =
     `Creado: ${new Date(d.created_at).toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`;
@@ -5190,8 +5199,9 @@ async function saveGobiernoCorporativo() {
     marco_normativo:      document.getElementById('gc-marco')?.value?.trim()        || null,
     directrices_valores:  document.getElementById('gc-valores')?.value?.trim()      || null,
     canal_comunicacion:   document.getElementById('gc-canal')?.value?.trim()        || null,
-    esquema_capacitacion: document.getElementById('gc-capacitacion')?.value?.trim() || null,
-    updated_at:           new Date().toISOString()
+    esquema_capacitacion:      document.getElementById('gc-capacitacion')?.value?.trim()  || null,
+    sanciones_institucionales: document.getElementById('gc-sanciones')?.value?.trim()     || null,
+    updated_at:                new Date().toISOString()
   };
 
   if (_gcCurrent?.id) {
