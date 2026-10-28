@@ -3721,19 +3721,104 @@ async function generateWordFromCatalogo(catId) {
 }
 
 // ── ADJUNTAR DOCUMENTO ────────────────────────────────────────────────────────
-function renderDocAdjunto() {
-  const banner  = document.getElementById('doc-adjunto-banner');
-  const link    = document.getElementById('doc-adjunto-link');
+async function renderDocAdjunto() {
+  const banner = document.getElementById('doc-adjunto-banner');
+  const link   = document.getElementById('doc-adjunto-link');
   if (!banner || !link) return;
-  const url     = politicaActual?.documento_adjunto_url;
-  const nombre  = politicaActual?.documento_adjunto_nombre;
+  let url    = politicaActual?.documento_adjunto_url;
+  const nombre = politicaActual?.documento_adjunto_nombre;
   if (url) {
+    // Si es path raw (no URL firmada), generar signed URL fresca
+    if (!url.startsWith('https://')) {
+      const { data: sgn } = await sb.storage.from('politicas-docs').createSignedUrl(url, 3600);
+      if (sgn?.signedUrl) { url = sgn.signedUrl; politicaActual.documento_adjunto_url = url; }
+    }
     banner.style.display = 'flex';
     link.href = url;
     link.textContent = nombre || 'Ver documento';
   } else {
     banner.style.display = 'none';
   }
+}
+
+// ── EXTRACCIÓN DE CONTENIDO DESDE .docx ──────────────────────────────────────
+const _DOCX_FIELD_MAP = {
+  'PROPOSITO Y OBJETIVO':              'objeto',
+  'ALCANCE':                           'alcance',
+  'MARCO NORMATIVO Y REFERENCIAS':     'marco_normativo',
+  'DEFINICIONES Y TERMINOLOGIA':       'definiciones',
+  'RESPONSABILIDADES':                 'responsabilidades',
+  'LINEAMIENTOS Y REGLAS':             'contenido',
+  'CONTROLES Y MONITOREO':             'controles_cumplimiento',
+  'SANCIONES POR INCUMPLIMIENTO':      'sanciones',
+  'EXCEPCIONES Y CASOS ESPECIALES':    'excepciones',
+  'CANAL DE COMUNICACION':             'canal_comunicacion',
+  'ESQUEMA DE CAPACITACION':           'esquema_capacitacion',
+  'DIRECTRICES Y VALORES ASOCIADOS':   'directrices_valores',
+  'DOCUMENTOS Y POLITICAS RELACIONADAS': 'documentos_relacionados',
+};
+
+function _normalizeKey(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
+}
+
+async function _extractDocxContent(file) {
+  if (!window.JSZip) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
+  }
+  const zip    = await JSZip.loadAsync(file);
+  const xmlStr = await zip.file('word/document.xml').async('string');
+  const xml    = new DOMParser().parseFromString(xmlStr, 'application/xml');
+  const NS     = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const getText = el => Array.from(el.getElementsByTagNameNS(NS,'t')).map(t=>t.textContent).join('');
+
+  const body     = xml.getElementsByTagNameNS(NS,'body')[0];
+  if (!body) return {};
+  const children = Array.from(body.childNodes).filter(n=>n.nodeType===1);
+
+  const sections = {};
+  let curField   = null;
+  let curLines   = [];
+
+  const flushSection = () => {
+    if (curField) {
+      let text = curLines.join('\n').trim();
+      // Para sanciones: descartar el bloque institucional (8.4+) que inyecta el GC
+      if (curField === 'sanciones') {
+        const cutIdx = text.search(/\n?8\.4[\s\S]/);
+        if (cutIdx > 0) text = text.slice(0, cutIdx).trim();
+      }
+      if (text && text !== '[ Completar este campo ]') sections[curField] = text;
+    }
+    curField = null; curLines = [];
+  };
+
+  const STOP_TABLES = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORÓ|ELABORO/;
+
+  for (const child of children) {
+    const localName = (child.localName||'').toLowerCase();
+    if (localName === 'tbl') {
+      const cellText = getText(child).trim();
+      // ¿Es tabla de firma/historial? → cerrar sección activa y parar
+      if (STOP_TABLES.test(_normalizeKey(cellText))) { flushSection(); break; }
+      // ¿Es encabezado de sección? → patrón "N. TÍTULO"
+      const m = cellText.match(/^\d{1,2}\.\s+(.+)$/);
+      if (m) {
+        flushSection();
+        const key = _DOCX_FIELD_MAP[_normalizeKey(m[1])];
+        if (key) curField = key;
+      }
+    } else if (localName === 'p' && curField) {
+      const t = getText(child).trim();
+      if (t) curLines.push(t);
+    }
+  }
+  flushSection();
+  return sections;
 }
 
 async function handleAdjunto(input) {
@@ -3744,31 +3829,46 @@ async function handleAdjunto(input) {
     alert('Guarda la política primero para poder adjuntar un documento.');
     return;
   }
-  const ext  = file.name.split('.').pop().toLowerCase();
-  const path = `${politicaActual.id}/v${politicaActual.version}_${Date.now()}.${ext}`;
-  const eEl  = document.getElementById('pol-error');
-  const sEl  = document.getElementById('pol-success');
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext !== 'docx') {
+    alert('Solo se permiten archivos Word (.docx). Para PDFs usa el botón PDF del sistema.');
+    return;
+  }
 
-  // Subir a Supabase Storage (bucket: politicas-docs)
+  // Validar folio en el nombre del archivo
+  const cat   = catalogo.find(c => c.id === politicaActual.catalogo_id);
+  const folio = cat?.codigo_documento || '';
+  if (folio && !file.name.toUpperCase().startsWith(folio.toUpperCase())) {
+    const ok = confirm(`El nombre del archivo no comienza con el folio esperado.\n\nEsperado: ${folio}\nArchivo: ${file.name}\n\n¿Continuar de todas formas?`);
+    if (!ok) return;
+  }
+
+  const eEl = document.getElementById('pol-error');
+  const sEl = document.getElementById('pol-success');
+  sEl.textContent = 'Subiendo documento…'; sEl.classList.add('show');
+
+  const path = `${politicaActual.id}/v${politicaActual.version}_${Date.now()}.docx`;
+
+  // Subir a Storage
   const { error: upErr } = await sb.storage.from('politicas-docs').upload(path, file, { upsert: true });
   if (upErr) {
+    sEl.classList.remove('show');
     eEl.textContent = 'Error al subir el archivo: ' + upErr.message;
     eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
     return;
   }
 
-  // Generar URL firmada (1 hora)
+  // Signed URL para el banner (en memoria)
   const { data: signed } = await sb.storage.from('politicas-docs').createSignedUrl(path, 3600);
   const signedUrl = signed?.signedUrl || '';
 
-  // Guardar path + nombre en BD
+  // Guardar path raw en BD
   const { error: dbErr } = await sb.from('pol_politicas').update({
-    documento_adjunto_url:    path,
-    documento_adjunto_nombre: file.name
+    documento_adjunto_url: path, documento_adjunto_nombre: file.name
   }).eq('id', politicaActual.id);
-
   if (dbErr) {
-    eEl.textContent = 'Error al registrar el documento: ' + dbErr.message;
+    sEl.classList.remove('show');
+    eEl.textContent = 'Error al registrar: ' + dbErr.message;
     eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
     return;
   }
@@ -3777,13 +3877,13 @@ async function handleAdjunto(input) {
   politicaActual.documento_adjunto_nombre = file.name;
   renderDocAdjunto();
 
-  // Registrar en repositorio de versiones
+  // Versionar
   const { data: prevV } = await sb.from('pol_versiones')
     .select('version').eq('politica_id', politicaActual.id)
     .order('version', { ascending: false }).limit(1).single();
   const nextVer = (prevV?.version || 0) + 1;
   await sb.from('pol_versiones').insert({
-    politica_id: politicaActual.id, version: nextVer, folio: politicaActual.codigo_documento || '',
+    politica_id: politicaActual.id, version: nextVer, folio: folio || '',
     fuente: 'adjuntado', url_storage: path, nombre_archivo: file.name,
     elaboro: politicaActual.responsable_elaboracion || null,
     autorizo: politicaActual.autorizado_por || null
@@ -3791,8 +3891,39 @@ async function handleAdjunto(input) {
   await sb.from('pol_politicas').update({ version: nextVer }).eq('id', politicaActual.id);
   politicaActual.version = nextVer;
 
-  sEl.textContent = `Documento adjunto guardado (v${nextVer}).`;
-  sEl.classList.add('show'); setTimeout(() => sEl.classList.remove('show'), 2500);
+  // Extraer contenido del Word y poblar form + BD
+  sEl.textContent = 'Extrayendo contenido del documento…';
+  try {
+    const extracted = await _extractDocxContent(file);
+    const FIELD_EL = {
+      objeto:'pol-objeto', alcance:'pol-alcance', marco_normativo:'pol-marco-normativo',
+      definiciones:'pol-definiciones', responsabilidades:'pol-responsabilidades',
+      contenido:'pol-contenido', controles_cumplimiento:'pol-controles-cumplimiento',
+      sanciones:'pol-sanciones', excepciones:'pol-excepciones',
+      documentos_relacionados:'pol-documentos-relacionados',
+      canal_comunicacion:'pol-canal-comunicacion', esquema_capacitacion:'pol-esquema-capacitacion',
+      directrices_valores:'pol-directrices-valores',
+    };
+    const updatePayload = {};
+    for (const [field, elId] of Object.entries(FIELD_EL)) {
+      if (extracted[field]) {
+        const el = document.getElementById(elId);
+        if (el) el.value = extracted[field];
+        updatePayload[field] = extracted[field];
+      }
+    }
+    if (Object.keys(updatePayload).length) {
+      await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
+      Object.assign(politicaActual, updatePayload);
+      sEl.textContent = `✓ Documento adjunto (v${nextVer}) · ${Object.keys(updatePayload).length} secciones extraídas y guardadas.`;
+    } else {
+      sEl.textContent = `✓ Documento adjunto (v${nextVer}) · Sin secciones reconocidas para extraer.`;
+    }
+  } catch(e) {
+    console.error('[handleAdjunto] extracción:', e);
+    sEl.textContent = `✓ Documento adjunto (v${nextVer}) · No se pudo extraer contenido: ${e.message}`;
+  }
+  setTimeout(() => sEl.classList.remove('show'), 5000);
 }
 
 async function removeAdjunto() {
