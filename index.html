@@ -3889,12 +3889,14 @@ function _showExtractPreview(sections) {
 async function handleAdjunto(input) {
   const file = input.files[0];
   if (!file) return;
+  console.log('[adjuntar] archivo:', file.name, 'politicaActual.id:', politicaActual?.id);
   input.value = '';
   if (!politicaActual?.id) {
     alert('Guarda la política primero para poder adjuntar un documento.');
     return;
   }
   const ext = file.name.split('.').pop().toLowerCase();
+  console.log('[adjuntar] ext:', ext);
   if (ext !== 'docx') {
     alert('Solo se permiten archivos Word (.docx). Para PDFs usa el botón PDF del sistema.');
     return;
@@ -3959,7 +3961,9 @@ async function handleAdjunto(input) {
   // Extraer contenido del Word y poblar form + BD
   sEl.textContent = 'Extrayendo contenido del documento…';
   try {
+    console.log('[adjuntar] iniciando extracción, JSZip:', !!window.JSZip);
     const extracted = await _extractDocxContent(file);
+    console.log('[adjuntar] secciones extraídas:', Object.keys(extracted));
     const FIELD_EL = {
       objeto:'pol-objeto', alcance:'pol-alcance', marco_normativo:'pol-marco-normativo',
       definiciones:'pol-definiciones', responsabilidades:'pol-responsabilidades',
