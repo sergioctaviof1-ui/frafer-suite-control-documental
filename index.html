@@ -2700,6 +2700,54 @@ function clearCurrentPolitica() {
   setTimeout(() => document.getElementById('doc-pol-input')?.focus(), 80);
 }
 
+// ── AUTO-SAVE SILENCIOSO (sin generar documentos, sin incrementar versión) ─────
+let _autoSaving = false;
+async function _autoSavePol() {
+  if (!politicaActual || _autoSaving) return;
+  _autoSaving = true;
+  try {
+    const payload = {
+      objeto:                  document.getElementById('pol-objeto')?.value || '',
+      alcance:                 document.getElementById('pol-alcance')?.value || '',
+      marco_normativo:         document.getElementById('pol-marco-normativo')?.value || '',
+      definiciones:            document.getElementById('pol-definiciones')?.value || '',
+      responsabilidades:       document.getElementById('pol-responsabilidades')?.value || '',
+      contenido:               document.getElementById('pol-contenido')?.value || '',
+      controles_cumplimiento:  document.getElementById('pol-controles-cumplimiento')?.value || '',
+      sanciones:               document.getElementById('pol-sanciones')?.value || '',
+      excepciones:             document.getElementById('pol-excepciones')?.value || '',
+      documentos_relacionados: document.getElementById('pol-documentos-relacionados')?.value || '',
+      responsable_direccion:   document.getElementById('pol-resp-dir')?.value || '',
+      responsable_elaboracion: document.getElementById('pol-resp-elab')?.value || '',
+      colaboradores:           document.getElementById('pol-colab')?.value || '',
+      canal_comunicacion:      document.getElementById('pol-canal-comunicacion')?.value || '',
+      esquema_capacitacion:    document.getElementById('pol-esquema-capacitacion')?.value || '',
+      directrices_valores:     document.getElementById('pol-directrices-valores')?.value || '',
+    };
+    if (!politicaActual.id || politicaActual.status === 'en_catalogo') {
+      const hoy = new Date().toISOString().split('T')[0];
+      const { data: newPol, error } = await sb.from('pol_politicas').insert({
+        ...payload, catalogo_id: politicaActual.catalogo_id,
+        version: 1, status: 'borrador', borrador_at: new Date().toISOString(),
+        fecha_inicio_vigencia: hoy
+      }).select().single();
+      if (!error && newPol) {
+        politicaActual = newPol;
+        const _c = catalogo.find(c => c.id === newPol.catalogo_id);
+        if (_c?.actividad_id) {
+          sb.from('pol_actividades').update({ objetivo_politica: payload.objeto || null }).eq('id', _c.actividad_id).then(() => {
+            const _a = actividades.find(a => a.id === _c.actividad_id); if (_a) _a.objetivo_politica = payload.objeto || null;
+          });
+        }
+      }
+    } else {
+      const { error } = await sb.from('pol_politicas').update(payload).eq('id', politicaActual.id);
+      if (!error) politicaActual = { ...politicaActual, ...payload };
+    }
+  } catch(e) { console.error('[_autoSavePol]', e); }
+  finally { _autoSaving = false; }
+}
+
 // ── GENERACIÓN DE DOCUMENTOS ──────────────────────────────────────────────────
 function _getDocData() {
   if (!politicaActual) return null;
@@ -3212,6 +3260,8 @@ function _buildPolicyPDFDef(d, versHist) {
 }
 
 async function generatePDF(download=true) {
+  // Auto-guardar contenido del form a BD antes de generar
+  if (download) await _autoSavePol();
   // Garantizar datos de Gobierno antes de leer el DOM
   if (!_gcCurrent) {
     const { data: gcData } = await sb.from('pol_gobierno_corporativo')
@@ -3591,6 +3641,8 @@ async function _generateWordCore(d, download=true) {
 }
 
 async function generateWord() {
+  // Auto-guardar contenido del form a BD antes de generar
+  await _autoSavePol();
   if (!_gcCurrent) {
     const { data: gcData } = await sb.from('pol_gobierno_corporativo')
       .select('*').order('version', { ascending: false }).limit(1);
@@ -4732,10 +4784,12 @@ async function setPorAutorizar(dirId) {
       const dObj = {
         folio, nombre: cat.nombre || `Política de ${act.nombre}`,
         dir: dir.nombre, area: area.nombre, dept: dept.nombre, act: act.nombre,
-        objeto: pol.objeto || '', alcance: '', marcoNormativo: pol.marco_normativo || '',
-        definiciones: '', responsabilidades: '', contenido: '', controles: '',
-        sanciones: '', excepciones: '',
-        respDir: '', respElab: '', autorizadoPor: '', colaboradores: '',
+        objeto: pol.objeto || '', alcance: pol.alcance || '', marcoNormativo: pol.marco_normativo || '',
+        definiciones: pol.definiciones || '', responsabilidades: pol.responsabilidades || '',
+        contenido: pol.contenido || '', controles: pol.controles_cumplimiento || '',
+        sanciones: pol.sanciones || '', excepciones: pol.excepciones || '',
+        documentosRelacionados: pol.documentos_relacionados || '',
+        respDir: pol.responsable_direccion || '', respElab: pol.responsable_elaboracion || '', autorizadoPor: '', colaboradores: pol.colaboradores || '',
         canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
         directrices: pol.directrices_valores || '',
         vigenciaMeses: '', fechaAutorizacion: '—', fechaVencimiento: '—',
@@ -4865,7 +4919,7 @@ async function regenerarPDFsDir(dirId) {
 
   const catIds = cats.map(c=>c.id);
   let { data: pols } = await sb.from('pol_politicas')
-    .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
+    .select('id,catalogo_id,version,objeto,alcance,marco_normativo,definiciones,responsabilidades,contenido,controles_cumplimiento,sanciones,excepciones,documentos_relacionados,responsable_direccion,responsable_elaboracion,colaboradores,canal_comunicacion,esquema_capacitacion,directrices_valores')
     .in('catalogo_id', catIds);
   if (!pols?.length) { alert('Sin políticas creadas. Presiona Por Autorizar primero.'); return; }
 
@@ -4880,7 +4934,7 @@ async function regenerarPDFsDir(dirId) {
       if (se) console.error('[regenerarPDFsDir] stub insert:', se.message);
     }
     const { data: polsActualizados } = await sb.from('pol_politicas')
-      .select('id,catalogo_id,version,objeto,marco_normativo,canal_comunicacion,esquema_capacitacion,directrices_valores')
+      .select('id,catalogo_id,version,objeto,alcance,marco_normativo,definiciones,responsabilidades,contenido,controles_cumplimiento,sanciones,excepciones,documentos_relacionados,responsable_direccion,responsable_elaboracion,colaboradores,canal_comunicacion,esquema_capacitacion,directrices_valores')
       .in('catalogo_id', catIds);
     if (polsActualizados?.length) pols = polsActualizados;
     console.log(`[regenerarPDFsDir] ${missingCats.length} stub(s) creados para actividades nuevas.`);
@@ -4909,10 +4963,12 @@ async function regenerarPDFsDir(dirId) {
       const dObj = {
         folio, nombre: cat.nombre || `Política de ${act.nombre}`,
         dir: dir.nombre, area: area.nombre, dept: dept.nombre, act: act.nombre,
-        objeto: pol.objeto || '', alcance: '', marcoNormativo: pol.marco_normativo || '',
-        definiciones: '', responsabilidades: '', contenido: '', controles: '',
-        sanciones: '', excepciones: '',
-        respDir: '', respElab: '', autorizadoPor: '', colaboradores: '',
+        objeto: pol.objeto || '', alcance: pol.alcance || '', marcoNormativo: pol.marco_normativo || '',
+        definiciones: pol.definiciones || '', responsabilidades: pol.responsabilidades || '',
+        contenido: pol.contenido || '', controles: pol.controles_cumplimiento || '',
+        sanciones: pol.sanciones || '', excepciones: pol.excepciones || '',
+        documentosRelacionados: pol.documentos_relacionados || '',
+        respDir: pol.responsable_direccion || '', respElab: pol.responsable_elaboracion || '', autorizadoPor: '', colaboradores: pol.colaboradores || '',
         canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
         directrices: pol.directrices_valores || '',
         vigenciaMeses: '', fechaAutorizacion: '—', fechaVencimiento: '—',
