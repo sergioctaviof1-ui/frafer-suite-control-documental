@@ -368,6 +368,21 @@ input,textarea,select{font-family:inherit}
   <span class="topbar-user" id="topbar-user"></span>
 </div>
 
+<!-- MODAL: Preview extracción Word -->
+<div class="modal-overlay" id="modal-extract-preview">
+  <div class="modal" style="max-width:680px">
+    <h3 style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">📄</span> Contenido extraído del documento
+    </h3>
+    <p id="extract-preview-count" style="font-size:12px;color:var(--dust);margin:-12px 0 16px;font-family:var(--ff-mono)"></p>
+    <div id="extract-preview-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;max-height:55vh;overflow-y:auto"></div>
+    <div class="actions-row">
+      <button id="btn-extract-accept" class="btn btn-primary" style="background:var(--ember-deep);color:#fff;border:none">✓ Guardar en la política</button>
+      <button class="btn btn-ghost" id="btn-extract-cancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Login -->
 <div class="modal-overlay" id="modal-login" style="display:none;z-index:9999;background:rgba(20,18,15,.85)">
   <div class="modal" style="max-width:380px;width:100%">
@@ -3825,6 +3840,52 @@ async function _extractDocxContent(file) {
   return sections;
 }
 
+const _EXTRACT_LABELS = {
+  objeto:'Propósito y Objetivo', alcance:'Alcance',
+  marco_normativo:'Marco Normativo', definiciones:'Definiciones',
+  responsabilidades:'Responsabilidades', contenido:'Lineamientos y Reglas',
+  controles_cumplimiento:'Controles y Monitoreo', sanciones:'Sanciones por Incumplimiento',
+  excepciones:'Excepciones', canal_comunicacion:'Canal de Comunicación',
+  esquema_capacitacion:'Esquema de Capacitación', directrices_valores:'Directrices y Valores',
+  documentos_relacionados:'Documentos Relacionados',
+};
+
+function _showExtractPreview(sections) {
+  return new Promise(resolve => {
+    const found   = Object.keys(sections).filter(k => sections[k]);
+    const total   = Object.keys(_EXTRACT_LABELS).length;
+    document.getElementById('extract-preview-count').textContent =
+      `${found.length} de ${total} secciones reconocidas`;
+
+    document.getElementById('extract-preview-list').innerHTML =
+      Object.entries(_EXTRACT_LABELS).map(([field, label]) => {
+        const txt = sections[field] || '';
+        const ok  = !!txt;
+        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:${ok?'#f0f7f0':'var(--linen)'}">
+          <span style="font-size:13px;flex-shrink:0;margin-top:1px">${ok?'✅':'➖'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:${ok?'#2d6b47':'var(--dust)'};font-family:var(--ff-mono);margin-bottom:2px">${label.toUpperCase()}</div>
+            ${ok?`<div style="font-size:11px;color:var(--ink);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;text-overflow:ellipsis">${txt.slice(0,180)}${txt.length>180?'…':''}</div>`
+                :`<div style="font-size:11px;color:var(--dust);font-style:italic">No encontrado en el documento</div>`}
+          </div>
+        </div>`;
+      }).join('');
+
+    const modal  = document.getElementById('modal-extract-preview');
+    const accept = document.getElementById('btn-extract-accept');
+    const cancel = document.getElementById('btn-extract-cancel');
+
+    const finish = ok => {
+      modal.classList.remove('open');
+      accept.onclick = null; cancel.onclick = null;
+      resolve(ok);
+    };
+    accept.onclick = () => finish(true);
+    cancel.onclick = () => finish(false);
+    modal.classList.add('open');
+  });
+}
+
 async function handleAdjunto(input) {
   const file = input.files[0];
   if (!file) return;
@@ -3917,10 +3978,17 @@ async function handleAdjunto(input) {
       }
     }
     if (Object.keys(updatePayload).length) {
-      await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
-      Object.assign(politicaActual, updatePayload);
-      fillPoliticaForm(politicaActual);  // forzar re-render desde el objeto ya actualizado
-      sEl.textContent = `✓ Documento adjunto (v${nextVer}) · ${Object.keys(updatePayload).length} secciones extraídas y guardadas.`;
+      sEl.classList.remove('show');
+      const confirmed = await _showExtractPreview(extracted);
+      sEl.classList.add('show');
+      if (confirmed) {
+        await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
+        Object.assign(politicaActual, updatePayload);
+        fillPoliticaForm(politicaActual);
+        sEl.textContent = `✓ ${Object.keys(updatePayload).length} secciones guardadas en la política (v${nextVer}).`;
+      } else {
+        sEl.textContent = `Documento adjunto (v${nextVer}) · Contenido no guardado (cancelado).`;
+      }
     } else {
       sEl.textContent = `✓ Documento adjunto (v${nextVer}) · Sin secciones reconocidas para extraer.`;
     }
