@@ -2370,6 +2370,12 @@ async function savePolitica() {
     }
     return;
   }
+  // Auto-timestamps: setear la primera vez que se asigna la persona responsable
+  const _now = new Date().toISOString();
+  if (payload.levantado_por   && !politicaActual.levantamiento_at) payload.levantamiento_at  = _now;
+  if (payload.revisado_por    && !politicaActual.revision_at)      payload.revision_at        = _now;
+  if (payload.autorizado_por  && !politicaActual.autorizacion_at)  payload.autorizacion_at    = _now;
+
   // Guardado subsecuente — solo bump de versión si el CONTENIDO cambió
   const _CF = ['objeto','alcance','marco_normativo','definiciones','responsabilidades',
     'contenido','controles_cumplimiento','sanciones','excepciones','documentos_relacionados','num_reglas'];
@@ -2391,24 +2397,39 @@ async function savePolitica() {
     }
     fillPoliticaForm(politicaActual);
     loadCatalogo();
+    // Toast visible desde cualquier pestaña (fixed, encima del header de política)
+    const _toast = (msg, ms=4000) => {
+      let t = document.getElementById('_save-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = '_save-toast';
+        t.style.cssText = 'position:fixed;top:56px;right:20px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;font-family:var(--ff-body);box-shadow:0 4px 16px rgba(0,0,0,.18);transition:opacity .3s;opacity:0;pointer-events:none';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.background = msg.startsWith('✓') ? 'var(--green)' : 'var(--ember-deep)';
+      t.style.color = '#fff';
+      t.style.opacity = '1';
+      clearTimeout(t._to);
+      t._to = setTimeout(() => { t.style.opacity = '0'; }, ms);
+    };
     if (contentChanged) {
-      sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      _toast(`Guardando v${newVersion}…`, 15000);
       try {
-        // Registrar versión por cambio de contenido
+        const _catF = catalogo.find(c => c.id === politicaActual.catalogo_id);
+        const _folio = _catF?.codigo || _catF?.clave || '';
         await sb.from('pol_versiones').insert({
-          politica_id: politicaActual.id, version: newVersion,
+          politica_id: politicaActual.id, version: newVersion, folio: _folio,
           fuente: 'editado', nombre_archivo: `v${newVersion}`,
           elaboro: politicaActual.responsable_elaboracion || null,
           autorizo: politicaActual.autorizado_por || null
         });
         await _generateWordCore(_getDocData(), false);
         await generatePDF(false);
-        sEl.textContent = `✓ Cambios guardados · Documentos generados v${newVersion}.`;
-      } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = `Contenido guardado v${newVersion} (error al generar documentos).`; }
-      setTimeout(() => sEl.classList.remove('show'), 5000);
+        _toast(`✓ v${newVersion} guardada · Documentos generados.`);
+      } catch(ge) { console.error('[savePolitica] gen:', ge); _toast(`v${newVersion} guardada (error al generar documentos).`); }
     } else {
-      sEl.textContent = '✓ Datos actualizados.'; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
-      setTimeout(() => sEl.classList.remove('show'), 3000);
+      _toast('✓ Datos actualizados.');
     }
   }
 }
