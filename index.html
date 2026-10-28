@@ -3782,23 +3782,33 @@ async function _extractDocxContent(file) {
   const zip    = await JSZip.loadAsync(file);
   const xmlStr = await zip.file('word/document.xml').async('string');
 
-  // Strip namespace prefixes para parsing robusto en todos los navegadores
-  const xmlClean = xmlStr.replace(/<(\/?)[a-zA-Z]+:/g, '<$1').replace(/\s[a-zA-Z]+:[a-zA-Z]+=["'][^"']*["']/g,'');
-  const xml      = new DOMParser().parseFromString(xmlClean, 'application/xml');
-  const getText  = el => Array.from(el.getElementsByTagName('t')).map(t=>t.textContent).join('');
+  // Extraer texto de cada <w:p> directo del XML raw (evita problemas de namespace en DOMParser)
+  const getParagraphTexts = xml => {
+    const results = [];
+    const pRe = /<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g;
+    let pm;
+    while ((pm = pRe.exec(xml)) !== null) {
+      const pXml = pm[0];
+      // Texto de todos los <w:t> en este párrafo
+      const tRe = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
+      const parts = []; let tm;
+      while ((tm = tRe.exec(pXml)) !== null) parts.push(tm[1]);
+      const text = parts.join('').trim();
+      if (text) results.push(text);
+    }
+    return results;
+  };
 
-  const body = xml.getElementsByTagName('body')[0];
-  if (!body) { console.warn('[_extractDocxContent] no body'); return {}; }
-  const children = Array.from(body.childNodes).filter(n=>n.nodeType===1);
+  const paragraphs = getParagraphTexts(xmlStr);
+  console.log('[docx] primeros 10 párrafos:', paragraphs.slice(0, 10));
 
-  const sections = {};
-  let curField   = null;
-  let curLines   = [];
+  const sections  = {};
+  let curField    = null;
+  let curLines    = [];
 
   const flushSection = () => {
     if (curField) {
       let text = curLines.join('\n').trim();
-      // Descartar bloque institucional 8.4+ para no duplicar el GC
       if (curField === 'sanciones') {
         const cutIdx = text.search(/\n8\.4\s/);
         if (cutIdx > 0) text = text.slice(0, cutIdx).trim();
@@ -3810,31 +3820,33 @@ async function _extractDocxContent(file) {
 
   const STOP_NORM = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA/;
 
-  for (const child of children) {
-    const raw = getText(child).trim();
-    if (!raw) continue;
+  for (const raw of paragraphs) {
+    const norm = _normalizeKey(raw);
 
     // Parar en tablas de firma/historial
-    if (STOP_NORM.test(_normalizeKey(raw.split('\n')[0]))) { flushSection(); break; }
+    if (STOP_NORM.test(norm)) { flushSection(); break; }
 
-    // Detectar encabezado de sección en la PRIMERA LÍNEA de cualquier elemento
-    const firstLine = raw.split('\n')[0].trim();
-    const m = firstLine.match(/^(\d{1,2})\.\s+(.+?)\s*$/);
-    if (m) {
-      const key = _DOCX_FIELD_MAP[_normalizeKey(m[2])];
-      console.log('[docx] sección:', m[2], '→', key || '(sin mapeo)');
-      flushSection();
-      curField = key || null;
-      // Si hay texto después del encabezado en el mismo elemento, es contenido
-      const rest = raw.slice(firstLine.length).trim();
-      if (curField && rest) curLines.push(rest);
-      continue;
+    // Estrategia A: "N. TITULO" en el texto (numeración manual)
+    const mNum = raw.match(/^(\d{1,2})\.\s+(.+?)\s*$/);
+    if (mNum) {
+      const key = _DOCX_FIELD_MAP[_normalizeKey(mNum[2])];
+      console.log('[docx] header (A):', raw, '→', key || '(sin mapeo)');
+      flushSection(); curField = key || null; continue;
+    }
+
+    // Estrategia B: texto ES exactamente el título de la sección (auto-numeración de Word)
+    const directKey = _DOCX_FIELD_MAP[norm];
+    if (directKey !== undefined) {
+      console.log('[docx] header (B):', raw, '→', directKey);
+      flushSection(); curField = directKey; continue;
     }
 
     // Contenido del campo actual
     if (curField) curLines.push(raw);
   }
   flushSection();
+
+  console.log('[docx] secciones detectadas:', Object.keys(sections));
   return sections;
 }
 
