@@ -3766,7 +3766,7 @@ async function _extractDocxContent(file) {
   if (!window.JSZip) {
     await new Promise((res, rej) => {
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.src = 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';
       s.onload = res; s.onerror = rej; document.head.appendChild(s);
     });
   }
