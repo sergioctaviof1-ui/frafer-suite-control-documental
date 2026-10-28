@@ -2769,6 +2769,7 @@ function _getDocData() {
     contenido:        g('pol-contenido'),
     controles:        g('pol-controles-cumplimiento'),
     sanciones:        g('pol-sanciones'),
+    sancionesInstitucionales: _gcCurrent?.sanciones_institucionales || '',
     excepciones:          g('pol-excepciones'),
     documentosRelacionados: g('pol-documentos-relacionados'),
     numReglas:            g('pol-num-reglas'),
@@ -2882,7 +2883,7 @@ ${sec('Propósito y Objetivo',d.objeto)}
 ${sec('Alcance',d.alcance)}
 ${sec('Definiciones',d.definiciones)}
 ${sec('Lineamientos y Reglas',d.contenido)}
-${sec('Sanciones por Incumplimiento',d.sanciones)}
+${sec('Sanciones por Incumplimiento',[d.sanciones,d.sancionesInstitucionales].filter(Boolean).join('\n\n'))}
 ${sec('Excepciones',d.excepciones)}
 <div class="sg">Comunicación e Implementación</div>
 ${sec('Canal de Comunicación',d.canal)}
@@ -3244,7 +3245,7 @@ function _buildPolicyPDFDef(d, versHist) {
       ...mkSec('Responsabilidades',              d.responsabilidades),
       ...mkSec('Lineamientos y Reglas',          d.contenido),
       ...mkSec('Controles y Monitoreo',          d.controles),
-      ...mkSec('Sanciones por Incumplimiento',   d.sanciones),
+      ...mkSec('Sanciones por Incumplimiento',   [d.sanciones, d.sancionesInstitucionales].filter(Boolean).join('\n\n')),
       ...mkSec('Excepciones y Casos Especiales', d.excepciones),
       grpLabel('Comunicación e Implementación'),
       ...mkSec('Canal de Comunicación',          d.canal),
@@ -3587,7 +3588,7 @@ async function _generateWordCore(d, download=true) {
           ...mkSec('Responsabilidades',                 d.responsabilidades),
           ...mkSec('Lineamientos y Reglas',             d.contenido),
           ...mkSec('Controles y Monitoreo',             d.controles),
-          ...mkSec('Sanciones por Incumplimiento',      d.sanciones),
+          ...mkSec('Sanciones por Incumplimiento',      [d.sanciones, d.sancionesInstitucionales].filter(Boolean).join('\n\n')),
           ...mkSec('Excepciones y Casos Especiales',    d.excepciones),
           grpLabel('Comunicación e Implementación'),
           ...mkSec('Canal de Comunicación',             d.canal),
@@ -4787,7 +4788,7 @@ async function setPorAutorizar(dirId) {
         objeto: pol.objeto || '', alcance: pol.alcance || '', marcoNormativo: pol.marco_normativo || '',
         definiciones: pol.definiciones || '', responsabilidades: pol.responsabilidades || '',
         contenido: pol.contenido || '', controles: pol.controles_cumplimiento || '',
-        sanciones: pol.sanciones || '', excepciones: pol.excepciones || '',
+        sanciones: pol.sanciones || '', sancionesInstitucionales: _gcCurrent?.sanciones_institucionales || '', excepciones: pol.excepciones || '',
         documentosRelacionados: pol.documentos_relacionados || '',
         respDir: pol.responsable_direccion || '', respElab: pol.responsable_elaboracion || '', autorizadoPor: '', colaboradores: pol.colaboradores || '',
         canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
@@ -4966,7 +4967,7 @@ async function regenerarPDFsDir(dirId) {
         objeto: pol.objeto || '', alcance: pol.alcance || '', marcoNormativo: pol.marco_normativo || '',
         definiciones: pol.definiciones || '', responsabilidades: pol.responsabilidades || '',
         contenido: pol.contenido || '', controles: pol.controles_cumplimiento || '',
-        sanciones: pol.sanciones || '', excepciones: pol.excepciones || '',
+        sanciones: pol.sanciones || '', sancionesInstitucionales: _gcCurrent?.sanciones_institucionales || '', excepciones: pol.excepciones || '',
         documentosRelacionados: pol.documentos_relacionados || '',
         respDir: pol.responsable_direccion || '', respElab: pol.responsable_elaboracion || '', autorizadoPor: '', colaboradores: pol.colaboradores || '',
         canal: pol.canal_comunicacion || '', capacitacion: pol.esquema_capacitacion || '',
