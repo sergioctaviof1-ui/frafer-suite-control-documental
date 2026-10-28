@@ -3808,17 +3808,23 @@ async function _extractDocxContent(file) {
     curField = null; curLines = [];
   };
 
-  const STOP_NORM = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA/;
+  const START_NORM = 'CONTENIDO DE LA POLITICA';
+  const STOP_NORM  = /^(CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA)/;
+  let started = false;
 
   for (const raw of paragraphs) {
     const norm = _normalizeKey(raw);
 
+    // Empezar solo después del encabezado "CONTENIDO DE LA POLÍTICA"
+    // (la portada también tiene ELABORÓ y dispararía el STOP antes de tiempo)
+    if (!started) { if (norm === START_NORM) started = true; continue; }
+
     // Parar en tablas de firma/historial
     if (STOP_NORM.test(norm)) { flushSection(); break; }
 
-    // Estrategia A: "N. TITULO" en el texto (numeración manual)
+    // Estrategia A: "N. TITULO EN MAYUSCULAS" — los encabezados son ALL-CAPS, el contenido no
     const mNum = raw.match(/^(\d{1,2})\.\s+(.+?)\s*$/);
-    if (mNum) {
+    if (mNum && mNum[2] === mNum[2].toUpperCase()) {
       const key = _DOCX_FIELD_MAP[_normalizeKey(mNum[2])];
       console.log('[docx] header (A):', raw, '→', key || '(sin mapeo)');
       flushSection(); curField = key || null; continue;
