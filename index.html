@@ -3860,30 +3860,60 @@ const _EXTRACT_LABELS = {
   documentos_relacionados:'Documentos Relacionados',
 };
 
-function _showExtractPreview(sections) {
+// existing: objeto con los valores actuales de politicaActual (para no sobreescribir)
+// Retorna: { confirmed: bool, toImport: { field: value } }
+function _showExtractPreview(sections, existing = {}) {
   return new Promise(resolve => {
-    const found   = Object.keys(sections).filter(k => sections[k]);
-    const total   = Object.keys(_EXTRACT_LABELS).length;
-    document.getElementById('extract-preview-count').textContent =
-      `${found.length} de ${total} secciones reconocidas`;
+    let willImport  = 0;
+    let willSkip    = 0;
+    let notFound    = 0;
 
-    document.getElementById('extract-preview-list').innerHTML =
-      Object.entries(_EXTRACT_LABELS).map(([field, label]) => {
-        const txt = sections[field] || '';
-        const ok  = !!txt;
-        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:${ok?'#f0f7f0':'var(--linen)'}">
-          <span style="font-size:13px;flex-shrink:0;margin-top:1px">${ok?'✅':'➖'}</span>
+    const rows = Object.entries(_EXTRACT_LABELS).map(([field, label]) => {
+      const newVal  = (sections[field] || '').trim();
+      const curVal  = (existing[field]  || '').trim();
+
+      if (!newVal) {
+        // No encontrado en el documento
+        notFound++;
+        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:var(--linen)">
+          <span style="font-size:13px;flex-shrink:0;margin-top:1px">➖</span>
           <div style="flex:1;min-width:0">
-            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:${ok?'#2d6b47':'var(--dust)'};font-family:var(--ff-mono);margin-bottom:2px">${label.toUpperCase()}</div>
-            ${ok?`<div style="font-size:11px;color:var(--ink);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden;text-overflow:ellipsis">${txt.slice(0,180)}${txt.length>180?'…':''}</div>`
-                :`<div style="font-size:11px;color:var(--dust);font-style:italic">No encontrado en el documento</div>`}
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--dust);font-family:var(--ff-mono);margin-bottom:2px">${label.toUpperCase()}</div>
+            <div style="font-size:11px;color:var(--dust);font-style:italic">No encontrado en el documento</div>
           </div>
         </div>`;
-      }).join('');
+      }
+      if (curVal) {
+        // Campo ya tiene contenido → no se sobreescribirá
+        willSkip++;
+        return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:#fff8ed;border-left:3px solid #E89C3A">
+          <span style="font-size:13px;flex-shrink:0;margin-top:1px">⚠️</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#8a5a00;font-family:var(--ff-mono);margin-bottom:2px">${label.toUpperCase()} — YA TIENE CONTENIDO, NO SE SOBREESCRIBIRÁ</div>
+            <div style="font-size:11px;color:var(--fog);font-style:italic">Existente: ${curVal.slice(0,100)}${curVal.length>100?'…':''}</div>
+          </div>
+        </div>`;
+      }
+      // Campo vacío → se importará
+      willImport++;
+      return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;background:#f0f7f0">
+          <span style="font-size:13px;flex-shrink:0;margin-top:1px">✅</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#2d6b47;font-family:var(--ff-mono);margin-bottom:2px">${label.toUpperCase()}</div>
+            <div style="font-size:11px;color:var(--ink);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden">${newVal.slice(0,180)}${newVal.length>180?'…':''}</div>
+          </div>
+        </div>`;
+    });
+
+    document.getElementById('extract-preview-count').textContent =
+      `${willImport} campos se importarán · ${willSkip} ya tienen contenido (protegidos) · ${notFound} no encontrados`;
+
+    document.getElementById('extract-preview-list').innerHTML = rows.join('');
 
     const modal  = document.getElementById('modal-extract-preview');
     const accept = document.getElementById('btn-extract-accept');
     const cancel = document.getElementById('btn-extract-cancel');
+    accept.textContent = willImport > 0 ? `✓ Importar ${willImport} campo${willImport>1?'s':''}` : 'Adjuntar sin importar';
 
     const finish = ok => {
       modal.classList.remove('open');
@@ -3943,9 +3973,9 @@ async function handleAdjunto(input) {
     return;
   }
 
-  // ── 3. Modal de confirmación (siempre se muestra, aunque sea 0 secciones) ─
+  // ── 3. Modal de confirmación — pasa datos existentes para proteger contenido previo ─
   sEl.classList.remove('show');
-  const confirmed = await _showExtractPreview(extracted);
+  const confirmed = await _showExtractPreview(extracted, politicaActual);
   if (!confirmed) {
     sEl.textContent = 'Adjunto cancelado — nada fue guardado.';
     sEl.classList.add('show');
@@ -3975,10 +4005,13 @@ async function handleAdjunto(input) {
   };
   const contentPayload = {};
   for (const [field, elId] of Object.entries(FIELD_EL)) {
-    if (extracted[field]) {
+    const newVal = (extracted[field] || '').trim();
+    const curVal = (politicaActual[field] || '').trim();
+    // Solo importar si el campo está vacío en la BD (proteger contenido previo)
+    if (newVal && !curVal) {
       const el = document.getElementById(elId);
-      if (el) el.value = extracted[field];
-      contentPayload[field] = extracted[field];
+      if (el) el.value = newVal;
+      contentPayload[field] = newVal;
     }
   }
 
