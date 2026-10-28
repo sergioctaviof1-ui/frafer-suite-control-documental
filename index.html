@@ -3772,12 +3772,14 @@ async function _extractDocxContent(file) {
   }
   const zip    = await JSZip.loadAsync(file);
   const xmlStr = await zip.file('word/document.xml').async('string');
-  const xml    = new DOMParser().parseFromString(xmlStr, 'application/xml');
-  const NS     = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-  const getText = el => Array.from(el.getElementsByTagNameNS(NS,'t')).map(t=>t.textContent).join('');
 
-  const body     = xml.getElementsByTagNameNS(NS,'body')[0];
-  if (!body) return {};
+  // Strip namespace prefixes para parsing robusto en todos los navegadores
+  const xmlClean = xmlStr.replace(/<(\/?)[a-zA-Z]+:/g, '<$1').replace(/\s[a-zA-Z]+:[a-zA-Z]+=["'][^"']*["']/g,'');
+  const xml      = new DOMParser().parseFromString(xmlClean, 'application/xml');
+  const getText  = el => Array.from(el.getElementsByTagName('t')).map(t=>t.textContent).join('');
+
+  const body = xml.getElementsByTagName('body')[0];
+  if (!body) { console.warn('[_extractDocxContent] no body'); return {}; }
   const children = Array.from(body.childNodes).filter(n=>n.nodeType===1);
 
   const sections = {};
@@ -3787,9 +3789,9 @@ async function _extractDocxContent(file) {
   const flushSection = () => {
     if (curField) {
       let text = curLines.join('\n').trim();
-      // Para sanciones: descartar el bloque institucional (8.4+) que inyecta el GC
+      // Descartar bloque institucional 8.4+ para no duplicar el GC
       if (curField === 'sanciones') {
-        const cutIdx = text.search(/\n?8\.4[\s\S]/);
+        const cutIdx = text.search(/\n8\.4\s/);
         if (cutIdx > 0) text = text.slice(0, cutIdx).trim();
       }
       if (text && text !== '[ Completar este campo ]') sections[curField] = text;
@@ -3797,22 +3799,24 @@ async function _extractDocxContent(file) {
     curField = null; curLines = [];
   };
 
-  const STOP_TABLES = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORÓ|ELABORO/;
+  const STOP_NORM = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA/;
 
   for (const child of children) {
-    const localName = (child.localName||'').toLowerCase();
-    if (localName === 'tbl') {
-      const cellText = getText(child).trim();
-      // ¿Es tabla de firma/historial? → cerrar sección activa y parar
-      if (STOP_TABLES.test(_normalizeKey(cellText))) { flushSection(); break; }
-      // ¿Es encabezado de sección? → patrón "N. TÍTULO"
-      const m = cellText.match(/^\d{1,2}\.\s+(.+)$/);
+    const tag = (child.localName || child.tagName || '').replace(/.*:/,'').toLowerCase();
+    if (tag === 'tbl') {
+      const raw = getText(child).trim();
+      const norm = _normalizeKey(raw);
+      // Tabla de firma/historial → parar extracción
+      if (STOP_NORM.test(norm)) { flushSection(); break; }
+      // Encabezado de sección → patrón "N. TÍTULO"
+      const m = raw.match(/^\s*(\d{1,2})\.\s+(.+?)\s*$/);
       if (m) {
         flushSection();
-        const key = _DOCX_FIELD_MAP[_normalizeKey(m[1])];
+        const key = _DOCX_FIELD_MAP[_normalizeKey(m[2])];
+        console.log('[docx] sección:', m[2], '→', key || '(sin mapeo)');
         if (key) curField = key;
       }
-    } else if (localName === 'p' && curField) {
+    } else if (tag === 'p' && curField) {
       const t = getText(child).trim();
       if (t) curLines.push(t);
     }
