@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Frafer Suite · Control Documental</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/jszip.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -3778,13 +3779,6 @@ function _normalizeKey(s) {
 }
 
 async function _extractDocxContent(file) {
-  if (!window.JSZip) {
-    await new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = '/jszip.min.js';
-      s.onload = res; s.onerror = rej; document.head.appendChild(s);
-    });
-  }
   const zip    = await JSZip.loadAsync(file);
   const xmlStr = await zip.file('word/document.xml').async('string');
 
