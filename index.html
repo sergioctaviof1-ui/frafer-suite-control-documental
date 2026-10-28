@@ -783,8 +783,8 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span id="pol-badge"></span>
         <button id="btn-cerrar-pol" class="btn" style="display:none;background:transparent;border:1px solid rgba(192,136,152,.4);color:var(--ember-glow);font-size:12px;padding:6px 12px" onclick="clearCurrentPolitica()">× Cerrar</button>
-        <button id="btn-adjuntar" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="document.getElementById('input-adjuntar').click()" title="Adjuntar documento Word o PDF existente">Adjuntar</button>
-        <input type="file" id="input-adjuntar" style="display:none" accept=".pdf,.doc,.docx" onchange="handleAdjunto(this)">
+        <button id="btn-adjuntar" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="var i=document.getElementById('input-adjuntar');i.value='';i.click()" title="Adjuntar documento Word existente">Adjuntar</button>
+        <input type="file" id="input-adjuntar" style="display:none" accept=".docx" onchange="handleAdjunto(this)">
         <button id="btn-gen-pdf" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generatePDF()" title="Generar PDF de esta política">PDF</button>
         <button id="btn-gen-word" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generateWord()" title="Descargar plantilla Word editable">Word</button>
         <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
