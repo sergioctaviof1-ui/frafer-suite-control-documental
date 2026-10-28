@@ -3832,6 +3832,11 @@ async function _extractDocxContent(file) {
 
   const START_NORM = 'CONTENIDO DE LA POLITICA';
   const STOP_NORM  = /^(CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA)/;
+  // Etiquetas de bloque estructural del documento (sin número, ALL-CAPS) — se omiten
+  const SKIP_BLOCKS = new Set([
+    'MARCO INSTITUCIONAL','COMUNICACION E IMPLEMENTACION',
+    'CONTENIDO DE LA POLITICA','GESTION Y CUMPLIMIENTO'
+  ]);
   let started = false;
 
   for (const raw of paragraphs) {
@@ -3843,6 +3848,9 @@ async function _extractDocxContent(file) {
 
     // Parar en tablas de firma/historial
     if (STOP_NORM.test(norm)) { flushSection(); break; }
+
+    // Saltar etiquetas de bloque estructural (sin número, no son campos)
+    if (SKIP_BLOCKS.has(norm)) continue;
 
     // Estrategia A: "N. TITULO EN MAYUSCULAS" — los encabezados son ALL-CAPS, el contenido no
     const mNum = raw.match(/^(\d{1,2})\.\s+(.+?)\s*$/);
