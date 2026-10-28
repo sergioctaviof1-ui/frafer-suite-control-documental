@@ -3811,24 +3811,28 @@ async function _extractDocxContent(file) {
   const STOP_NORM = /CONTROL DE APROBACIONES|CONTROL DE CAMBIOS|ELABORO|NOMBRE Y FIRMA/;
 
   for (const child of children) {
-    const tag = (child.localName || child.tagName || '').replace(/.*:/,'').toLowerCase();
-    if (tag === 'tbl') {
-      const raw = getText(child).trim();
-      const norm = _normalizeKey(raw);
-      // Tabla de firma/historial → parar extracción
-      if (STOP_NORM.test(norm)) { flushSection(); break; }
-      // Encabezado de sección → patrón "N. TÍTULO"
-      const m = raw.match(/^\s*(\d{1,2})\.\s+(.+?)\s*$/);
-      if (m) {
-        flushSection();
-        const key = _DOCX_FIELD_MAP[_normalizeKey(m[2])];
-        console.log('[docx] sección:', m[2], '→', key || '(sin mapeo)');
-        if (key) curField = key;
-      }
-    } else if (tag === 'p' && curField) {
-      const t = getText(child).trim();
-      if (t) curLines.push(t);
+    const raw = getText(child).trim();
+    if (!raw) continue;
+
+    // Parar en tablas de firma/historial
+    if (STOP_NORM.test(_normalizeKey(raw.split('\n')[0]))) { flushSection(); break; }
+
+    // Detectar encabezado de sección en la PRIMERA LÍNEA de cualquier elemento
+    const firstLine = raw.split('\n')[0].trim();
+    const m = firstLine.match(/^(\d{1,2})\.\s+(.+?)\s*$/);
+    if (m) {
+      const key = _DOCX_FIELD_MAP[_normalizeKey(m[2])];
+      console.log('[docx] sección:', m[2], '→', key || '(sin mapeo)');
+      flushSection();
+      curField = key || null;
+      // Si hay texto después del encabezado en el mismo elemento, es contenido
+      const rest = raw.slice(firstLine.length).trim();
+      if (curField && rest) curLines.push(rest);
+      continue;
     }
+
+    // Contenido del campo actual
+    if (curField) curLines.push(raw);
   }
   flushSection();
   return sections;
