@@ -4700,6 +4700,11 @@ async function setPorAutorizar(dirId) {
   if (!dir) return;
   if (!confirm(`¿Marcar "${dir.nombre}" como Por Autorizar?\n\nSe crearán stubs en Borrador para todas las actividades que aún no tengan documento iniciado.`)) return;
 
+  // Recargar GC fresco para PDFs iniciales
+  const { data: gcFresh } = await sb.from('pol_gobierno_corporativo')
+    .select('*').order('version', { ascending: false }).limit(1);
+  if (gcFresh?.length) _gcCurrent = gcFresh[0];
+
   const now = new Date().toISOString();
 
   // 1. Marcar dirección
@@ -4870,6 +4875,11 @@ async function regenerarPDFsDir(dirId) {
   const dir = direcciones.find(d=>d.id===dirId);
   if (!dir) return;
   if (!confirm(`¿Regenerar los PDFs v1 de "${dir.nombre}"?\n\nSe sobreescribirán los archivos actuales con los datos de hoy (incluidos los objetivos guardados).`)) return;
+
+  // Recargar GC fresco para que PDFs usen la versión más reciente
+  const { data: gcFresh } = await sb.from('pol_gobierno_corporativo')
+    .select('*').order('version', { ascending: false }).limit(1);
+  if (gcFresh?.length) _gcCurrent = gcFresh[0];
 
   const areaIds  = areas.filter(a=>a.direccion_id===dirId).map(a=>a.id);
   const deptIds  = departamentos.filter(d=>areaIds.includes(d.area_id)).map(d=>d.id);
