@@ -2899,7 +2899,7 @@ ${sec('Propósito y Objetivo',d.objeto)}
 ${sec('Alcance',d.alcance)}
 ${sec('Definiciones',d.definiciones)}
 ${sec('Lineamientos y Reglas',d.contenido)}
-${sec('Sanciones por Incumplimiento',[d.sanciones,d.sancionesInstitucionales].filter(Boolean).join('\n\n'))}
+${sec('Sanciones por Incumplimiento',(d.sancionesInstitucionales&&(d.sanciones||'').includes(d.sancionesInstitucionales.slice(0,40).trim())?d.sanciones:[d.sanciones,d.sancionesInstitucionales].filter(Boolean).join('\n\n')))}
 ${sec('Excepciones',d.excepciones)}
 <div class="sg">Comunicación e Implementación</div>
 ${sec('Canal de Comunicación',d.canal)}
@@ -3261,7 +3261,7 @@ function _buildPolicyPDFDef(d, versHist) {
       ...mkSec('Responsabilidades',              d.responsabilidades),
       ...mkSec('Lineamientos y Reglas',          d.contenido),
       ...mkSec('Controles y Monitoreo',          d.controles),
-      ...mkSec('Sanciones por Incumplimiento',   [d.sanciones, d.sancionesInstitucionales].filter(Boolean).join('\n\n')),
+      ...mkSec('Sanciones por Incumplimiento',   (d.sancionesInstitucionales&&(d.sanciones||'').includes(d.sancionesInstitucionales.slice(0,40).trim())?d.sanciones:[d.sanciones,d.sancionesInstitucionales].filter(Boolean).join('\n\n'))),
       ...mkSec('Excepciones y Casos Especiales', d.excepciones),
       grpLabel('Comunicación e Implementación'),
       ...mkSec('Canal de Comunicación',          d.canal),
@@ -3604,7 +3604,7 @@ async function _generateWordCore(d, download=true) {
           ...mkSec('Responsabilidades',                 d.responsabilidades),
           ...mkSec('Lineamientos y Reglas',             d.contenido),
           ...mkSec('Controles y Monitoreo',             d.controles),
-          ...mkSec('Sanciones por Incumplimiento',      [d.sanciones, d.sancionesInstitucionales].filter(Boolean).join('\n\n')),
+          ...mkSec('Sanciones por Incumplimiento',      (d.sancionesInstitucionales&&(d.sanciones||'').includes(d.sancionesInstitucionales.slice(0,40).trim())?d.sanciones:[d.sanciones,d.sancionesInstitucionales].filter(Boolean).join('\n\n'))),
           ...mkSec('Excepciones y Casos Especiales',    d.excepciones),
           grpLabel('Comunicación e Implementación'),
           ...mkSec('Canal de Comunicación',             d.canal),
@@ -3995,12 +3995,39 @@ async function handleAdjunto(input) {
   };
   const contentPayload = {};
   for (const [field, elId] of Object.entries(FIELD_EL)) {
-    const newVal = (extracted[field] || '').trim();
-    if (newVal) {
-      const el = document.getElementById(elId);
-      if (el) el.value = newVal;
-      contentPayload[field] = newVal;
+    const extractedVal = (extracted[field] || '').trim();
+    if (!extractedVal) continue;
+
+    let finalVal = extractedVal;
+
+    if (field === 'sanciones') {
+      // El Word trae 8.1-8.3 (policy-specific, ya cortado por cutIdx).
+      // Siempre concatenar el GC institucional fresco para que el campo quede completo.
+      const gcSanc = (_gcCurrent?.sanciones_institucionales || '').trim();
+      finalVal = extractedVal + (gcSanc ? '\n\n' + gcSanc : '');
     }
+
+    if (field === 'marco_normativo') {
+      // El Word trae GC-base + adiciones específicas mezclados.
+      // Identificar solo las adiciones (líneas que NO están en el GC actual),
+      // luego guardar: GC fresco + adiciones específicas.
+      const gcMarco = (_gcCurrent?.marco_normativo || '').trim();
+      if (gcMarco) {
+        const normL = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'')
+          .replace(/^\s*\d+[.)]\s*/,'').toLowerCase().trim();
+        const gcLines = gcMarco.split('\n').map(normL).filter(l => l.length > 8);
+        const wordLines = extractedVal.split('\n');
+        const specific = wordLines.filter(line => {
+          const n = normL(line);
+          return n.length > 8 && !gcLines.some(g => n.includes(g.slice(0,28)) || g.includes(n.slice(0,28)));
+        });
+        finalVal = gcMarco + (specific.length ? '\n\n' + specific.join('\n') : '');
+      }
+    }
+
+    const el = document.getElementById(elId);
+    if (el) el.value = finalVal;
+    contentPayload[field] = finalVal;
   }
 
   const { error: dbErr } = await sb.from('pol_politicas').update({
