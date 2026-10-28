@@ -3899,35 +3899,30 @@ function _showExtractPreview(sections) {
 async function handleAdjunto(input) {
   const file = input.files[0];
   if (!file) return;
-  console.log('[adjuntar] archivo:', file.name, 'politicaActual.id:', politicaActual?.id);
   input.value = '';
+
   if (!politicaActual?.id) {
     alert('Guarda la política primero para poder adjuntar un documento.');
     return;
   }
-  const ext = file.name.split('.').pop().toLowerCase();
-  console.log('[adjuntar] ext:', ext);
-  if (ext !== 'docx') {
-    alert('Solo se permiten archivos Word (.docx). Para PDFs usa el botón PDF del sistema.');
+  if (file.name.split('.').pop().toLowerCase() !== 'docx') {
+    alert('Solo se permiten archivos Word (.docx).');
     return;
   }
 
-  // Validar folio en el nombre del archivo
   const cat   = catalogo.find(c => c.id === politicaActual.catalogo_id);
   const folio = cat?.codigo_documento || '';
   if (folio && !file.name.toUpperCase().startsWith(folio.toUpperCase())) {
-    const ok = confirm(`El nombre del archivo no comienza con el folio esperado.\n\nEsperado: ${folio}\nArchivo: ${file.name}\n\n¿Continuar de todas formas?`);
-    if (!ok) return;
+    if (!confirm(`El nombre del archivo no comienza con el folio esperado.\n\nEsperado: ${folio}\nArchivo: ${file.name}\n\n¿Continuar de todas formas?`)) return;
   }
 
   const eEl = document.getElementById('pol-error');
   const sEl = document.getElementById('pol-success');
+
+  // ── 1. Subir a Storage ─────────────────────────────────────────────────────
   sEl.textContent = 'Subiendo documento…'; sEl.classList.add('show');
-
-  const path = `${politicaActual.id}/v${politicaActual.version}_${Date.now()}.docx`;
-
-  // Subir a Storage
-  const { error: upErr } = await sb.storage.from('politicas-docs').upload(path, file, { upsert: true });
+  const storagePath = `${politicaActual.id}/v${politicaActual.version}_${Date.now()}.docx`;
+  const { error: upErr } = await sb.storage.from('politicas-docs').upload(storagePath, file, { upsert: true });
   if (upErr) {
     sEl.classList.remove('show');
     eEl.textContent = 'Error al subir el archivo: ' + upErr.message;
@@ -3935,81 +3930,91 @@ async function handleAdjunto(input) {
     return;
   }
 
-  // Signed URL para el banner (en memoria)
-  const { data: signed } = await sb.storage.from('politicas-docs').createSignedUrl(path, 3600);
-  const signedUrl = signed?.signedUrl || '';
-
-  // Guardar path raw en BD
-  const { error: dbErr } = await sb.from('pol_politicas').update({
-    documento_adjunto_url: path, documento_adjunto_nombre: file.name
-  }).eq('id', politicaActual.id);
-  if (dbErr) {
+  // ── 2. Extraer contenido del Word ──────────────────────────────────────────
+  sEl.textContent = 'Extrayendo contenido del documento…';
+  let extracted = {};
+  try {
+    extracted = await _extractDocxContent(file);
+  } catch(e) {
+    console.error('[handleAdjunto] extracción:', e);
     sEl.classList.remove('show');
-    eEl.textContent = 'Error al registrar: ' + dbErr.message;
-    eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
+    eEl.textContent = 'No se pudo leer el documento: ' + e.message;
+    eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 8000);
     return;
   }
 
-  politicaActual.documento_adjunto_url    = signedUrl || path;
-  politicaActual.documento_adjunto_nombre = file.name;
-  renderDocAdjunto();
+  // ── 3. Modal de confirmación (siempre se muestra, aunque sea 0 secciones) ─
+  sEl.classList.remove('show');
+  const confirmed = await _showExtractPreview(extracted);
+  if (!confirmed) {
+    sEl.textContent = 'Adjunto cancelado — nada fue guardado.';
+    sEl.classList.add('show');
+    setTimeout(() => sEl.classList.remove('show'), 3000);
+    return;
+  }
 
-  // Versionar
+  // ── 4. Usuario confirmó: ahora sí guardar en BD ────────────────────────────
+  sEl.textContent = 'Guardando…'; sEl.classList.add('show');
+
+  const { data: signed } = await sb.storage.from('politicas-docs').createSignedUrl(storagePath, 3600);
+  const signedUrl = signed?.signedUrl || '';
+
   const { data: prevV } = await sb.from('pol_versiones')
     .select('version').eq('politica_id', politicaActual.id)
     .order('version', { ascending: false }).limit(1).single();
   const nextVer = (prevV?.version || 0) + 1;
+
+  const FIELD_EL = {
+    objeto:'pol-objeto', alcance:'pol-alcance', marco_normativo:'pol-marco-normativo',
+    definiciones:'pol-definiciones', responsabilidades:'pol-responsabilidades',
+    contenido:'pol-contenido', controles_cumplimiento:'pol-controles-cumplimiento',
+    sanciones:'pol-sanciones', excepciones:'pol-excepciones',
+    documentos_relacionados:'pol-documentos-relacionados',
+    canal_comunicacion:'pol-canal-comunicacion', esquema_capacitacion:'pol-esquema-capacitacion',
+    directrices_valores:'pol-directrices-valores',
+  };
+  const contentPayload = {};
+  for (const [field, elId] of Object.entries(FIELD_EL)) {
+    if (extracted[field]) {
+      const el = document.getElementById(elId);
+      if (el) el.value = extracted[field];
+      contentPayload[field] = extracted[field];
+    }
+  }
+
+  const { error: dbErr } = await sb.from('pol_politicas').update({
+    documento_adjunto_url: storagePath,
+    documento_adjunto_nombre: file.name,
+    version: nextVer,
+    ...contentPayload
+  }).eq('id', politicaActual.id);
+  if (dbErr) {
+    sEl.classList.remove('show');
+    eEl.textContent = 'Error al guardar: ' + dbErr.message;
+    eEl.classList.add('show'); setTimeout(() => eEl.classList.remove('show'), 5000);
+    return;
+  }
+
   await sb.from('pol_versiones').insert({
     politica_id: politicaActual.id, version: nextVer, folio: folio || '',
-    fuente: 'adjuntado', url_storage: path, nombre_archivo: file.name,
+    fuente: 'adjuntado', url_storage: storagePath, nombre_archivo: file.name,
     elaboro: politicaActual.responsable_elaboracion || null,
     autorizo: politicaActual.autorizado_por || null
   });
-  await sb.from('pol_politicas').update({ version: nextVer }).eq('id', politicaActual.id);
-  politicaActual.version = nextVer;
 
-  // Extraer contenido del Word y poblar form + BD
-  sEl.textContent = 'Extrayendo contenido del documento…';
-  try {
-    console.log('[adjuntar] iniciando extracción, JSZip:', !!window.JSZip);
-    const extracted = await _extractDocxContent(file);
-    console.log('[adjuntar] secciones extraídas:', Object.keys(extracted));
-    const FIELD_EL = {
-      objeto:'pol-objeto', alcance:'pol-alcance', marco_normativo:'pol-marco-normativo',
-      definiciones:'pol-definiciones', responsabilidades:'pol-responsabilidades',
-      contenido:'pol-contenido', controles_cumplimiento:'pol-controles-cumplimiento',
-      sanciones:'pol-sanciones', excepciones:'pol-excepciones',
-      documentos_relacionados:'pol-documentos-relacionados',
-      canal_comunicacion:'pol-canal-comunicacion', esquema_capacitacion:'pol-esquema-capacitacion',
-      directrices_valores:'pol-directrices-valores',
-    };
-    const updatePayload = {};
-    for (const [field, elId] of Object.entries(FIELD_EL)) {
-      if (extracted[field]) {
-        const el = document.getElementById(elId);
-        if (el) el.value = extracted[field];
-        updatePayload[field] = extracted[field];
-      }
-    }
-    if (Object.keys(updatePayload).length) {
-      sEl.classList.remove('show');
-      const confirmed = await _showExtractPreview(extracted);
-      sEl.classList.add('show');
-      if (confirmed) {
-        await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
-        Object.assign(politicaActual, updatePayload);
-        fillPoliticaForm(politicaActual);
-        sEl.textContent = `✓ ${Object.keys(updatePayload).length} secciones guardadas en la política (v${nextVer}).`;
-      } else {
-        sEl.textContent = `Documento adjunto (v${nextVer}) · Contenido no guardado (cancelado).`;
-      }
-    } else {
-      sEl.textContent = `✓ Documento adjunto (v${nextVer}) · Sin secciones reconocidas para extraer.`;
-    }
-  } catch(e) {
-    console.error('[handleAdjunto] extracción:', e);
-    sEl.textContent = `✓ Documento adjunto (v${nextVer}) · No se pudo extraer contenido: ${e.message}`;
-  }
+  Object.assign(politicaActual, {
+    documento_adjunto_url: signedUrl || storagePath,
+    documento_adjunto_nombre: file.name,
+    version: nextVer,
+    ...contentPayload
+  });
+  renderDocAdjunto();
+  if (Object.keys(contentPayload).length) fillPoliticaForm(politicaActual);
+
+  const cnt = Object.keys(contentPayload).length;
+  sEl.textContent = cnt > 0
+    ? `✓ Documento adjunto · ${cnt} secciones importadas (v${nextVer}).`
+    : `✓ Documento adjunto (v${nextVer}).`;
   setTimeout(() => sEl.classList.remove('show'), 5000);
 }
 
