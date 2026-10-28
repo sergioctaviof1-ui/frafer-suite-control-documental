@@ -2418,12 +2418,13 @@ async function savePolitica() {
       try {
         const _catF = catalogo.find(c => c.id === politicaActual.catalogo_id);
         const _folio = _catF?.codigo || _catF?.clave || '';
-        await sb.from('pol_versiones').insert({
+        const { error: _vErr } = await sb.from('pol_versiones').insert({
           politica_id: politicaActual.id, version: newVersion, folio: _folio,
-          fuente: 'editado', nombre_archivo: `v${newVersion}`,
+          fuente: 'generado', nombre_archivo: `v${newVersion}`,
           elaboro: politicaActual.responsable_elaboracion || null,
           autorizo: politicaActual.autorizado_por || null
         });
+        if (_vErr) console.error('[savePolitica] pol_versiones insert:', _vErr.message);
         await _generateWordCore(_getDocData(), false);
         await generatePDF(false);
         _toast(`✓ v${newVersion} guardada · Documentos generados.`);
