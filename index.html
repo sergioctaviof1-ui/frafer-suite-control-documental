@@ -3919,6 +3919,7 @@ async function handleAdjunto(input) {
     if (Object.keys(updatePayload).length) {
       await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
       Object.assign(politicaActual, updatePayload);
+      fillPoliticaForm(politicaActual);  // forzar re-render desde el objeto ya actualizado
       sEl.textContent = `✓ Documento adjunto (v${nextVer}) · ${Object.keys(updatePayload).length} secciones extraídas y guardadas.`;
     } else {
       sEl.textContent = `✓ Documento adjunto (v${nextVer}) · Sin secciones reconocidas para extraer.`;
