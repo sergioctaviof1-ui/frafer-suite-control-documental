@@ -3782,25 +3782,15 @@ async function _extractDocxContent(file) {
   const zip    = await JSZip.loadAsync(file);
   const xmlStr = await zip.file('word/document.xml').async('string');
 
-  // Extraer texto de cada <w:p> directo del XML raw (evita problemas de namespace en DOMParser)
-  const getParagraphTexts = xml => {
-    const results = [];
-    const pRe = /<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g;
-    let pm;
-    while ((pm = pRe.exec(xml)) !== null) {
-      const pXml = pm[0];
-      // Texto de todos los <w:t> en este párrafo
-      const tRe = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
-      const parts = []; let tm;
-      while ((tm = tRe.exec(pXml)) !== null) parts.push(tm[1]);
-      const text = parts.join('').trim();
-      if (text) results.push(text);
-    }
-    return results;
-  };
-
-  const paragraphs = getParagraphTexts(xmlStr);
-  console.log('[docx] primeros 10 párrafos:', paragraphs.slice(0, 10));
+  // Segmentar por párrafos: split por </w:p> en lugar de regex sobre string enorme
+  // (los regex con [\s\S]*? sobre XMLs de 400KB fallan en el browser)
+  const paragraphs = [];
+  for (const frag of xmlStr.split('</w:p>')) {
+    const parts = [...frag.matchAll(/<w:t(?:[^>]*)?>([^<]*)<\/w:t>/g)].map(m => m[1]);
+    const text = parts.join('').trim();
+    if (text) paragraphs.push(text);
+  }
+  console.log('[docx] párrafos con texto:', paragraphs.length, '| muestra:', paragraphs.slice(0, 10));
 
   const sections  = {};
   let curField    = null;
