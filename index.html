@@ -2370,12 +2370,19 @@ async function savePolitica() {
     }
     return;
   }
-  // Guardado subsecuente — UPDATE: incrementar versión y regenerar documentos
-  const newVersion = (politicaActual.version || 1) + 1;
-  const { error } = await sb.from('pol_politicas').update({ ...payload, version: newVersion }).eq('id', politicaActual.id);
+  // Guardado subsecuente — solo bump de versión si el CONTENIDO cambió
+  const _CF = ['objeto','alcance','marco_normativo','definiciones','responsabilidades',
+    'contenido','controles_cumplimiento','sanciones','excepciones','documentos_relacionados','num_reglas'];
+  const prevHash = _CF.map(f => (politicaActual[f] ?? '').toString().trim()).join('§');
+  const newHash  = _CF.map(f => (payload[f]         ?? '').toString().trim()).join('§');
+  const contentChanged = prevHash !== newHash;
+  const newVersion = contentChanged ? (politicaActual.version || 1) + 1 : (politicaActual.version || 1);
+  const updatePayload = contentChanged ? { ...payload, version: newVersion } : payload;
+
+  const { error } = await sb.from('pol_politicas').update(updatePayload).eq('id', politicaActual.id);
   if (error) { eEl.textContent = error.message; eEl.classList.add('show'); setTimeout(()=>eEl.classList.remove('show'),4000); }
   else {
-    politicaActual = { ...politicaActual, ...payload, version: newVersion };
+    politicaActual = { ...politicaActual, ...updatePayload };
     const _catSync2 = catalogo.find(c => c.id === politicaActual.catalogo_id);
     if (_catSync2?.actividad_id) {
       sb.from('pol_actividades').update({ objetivo_politica: payload.objeto || null })
@@ -2384,13 +2391,25 @@ async function savePolitica() {
     }
     fillPoliticaForm(politicaActual);
     loadCatalogo();
-    sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
-    try {
-      await _generateWordCore(_getDocData(), false);
-      await generatePDF(false);
-      sEl.textContent = `✓ Cambios guardados · Documentos generados v${newVersion}.`;
-    } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = `Contenido guardado v${newVersion} (error al generar documentos).`; }
-    setTimeout(() => sEl.classList.remove('show'), 5000);
+    if (contentChanged) {
+      sEl.textContent = `Guardado · Generando documentos v${newVersion}…`; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      try {
+        // Registrar versión por cambio de contenido
+        await sb.from('pol_versiones').insert({
+          politica_id: politicaActual.id, version: newVersion,
+          fuente: 'editado', nombre_archivo: `v${newVersion}`,
+          elaboro: politicaActual.responsable_elaboracion || null,
+          autorizo: politicaActual.autorizado_por || null
+        });
+        await _generateWordCore(_getDocData(), false);
+        await generatePDF(false);
+        sEl.textContent = `✓ Cambios guardados · Documentos generados v${newVersion}.`;
+      } catch(ge) { console.error('[savePolitica] gen:', ge); sEl.textContent = `Contenido guardado v${newVersion} (error al generar documentos).`; }
+      setTimeout(() => sEl.classList.remove('show'), 5000);
+    } else {
+      sEl.textContent = '✓ Datos actualizados.'; sEl.classList.add('show'); sEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      setTimeout(() => sEl.classList.remove('show'), 3000);
+    }
   }
 }
 
@@ -3337,14 +3356,6 @@ async function generatePDF(download=true) {
       const storagePath = `${d.politicaId}/${fileName}`;
       await sb.storage.from('politicas-docs').upload(storagePath, pdfBlob,
         { contentType:'application/pdf', upsert:true });
-      // Reemplazar registro previo del mismo tipo para esta versión (evitar duplicados al regenerar)
-      await sb.from('pol_versiones').delete()
-        .eq('politica_id', d.politicaId).eq('version', versionNum).ilike('nombre_archivo', '%.pdf');
-      await sb.from('pol_versiones').insert({
-        politica_id: d.politicaId, version: versionNum, folio: d.folio,
-        fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
-        elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
-      });
       const { data: pubUrl } = sb.storage.from('politicas-docs').getPublicUrl(storagePath);
       if (pubUrl?.publicUrl) {
         await sb.from('pol_politicas').update({ url_pdf: pubUrl.publicUrl }).eq('id', d.politicaId);
@@ -3642,17 +3653,6 @@ async function _generateWordCore(d, download=true) {
       );
       if (upErr) { console.error('[Word] Storage upload error:', upErr.message); }
 
-      // Reemplazar registro previo del mismo tipo para esta versión (evitar duplicados al regenerar)
-      await sb.from('pol_versiones').delete()
-        .eq('politica_id', d.politicaId).eq('version', versionNum).ilike('nombre_archivo', '%.docx');
-      const { error: insErr } = await sb.from('pol_versiones').insert({
-        politica_id: d.politicaId, version: versionNum, folio: d.folio,
-        fuente: 'generado', url_storage: storagePath, nombre_archivo: fileName,
-        elaboro: d.respElab || null, autorizo: d.autorizadoPor || null
-      });
-      if (insErr) {
-        console.error('[Word] pol_versiones insert error:', insErr.message);
-      }
     }
 
 }
