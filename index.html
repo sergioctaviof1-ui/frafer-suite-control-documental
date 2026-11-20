@@ -4270,7 +4270,7 @@ async function saveDepto() {
     const maxSeq = Math.max(...existingDepts.map(d => parseInt(d.codigo?.split('-').pop())||0));
     nextSeq = maxSeq + 1;
   }
-  const codigo = `${area.numero}-${String(nextSeq).padStart(2,'0')}`;
+  const codigo = `${area.numero}-${String(nextSeq).padStart(3,'0')}`;
   const orden  = nextSeq;
   const { error } = await sb.from('pol_departamentos').insert({ area_id, nombre, codigo, orden });
   if (error) { showModalError('mdepto-error', error.message); return; }
