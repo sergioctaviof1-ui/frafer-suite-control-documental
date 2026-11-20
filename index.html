@@ -4191,8 +4191,8 @@ function updateCodigoPreview() {
   const act    = actividades.find(a=>a.id===actId);
   const dept   = act ? departamentos.find(d=>d.id===act.departamento_id) : null;
   if (dir && area && act && dept) {
-    const deptSeq = dept.codigo ? dept.codigo.split('-').pop() : '??';
-    const actSeq  = act.codigo  ? act.codigo.split('-').pop()  : '??';
+    const deptSeq = String(dept.orden).padStart(3,'0');
+    const actSeq  = String(actIndexInDept(act.id, dept.id) + 1).padStart(2,'0');
     document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-${deptSeq}-${actSeq}`;
   } else if (dir && area) {
     document.getElementById('mcat-codigo-preview').textContent = `${tipo}-${dir.codigo}-${area.numero}-??-??`;
