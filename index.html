@@ -4547,22 +4547,22 @@ async function loadAdmin() {
       return sum + actividades.filter(a=>dIds.includes(a.departamento_id)).length;
     }, 0);
 
-    // Conteos documentación (solo dirs autorizadas)
-    const autDirIds  = new Set(direcciones.filter(d=>d.confirmada).map(d=>d.id));
-    const autAreaIds = new Set(areas.filter(a=>autDirIds.has(a.direccion_id)).map(a=>a.id));
-    const pltAut = (polsData||[]).filter(p => {
-      const cat = (catsData||[]).find(c=>c.id===p.catalogo_id);
-      return cat && cat.tipo_documento==='PLT' && autAreaIds.has(cat.area_id);
-    });
-    const catAutPLT = (catsData||[]).filter(c=>c.tipo_documento==='PLT' && autAreaIds.has(c.area_id)).length;
-    const nDoc  = pltAut.filter(p=>['borrador','en_revision','autorizado'].includes(p.status)).length;
-    const nPub  = pltAut.filter(p=>p.status==='publicado').length;
+    // Capa 1: (por_autorizar + autorizadas) / total dirs — igual que Dashboard
+    const c1pct = nTotal ? Math.round(((nPorAut + nAut) / nTotal) * 100) : 0;
 
-    // Porcentajes
-    const c1pct = nTotal ? Math.round((nAut/nTotal)*100) : 0;
-    const c2pct = catAutPLT ? Math.round(((nDoc+nPub)/catAutPLT)*100) : 0;
-    const pubPct= catAutPLT ? Math.round((nPub/catAutPLT)*100) : 0;
-    const globalPct = Math.round((c1pct*0.5) + (c2pct*0.5));
+    // Capa 2: pipeline ponderado sobre TODAS las actividades (borrador=1, revision=2, aut/pub=3)
+    const allPLTCats  = (catsData||[]).filter(c=>c.tipo_documento==='PLT');
+    const allPLTTotal = allPLTCats.length;
+    const allPLTIds   = new Set(allPLTCats.map(c=>c.id));
+    let c2points = 0, nDoc2 = 0, nPub2 = 0;
+    (polsData||[]).filter(p=>allPLTIds.has(p.catalogo_id)).forEach(p => {
+      if      (p.status === 'borrador')    { c2points += 1; nDoc2++; }
+      else if (p.status === 'en_revision') { c2points += 2; nDoc2++; }
+      else if (p.status === 'autorizado')  { c2points += 3; nDoc2++; }
+      else if (p.status === 'publicado')   { c2points += 3; nPub2++; }
+    });
+    const c2pct = allPLTTotal ? Math.round((c2points / (allPLTTotal * 3)) * 100) : 0;
+    const globalPct = Math.round((c1pct * 0.5) + (c2pct * 0.5));
 
     const bar = (pct,color) => `<div style="height:6px;border-radius:3px;background:var(--stone);overflow:hidden;margin-top:6px">
       <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div></div>`;
@@ -4581,10 +4581,10 @@ async function loadAdmin() {
         <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;padding:14px 18px">
           <div style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;color:#2e7d32;font-weight:700;margin-bottom:6px">CAPA 2 · DOCUMENTACIÓN Y AUTORIZACIÓN · 50%</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <span style="font-size:22px;font-weight:700;color:var(--navy);font-family:var(--ff-mono)">${nDoc+nPub}<span style="font-size:12px;color:var(--muted)"> / ${catAutPLT||'—'}</span></span>
+            <span style="font-size:22px;font-weight:700;color:var(--navy);font-family:var(--ff-mono)">${nDoc2+nPub2}<span style="font-size:12px;color:var(--muted)"> / ${allPLTTotal}</span></span>
             <span style="font-size:11px;font-family:var(--ff-mono);color:#2e7d32;font-weight:700">${c2pct}%</span>
           </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px">En proceso: ${nDoc} · Publicadas: ${nPub} · En catálogo autorizado: ${catAutPLT}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">En proceso: ${nDoc2} · Publicadas: ${nPub2} · Total actividades: ${allPLTTotal}</div>
           ${bar(c2pct,'#2e7d32')}
         </div>
       </div>
