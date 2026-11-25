@@ -1523,12 +1523,19 @@ function renderDashboard() {
   // Capa 1: "por autorizar" = trabajo del consultor ya hecho, pendiente firma Morsa
   const c1pct = allTotal ? Math.round(((allPorAut + allCat) / allTotal) * 100) : 0;
 
-  // Capa 2: qué % del total de actividades tiene documentación iniciada
+  // Capa 2: pipeline ponderado por etapa (borrador=1pt, en_revision=2pts, autorizado/publicado=3pts)
+  // Denominador = allTotal × 3 pasos posibles → nunca optimista
   const allPLTIds = new Set(allPLT.map(c => c.id));
   const polsC2 = pols.filter(p => allPLTIds.has(p.catalogo_id));
-  const nDoc2  = polsC2.filter(p => ['borrador','en_revision','autorizado'].includes(effectiveStatus(p))).length;
-  const nPub2  = polsC2.filter(p => effectiveStatus(p) === 'publicado').length;
-  const c2pct  = allTotal ? Math.round(((nDoc2 + nPub2) / allTotal) * 100) : 0;
+  let c2points = 0;
+  let nDoc2 = 0, nPub2 = 0;
+  polsC2.forEach(p => {
+    const st = effectiveStatus(p);
+    if      (st === 'borrador')                      { c2points += 1; nDoc2++; }
+    else if (st === 'en_revision')                   { c2points += 2; nDoc2++; }
+    else if (st === 'autorizado' || st === 'publicado') { c2points += 3; if (st === 'publicado') nPub2++; else nDoc2++; }
+  });
+  const c2pct = allTotal ? Math.round((c2points / (allTotal * 3)) * 100) : 0;
   const globalPct = Math.round(c1pct * 0.5 + c2pct * 0.5);
 
   const bar = (pct, color) =>
