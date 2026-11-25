@@ -723,10 +723,10 @@ input,textarea,select{font-family:inherit}
       </div>
     </div>
     <div class="stats-row" id="dash-stats">
+      <div class="stat-card amber"><div class="num" id="stat-por-confirmar">—</div><div class="lbl">Por Confirmar</div></div>
       <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">En Catálogo</div></div>
+      <div class="stat-card"><div class="num" id="stat-proceso">—</div><div class="lbl">En Documentación</div></div>
       <div class="stat-card green"><div class="num" id="stat-pub">—</div><div class="lbl">Publicadas</div></div>
-      <div class="stat-card amber"><div class="num" id="stat-proceso">—</div><div class="lbl">En Proceso</div></div>
-      <div class="stat-card"><div class="num" id="stat-pend">—</div><div class="lbl">Pendientes</div></div>
       <div class="stat-card red"><div class="num" id="stat-venc">—</div><div class="lbl">Vencidas / Alerta</div></div>
     </div>
     <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
@@ -734,15 +734,13 @@ input,textarea,select{font-family:inherit}
         <thead>
           <tr>
             <th class="th-area">Dirección / Área</th>
+            <th class="th-total">Por Confirmar</th>
             <th class="th-total">En Catálogo</th>
+            <th class="th-proceso">En Documentación</th>
             <th class="th-pub">Publicadas</th>
-            <th class="th-proceso">En Proceso</th>
-            <th class="th-pend">Pendientes</th>
-            <th class="th-total">Documentadas</th>
-            <th class="th-avance">Avance</th>
           </tr>
         </thead>
-        <tbody id="semaforo-body"><tr><td colspan="7" class="loading">Cargando datos…</td></tr></tbody>
+        <tbody id="semaforo-body"><tr><td colspan="5" class="loading">Cargando datos…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1451,7 +1449,7 @@ async function loadDashboard() {
   const [{ data: pols }, { data: cats }, { data: dirs }, { data: areasData }] = await Promise.all([
     sb.from('pol_politicas').select('id,status,catalogo_id,fecha_vencimiento'),
     sb.from('pol_catalogo').select('id,area_id,tipo_documento,codigo_documento').eq('activo',true),
-    sb.from('pol_direcciones').select('id,nombre,codigo,tipo').order('orden'),
+    sb.from('pol_direcciones').select('id,nombre,codigo,tipo,confirmada,confirmada_at').order('orden'),
     sb.from('pol_areas').select('id,direccion_id')
   ]);
   _dashCache = { pols: pols||[], cats: cats||[], dirs: dirs||[], areasData: areasData||[] };
@@ -1468,65 +1466,68 @@ function renderDashboard() {
   const { pols, cats, dirs, areasData } = _dashCache;
   if (!dirs?.length) return;
 
+  // Mapa de dirección → confirmada
+  const dirMap = Object.fromEntries(dirs.map(d=>[d.id,d]));
+  const areaToDir = Object.fromEntries(areasData.map(a=>[a.id,a.direccion_id]));
+
   const filteredCats = cats.filter(c=>c.tipo_documento===dashTipo);
   const catIds = new Set(filteredCats.map(c=>c.id));
   const filteredPols = pols.filter(p=>catIds.has(p.catalogo_id));
 
-  const totalCat = filteredCats.length;
-  const pub    = filteredPols.filter(p=>p.status==='publicado').length;
-  const proc   = filteredPols.filter(p=>['en_catalogo','borrador','en_revision','autorizado'].includes(p.status)).length;
-  const pend   = filteredPols.filter(p=>p.status==='en_catalogo').length;
+  // Separar catálogo en "por confirmar" (dir no autorizada) vs "en catálogo" (dir autorizada)
+  let totalPorConfirmar = 0, totalEnCatalogo = 0;
+  filteredCats.forEach(c => {
+    const dirId = areaToDir[c.area_id];
+    const dir = dirId ? dirMap[dirId] : null;
+    if (dir?.confirmada) totalEnCatalogo++;
+    else totalPorConfirmar++;
+  });
+
+  const pub    = filteredPols.filter(p=>effectiveStatus(p)==='publicado').length;
+  const doc    = filteredPols.filter(p=>['borrador','en_revision','autorizado'].includes(effectiveStatus(p))).length;
   const today  = new Date(); today.setHours(0,0,0,0);
   const d60    = new Date(today); d60.setDate(d60.getDate()+60);
-  const alertas= filteredPols.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)>today&&new Date(p.fecha_vencimiento)<=d60).length;
-  const venc   = filteredPols.filter(p=>p.status==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<today).length;
+  const alertas= filteredPols.filter(p=>effectiveStatus(p)==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)>today&&new Date(p.fecha_vencimiento)<=d60).length;
+  const venc   = filteredPols.filter(p=>effectiveStatus(p)==='publicado'&&p.fecha_vencimiento&&new Date(p.fecha_vencimiento)<today).length;
 
-  document.getElementById('stat-total').textContent   = totalCat;
-  document.getElementById('stat-pub').textContent     = pub;
-  document.getElementById('stat-proceso').textContent = proc;
-  document.getElementById('stat-pend').textContent    = pend;
-  document.getElementById('stat-venc').textContent    = (venc+alertas) || '—';
+  document.getElementById('stat-por-confirmar').textContent = totalPorConfirmar || '—';
+  document.getElementById('stat-total').textContent         = totalEnCatalogo;
+  document.getElementById('stat-proceso').textContent       = doc || '—';
+  document.getElementById('stat-pub').textContent           = pub || '—';
+  document.getElementById('stat-venc').textContent          = (venc+alertas) || '—';
 
-  const catById   = Object.fromEntries(filteredCats.map(c=>[c.id,c]));
-  const areaToDir = Object.fromEntries(areasData.map(a=>[a.id,a.direccion_id]));
+  const catById = Object.fromEntries(filteredCats.map(c=>[c.id,c]));
 
   const dirStats = {};
   filteredCats.forEach(c => {
     const dirId = areaToDir[c.area_id]; if (!dirId) return;
-    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
-    dirStats[dirId].cat++;
+    const dir = dirMap[dirId];
+    if (!dirStats[dirId]) dirStats[dirId] = {porConfirmar:0,cat:0,doc:0,pub:0};
+    if (dir?.confirmada) dirStats[dirId].cat++;
+    else dirStats[dirId].porConfirmar++;
   });
   filteredPols.forEach(p => {
     const cat = catById[p.catalogo_id]; if (!cat) return;
     const dirId = areaToDir[cat.area_id]; if (!dirId) return;
-    if (!dirStats[dirId]) dirStats[dirId] = {pub:0,proc:0,pend:0,venc:0,cat:0};
+    if (!dirStats[dirId]) dirStats[dirId] = {porConfirmar:0,cat:0,doc:0,pub:0};
     const est = effectiveStatus(p);
-    if (est==='publicado')  dirStats[dirId].pub++;
-    else if (est==='vencido') dirStats[dirId].venc++;
-    else if (est==='en_catalogo') dirStats[dirId].pend++;
-    else dirStats[dirId].proc++;
+    if (est==='publicado') dirStats[dirId].pub++;
+    else if (['borrador','en_revision','autorizado'].includes(est)) dirStats[dirId].doc++;
   });
 
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
   let tbody = '';
   dirs.forEach(dir => {
-    const s = dirStats[dir.id] || {pub:0,proc:0,pend:0,venc:0,cat:0};
-    const doc = s.pub+s.proc+s.pend+s.venc;
-    const pct = s.cat ? Math.round((s.pub/s.cat)*100) : 0;
+    const s = dirStats[dir.id] || {porConfirmar:0,cat:0,doc:0,pub:0};
     tbody += `<tr>
       <td><span class="div-label">[${dir.codigo}] ${dir.nombre}</span><br><span style="font-size:10px;color:var(--muted)">${tipoLabel[dir.tipo]||dir.tipo}</span></td>
-      <td style="font-weight:700;color:var(--navy)">${s.cat}</td>
-      <td style="color:var(--green)">${s.pub}</td>
-      <td style="color:var(--amber)">${s.proc}</td>
-      <td style="color:var(--muted)">${s.pend}</td>
-      <td>${doc}</td>
-      <td style="min-width:120px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${pct}%</div>
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-      </td>
+      <td style="color:var(--amber);font-weight:${s.porConfirmar?'700':'400'}">${s.porConfirmar||'—'}</td>
+      <td style="font-weight:700;color:var(--navy)">${s.cat||'—'}</td>
+      <td style="color:var(--dust)">${s.doc||'—'}</td>
+      <td style="color:var(--green);font-weight:${s.pub?'700':'400'}">${s.pub||'—'}</td>
     </tr>`;
   });
-  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';
+  document.getElementById('semaforo-body').innerHTML = tbody || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';
 }
 
 // ── CATÁLOGO — TABLA FLAT FILTRABLE ───────────────────────────────────────────
