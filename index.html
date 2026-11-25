@@ -4445,6 +4445,30 @@ async function loadAdmin() {
     </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
+  // Fila de totales
+  if (direcciones.length) {
+    const totalActs = direcciones.reduce((sum, d) => {
+      const aIds = areas.filter(a=>a.direccion_id===d.id).map(a=>a.id);
+      const dIds = departamentos.filter(dep=>aIds.includes(dep.area_id)).map(dep=>dep.id);
+      return sum + actividades.filter(a=>dIds.includes(a.departamento_id)).length;
+    }, 0);
+    const nLev    = direcciones.filter(d=>getDirStatus(d)==='levantamiento').length;
+    const nPorAut = direcciones.filter(d=>getDirStatus(d)==='por_autorizar').length;
+    const nAut    = direcciones.filter(d=>getDirStatus(d)==='autorizada').length;
+    const tbody = document.getElementById('admin-direcciones-body');
+    tbody.innerHTML += `<tr style="background:var(--navy)">
+      <td colspan="2" style="background:var(--navy);font-family:var(--ff-mono);font-size:9px;letter-spacing:.08em;color:var(--ember-glow);font-weight:700;padding:10px 12px">
+        TOTAL · ${direcciones.length} DIVISIONES
+      </td>
+      <td style="background:var(--navy)"></td>
+      <td style="background:var(--navy);text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:14px;color:var(--ember-glow)">${totalActs}</td>
+      <td style="background:var(--navy);font-family:var(--ff-mono);font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.04em">
+        ${nLev} Levant. · ${nPorAut} Por Aut. · ${nAut} Autorizadas
+      </td>
+      <td style="background:var(--navy)"></td>
+    </tr>`;
+  }
+
   const btnEditar = (fn, id, activo, tabla, campo) => `
     <button onclick="${fn}('${id}')" style="border:1px solid var(--stone);border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:var(--dust);cursor:pointer;margin-right:4px">✎ Editar</button>
     <button onclick="toggleActivo('${tabla}','${id}',${activo},'${campo}')" style="border:1px solid ${activo?'var(--red)':'var(--green)'};border-radius:4px;padding:2px 8px;font-size:10px;background:none;color:${activo?'var(--red)':'var(--green)'};cursor:pointer;margin-right:4px">${activo?'Inactivar':'Activar'}</button>
