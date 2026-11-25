@@ -1531,17 +1531,15 @@ function renderDashboard() {
 
   // Capa 2: pipeline ponderado por etapa (borrador=1pt, en_revision=2pts, autorizado/publicado=3pts)
   // Denominador = allTotal × 3 pasos posibles → nunca optimista
-  // Capa 2: solo dirs CONFIRMADAS — borradores auto-generados en Por Autorizar no cuentan
-  const confirmedPLTIds = new Set(
-    allPLT.filter(c => dirMap[areaToDir[c.area_id]]?.confirmada).map(c => c.id)
-  );
-  const polsC2 = pols.filter(p => confirmedPLTIds.has(p.catalogo_id));
-  let c2points = 0;
-  let nDoc2 = 0, nPub2 = 0;
+  // Capa 2: todas las pol_politicas PLT — borrador=1pt, revision=2pt, aut/pub=3pt
+  const allPLTIds = new Set(allPLT.map(c => c.id));
+  const polsC2 = pols.filter(p => allPLTIds.has(p.catalogo_id));
+  let c2points = 0, nDoc2 = 0, nPub2 = 0;
   polsC2.forEach(p => {
     const st = effectiveStatus(p);
-    if      (st === 'en_revision')                      { c2points += 2; nDoc2++; }
-    else if (st === 'autorizado' || st === 'publicado') { c2points += 3; if (st === 'publicado') nPub2++; else nDoc2++; }
+    if      (st === 'borrador')                         { c2points += 1; nDoc2++; }
+    else if (st === 'en_revision')                      { c2points += 2; nDoc2++; }
+    else if (st === 'autorizado' || st === 'publicado') { c2points += 3; if (st==='publicado') nPub2++; else nDoc2++; }
   });
   const c2pct = allTotal ? Math.round((c2points / (allTotal * 3)) * 100) : 0;
   const globalPct = Math.round(c1pct * 0.5 + c2pct * 0.5);
@@ -4560,12 +4558,12 @@ async function loadAdmin() {
     const c1Total = c1Lev + c1Por + c1Aut;
     const c1pct = c1Total ? Math.round(((c1Por + c1Aut) / c1Total) * 100) : 0;
 
-    // Capa 2: pipeline ponderado sobre TODAS las actividades (borrador=1, revision=2, aut/pub=3)
+    // Capa 2: todas las pol_politicas PLT — borrador=1pt, revision=2pt, aut/pub=3pt
     const allPLTCats  = (catsData||[]).filter(c=>c.tipo_documento==='PLT');
     const allPLTTotal = allPLTCats.length;
-    const allPLTIds   = new Set(allPLTCats.map(c=>c.id));
+    const allPLTIds2  = new Set(allPLTCats.map(c=>c.id));
     let c2points = 0, nDoc2 = 0, nPub2 = 0;
-    (polsData||[]).filter(p=>allPLTIds.has(p.catalogo_id)).forEach(p => {
+    (polsData||[]).filter(p=>allPLTIds2.has(p.catalogo_id)).forEach(p => {
       if      (p.status === 'borrador')    { c2points += 1; nDoc2++; }
       else if (p.status === 'en_revision') { c2points += 2; nDoc2++; }
       else if (p.status === 'autorizado')  { c2points += 3; nDoc2++; }
