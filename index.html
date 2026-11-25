@@ -729,6 +729,7 @@ input,textarea,select{font-family:inherit}
       <div class="stat-card"><div class="num" id="stat-proceso">—</div><div class="lbl">En Documentación</div></div>
       <div class="stat-card green"><div class="num" id="stat-pub">—</div><div class="lbl">Publicadas</div></div>
     </div>
+    <div id="dash-progress" style="margin:16px 0"></div>
     <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
       <table class="semaforo-table" id="semaforo-table">
         <thead>
@@ -1506,6 +1507,68 @@ function renderDashboard() {
   document.getElementById('stat-proceso').textContent       = totDoc   || '—';
   document.getElementById('stat-pub').textContent           = totPub   || '—';
 
+  // ── Progreso global ──────────────────────────────────────────────────────────
+  // Usar solo PLT para representar actividades únicas (cada actividad = 1 PLT)
+  const allPLT = cats.filter(c => c.tipo_documento === 'PLT');
+  let allLev = 0, allPorAut = 0, allCat = 0;
+  allPLT.forEach(c => {
+    const dirId = areaToDir[c.area_id];
+    const dir = dirMap[dirId];
+    if (!dir) return;
+    if (dir.confirmada) allCat++;
+    else if (dir.confirmada_at) allPorAut++;
+    else allLev++;
+  });
+  const allTotal = allLev + allPorAut + allCat;
+  // Capa 1: "por autorizar" = trabajo del consultor ya hecho, pendiente firma Morsa
+  const c1pct = allTotal ? Math.round(((allPorAut + allCat) / allTotal) * 100) : 0;
+
+  // Capa 2: documentación de actividades confirmadas
+  const confirmedCatIds = new Set(
+    allPLT.filter(c => dirMap[areaToDir[c.area_id]]?.confirmada).map(c => c.id)
+  );
+  const polsC2 = pols.filter(p => confirmedCatIds.has(p.catalogo_id));
+  const nDoc2  = polsC2.filter(p => ['borrador','en_revision','autorizado'].includes(effectiveStatus(p))).length;
+  const nPub2  = polsC2.filter(p => effectiveStatus(p) === 'publicado').length;
+  const c2pct  = allCat ? Math.round(((nDoc2 + nPub2) / allCat) * 100) : 0;
+  const globalPct = Math.round(c1pct * 0.5 + c2pct * 0.5);
+
+  const bar = (pct, color) =>
+    `<div style="width:100%;height:8px;background:var(--stone);border-radius:4px;overflow:hidden">` +
+    `<div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s"></div></div>`;
+
+  const progEl = document.getElementById('dash-progress');
+  if (progEl) progEl.innerHTML = `
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Capa 1 — Estructura</span>
+      <span style="font-size:20px;font-weight:700;color:var(--ember-deep)">${c1pct}%</span>
+    </div>
+    ${bar(c1pct,'var(--ember-deep)')}
+    <div style="font-size:11px;color:var(--muted);margin-top:7px">
+      <b>${allPorAut + allCat}</b> de <b>${allTotal}</b> actividades levantadas ·
+      <b>${allCat}</b> confirmadas por Grupo Morsa
+    </div>
+  </div>
+  <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Capa 2 — Documentación</span>
+      <span style="font-size:20px;font-weight:700;color:var(--green)">${c2pct}%</span>
+    </div>
+    ${bar(c2pct,'var(--green)')}
+    <div style="font-size:11px;color:var(--muted);margin-top:7px">
+      <b>${nDoc2 + nPub2}</b> de <b>${allCat}</b> documentos en proceso · <b>${nPub2}</b> publicados
+    </div>
+  </div>
+</div>
+<div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;padding:11px 16px;display:flex;align-items:center;gap:16px">
+  <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap">Avance Global</span>
+  <div style="flex:1">${bar(globalPct,'var(--navy)')}</div>
+  <span style="font-size:20px;font-weight:700;color:var(--navy);min-width:48px;text-align:right">${globalPct}%</span>
+</div>`;
+
+  // ── Tabla por dirección ──────────────────────────────────────────────────────
   const tipoLabel = {gobierno:'Gobierno',soporte:'Soporte',primaria:'Primaria'};
   const cell = (v, color, bold) =>
     `<td style="color:${color};font-weight:${bold&&v?'700':'400'};text-align:center">${v||'—'}</td>`;
@@ -1522,6 +1585,19 @@ function renderDashboard() {
       ${cell(s.pub,   'var(--green)', true)}
     </tr>`;
   });
+
+  // Fila de totales
+  const tcell = (v, color) =>
+    `<td style="color:${color};font-weight:700;text-align:center;padding:10px 8px">${v}</td>`;
+  tbody += `<tr style="border-top:2px solid var(--stone);background:rgba(0,0,0,.03)">
+    <td style="padding:10px 12px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em">Totales</td>
+    ${tcell(totLev   || '—', 'var(--dust)')}
+    ${tcell(totPorAut|| '—', 'var(--amber)')}
+    ${tcell(totCat,          'var(--navy)')}
+    ${tcell(totDoc   || '—', 'var(--dust)')}
+    ${tcell(totPub   || '—', 'var(--green)')}
+  </tr>`;
+
   document.getElementById('semaforo-body').innerHTML = tbody ||
     '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin datos</td></tr>';
 }
