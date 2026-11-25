@@ -1174,8 +1174,9 @@ input,textarea,select{font-family:inherit}
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn btn-primary btn-sm" onclick="openModalDireccion()">+ Nueva Dirección</button>
       </div>
+      <div id="admin-dir-progress" style="margin-bottom:16px"></div>
       <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:12px;overflow:clip">
-        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th style="text-align:center">Políticas</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <table class="admin-table"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th style="text-align:center">Actividades</th><th>Estado Estructura</th><th>Acciones</th></tr></thead>
         <tbody id="admin-direcciones-body"><tr><td colspan="6" class="loading">Cargando…</td></tr></tbody></table>
       </div>
     </div>
@@ -4394,12 +4395,13 @@ async function moverDir(id, delta) {
 }
 
 async function loadAdmin() {
-  const [{ data: dirsData }, { data: areasData }, { data: deptosData }, { data: actsData }, { data: catsData }] = await Promise.all([
+  const [{ data: dirsData }, { data: areasData }, { data: deptosData }, { data: actsData }, { data: catsData }, { data: polsData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').order('orden'),
     sb.from('pol_areas').select('*').order('numero'),
     sb.from('pol_departamentos').select('*').order('orden'),
     sb.from('pol_actividades').select('*').order('created_at'),
-    sb.from('pol_catalogo').select('*').order('numero')
+    sb.from('pol_catalogo').select('id,area_id,tipo_documento,actividad_id').eq('activo',true),
+    sb.from('pol_politicas').select('id,status,catalogo_id')
   ]);
   direcciones = dirsData||[]; areas = areasData||[]; departamentos = deptosData||[];
   actividades = actsData||[]; catalogo = catsData||[];
@@ -4445,20 +4447,75 @@ async function loadAdmin() {
     </tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Sin direcciones</td></tr>';
 
-  // Fila de totales
+  // ── TOTALES + PROGRESO 50/50 ──────────────────────────────────────────────
   if (direcciones.length) {
+    // Conteos estructura
+    const nTotal  = direcciones.length;
+    const nLev    = direcciones.filter(d=>getDirStatus(d)==='levantamiento').length;
+    const nPorAut = direcciones.filter(d=>getDirStatus(d)==='por_autorizar').length;
+    const nAut    = direcciones.filter(d=>getDirStatus(d)==='autorizada').length;
     const totalActs = direcciones.reduce((sum, d) => {
       const aIds = areas.filter(a=>a.direccion_id===d.id).map(a=>a.id);
       const dIds = departamentos.filter(dep=>aIds.includes(dep.area_id)).map(dep=>dep.id);
       return sum + actividades.filter(a=>dIds.includes(a.departamento_id)).length;
     }, 0);
-    const nLev    = direcciones.filter(d=>getDirStatus(d)==='levantamiento').length;
-    const nPorAut = direcciones.filter(d=>getDirStatus(d)==='por_autorizar').length;
-    const nAut    = direcciones.filter(d=>getDirStatus(d)==='autorizada').length;
+
+    // Conteos documentación (solo dirs autorizadas)
+    const autDirIds  = new Set(direcciones.filter(d=>d.confirmada).map(d=>d.id));
+    const autAreaIds = new Set(areas.filter(a=>autDirIds.has(a.direccion_id)).map(a=>a.id));
+    const pltAut = (polsData||[]).filter(p => {
+      const cat = (catsData||[]).find(c=>c.id===p.catalogo_id);
+      return cat && cat.tipo_documento==='PLT' && autAreaIds.has(cat.area_id);
+    });
+    const catAutPLT = (catsData||[]).filter(c=>c.tipo_documento==='PLT' && autAreaIds.has(c.area_id)).length;
+    const nDoc  = pltAut.filter(p=>['borrador','en_revision','autorizado'].includes(p.status)).length;
+    const nPub  = pltAut.filter(p=>p.status==='publicado').length;
+
+    // Porcentajes
+    const c1pct = nTotal ? Math.round((nAut/nTotal)*100) : 0;
+    const c2pct = catAutPLT ? Math.round(((nDoc+nPub)/catAutPLT)*100) : 0;
+    const pubPct= catAutPLT ? Math.round((nPub/catAutPLT)*100) : 0;
+    const globalPct = Math.round((c1pct*0.5) + (c2pct*0.5));
+
+    const bar = (pct,color) => `<div style="height:6px;border-radius:3px;background:var(--stone);overflow:hidden;margin-top:6px">
+      <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div></div>`;
+
+    document.getElementById('admin-dir-progress').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">
+        <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;padding:14px 18px">
+          <div style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;color:var(--ember-deep);font-weight:700;margin-bottom:6px">CAPA 1 · CONFIRMACIÓN DE ESTRUCTURA · 50%</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:22px;font-weight:700;color:var(--navy);font-family:var(--ff-mono)">${nAut}<span style="font-size:12px;color:var(--muted)"> / ${nTotal}</span></span>
+            <span style="font-size:11px;font-family:var(--ff-mono);color:var(--ember-deep);font-weight:700">${c1pct}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${nLev} Levantamiento · ${nPorAut} Por Autorizar · ${nAut} Autorizadas</div>
+          ${bar(c1pct,'var(--ember-deep)')}
+        </div>
+        <div style="background:#FDF9F5;border:1px solid var(--stone);border-radius:10px;padding:14px 18px">
+          <div style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;color:#2e7d32;font-weight:700;margin-bottom:6px">CAPA 2 · DOCUMENTACIÓN Y AUTORIZACIÓN · 50%</div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:22px;font-weight:700;color:var(--navy);font-family:var(--ff-mono)">${nDoc+nPub}<span style="font-size:12px;color:var(--muted)"> / ${catAutPLT||'—'}</span></span>
+            <span style="font-size:11px;font-family:var(--ff-mono);color:#2e7d32;font-weight:700">${c2pct}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">En proceso: ${nDoc} · Publicadas: ${nPub} · En catálogo autorizado: ${catAutPLT}</div>
+          ${bar(c2pct,'#2e7d32')}
+        </div>
+      </div>
+      <div style="background:var(--navy);border-radius:10px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.10em;color:var(--ember-glow);font-weight:700">AVANCE GLOBAL DEL PROYECTO</span>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="width:200px;height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden">
+            <div style="height:100%;width:${globalPct}%;background:var(--ember-glow);border-radius:4px;transition:width .4s"></div>
+          </div>
+          <span style="font-family:var(--ff-mono);font-size:18px;font-weight:700;color:var(--ember-glow)">${globalPct}%</span>
+        </div>
+      </div>`;
+
+    // Fila totales en tabla
     const tbody = document.getElementById('admin-direcciones-body');
     tbody.innerHTML += `<tr style="background:var(--navy)">
       <td colspan="2" style="background:var(--navy);font-family:var(--ff-mono);font-size:9px;letter-spacing:.08em;color:var(--ember-glow);font-weight:700;padding:10px 12px">
-        TOTAL · ${direcciones.length} DIVISIONES
+        TOTAL · ${nTotal} DIVISIONES
       </td>
       <td style="background:var(--navy)"></td>
       <td style="background:var(--navy);text-align:center;font-family:var(--ff-mono);font-weight:700;font-size:14px;color:var(--ember-glow)">${totalActs}</td>
