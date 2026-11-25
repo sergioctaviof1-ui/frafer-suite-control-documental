@@ -1452,7 +1452,7 @@ function switchDashTipo(tipo, btn) {
 async function loadDashboard() {
   const [{ data: pols }, { data: cats }, { data: dirs }, { data: areasData }] = await Promise.all([
     sb.from('pol_politicas').select('id,status,catalogo_id,fecha_vencimiento'),
-    sb.from('pol_catalogo').select('id,area_id,tipo_documento,codigo_documento').eq('activo',true),
+    sb.from('pol_catalogo').select('id,area_id,tipo_documento,codigo_documento').eq('activo',true).not('actividad_id','is',null),
     sb.from('pol_direcciones').select('id,nombre,codigo,tipo,confirmada,confirmada_at').order('orden'),
     sb.from('pol_areas').select('id,direccion_id')
   ]);
@@ -4487,7 +4487,7 @@ async function loadAdmin() {
     sb.from('pol_areas').select('*').order('numero'),
     sb.from('pol_departamentos').select('*').order('orden'),
     sb.from('pol_actividades').select('*').order('created_at'),
-    sb.from('pol_catalogo').select('id,area_id,tipo_documento,actividad_id').eq('activo',true),
+    sb.from('pol_catalogo').select('id,area_id,tipo_documento,actividad_id').eq('activo',true).not('actividad_id','is',null),
     sb.from('pol_politicas').select('id,status,catalogo_id')
   ]);
   direcciones = dirsData||[]; areas = areasData||[]; departamentos = deptosData||[];
