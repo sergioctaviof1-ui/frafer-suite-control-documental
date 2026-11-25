@@ -1477,34 +1477,32 @@ function renderDashboard() {
   const catIds = new Set(filteredCats.map(c=>c.id));
   const filteredPols = pols.filter(p=>catIds.has(p.catalogo_id));
 
-  // Clasificar cada entrada del catálogo según el estado de su dirección
+  // Cada actividad en UNA SOLA columna según su etapa más avanzada
   let totLev = 0, totPorAut = 0, totCat = 0, totDoc = 0, totPub = 0;
-
   const dirStats = {};
   const initDir = id => { if (!dirStats[id]) dirStats[id] = {lev:0,porAut:0,cat:0,doc:0,pub:0}; };
+
+  // Índice pol_politicas por catalogo_id para lookup rápido
+  const polByCat = {};
+  filteredPols.forEach(p => { polByCat[p.catalogo_id] = p; });
 
   filteredCats.forEach(c => {
     const dirId = areaToDir[c.area_id]; if (!dirId) return;
     const dir = dirMap[dirId];
     initDir(dirId);
-    if (dir?.confirmada) { dirStats[dirId].cat++; totCat++; }
-    else if (dir?.confirmada_at) { dirStats[dirId].porAut++; totPorAut++; }
-    else { dirStats[dirId].lev++; totLev++; }
-  });
 
-  // Doc/pub solo cuentan para actividades en direcciones YA confirmadas
-  const confirmedCatIds = new Set(
-    filteredCats.filter(c => dirMap[areaToDir[c.area_id]]?.confirmada).map(c=>c.id)
-  );
-  const catById = Object.fromEntries(filteredCats.map(c=>[c.id,c]));
-  filteredPols.forEach(p => {
-    if (!confirmedCatIds.has(p.catalogo_id)) return;
-    const cat = catById[p.catalogo_id]; if (!cat) return;
-    const dirId = areaToDir[cat.area_id]; if (!dirId) return;
-    initDir(dirId);
-    const est = effectiveStatus(p);
-    if (est === 'publicado') { dirStats[dirId].pub++; totPub++; }
-    else if (['borrador','en_revision','autorizado'].includes(est)) { dirStats[dirId].doc++; totDoc++; }
+    if (!dir?.confirmada) {
+      // Dirección no confirmada → Levantamiento o Por Autorizar
+      if (dir?.confirmada_at) { dirStats[dirId].porAut++; totPorAut++; }
+      else                    { dirStats[dirId].lev++;    totLev++;    }
+    } else {
+      // Dirección confirmada → avanzar al estado más profundo del doc
+      const pol = polByCat[c.id];
+      const est = pol ? effectiveStatus(pol) : null;
+      if      (est === 'publicado')                              { dirStats[dirId].pub++; totPub++; }
+      else if (['borrador','en_revision','autorizado'].includes(est)) { dirStats[dirId].doc++; totDoc++; }
+      else                                                       { dirStats[dirId].cat++; totCat++; }
+    }
   });
 
   const universo = filteredCats.length;
