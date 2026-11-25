@@ -1523,14 +1523,12 @@ function renderDashboard() {
   // Capa 1: "por autorizar" = trabajo del consultor ya hecho, pendiente firma Morsa
   const c1pct = allTotal ? Math.round(((allPorAut + allCat) / allTotal) * 100) : 0;
 
-  // Capa 2: documentación de actividades confirmadas
-  const confirmedCatIds = new Set(
-    allPLT.filter(c => dirMap[areaToDir[c.area_id]]?.confirmada).map(c => c.id)
-  );
-  const polsC2 = pols.filter(p => confirmedCatIds.has(p.catalogo_id));
+  // Capa 2: qué % del total de actividades tiene documentación iniciada
+  const allPLTIds = new Set(allPLT.map(c => c.id));
+  const polsC2 = pols.filter(p => allPLTIds.has(p.catalogo_id));
   const nDoc2  = polsC2.filter(p => ['borrador','en_revision','autorizado'].includes(effectiveStatus(p))).length;
   const nPub2  = polsC2.filter(p => effectiveStatus(p) === 'publicado').length;
-  const c2pct  = allCat ? Math.round(((nDoc2 + nPub2) / allCat) * 100) : 0;
+  const c2pct  = allTotal ? Math.round(((nDoc2 + nPub2) / allTotal) * 100) : 0;
   const globalPct = Math.round(c1pct * 0.5 + c2pct * 0.5);
 
   const bar = (pct, color) =>
@@ -1558,7 +1556,7 @@ function renderDashboard() {
     </div>
     ${bar(c2pct,'var(--green)')}
     <div style="font-size:11px;color:var(--muted);margin-top:7px">
-      <b>${nDoc2 + nPub2}</b> de <b>${allCat}</b> documentos en proceso · <b>${nPub2}</b> publicados
+      <b>${nDoc2 + nPub2}</b> de <b>${allTotal}</b> actividades con documentación iniciada · <b>${nPub2}</b> publicadas
     </div>
   </div>
 </div>
