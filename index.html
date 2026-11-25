@@ -723,6 +723,7 @@ input,textarea,select{font-family:inherit}
       </div>
     </div>
     <div class="stats-row" id="dash-stats">
+      <div class="stat-card navy"><div class="num" id="stat-universo">—</div><div class="lbl">Total Políticas</div></div>
       <div class="stat-card"><div class="num" id="stat-levantamiento">—</div><div class="lbl">En Levantamiento</div></div>
       <div class="stat-card amber"><div class="num" id="stat-por-autorizar">—</div><div class="lbl">Por Autorizar</div></div>
       <div class="stat-card"><div class="num" id="stat-total">—</div><div class="lbl">En Catálogo</div></div>
@@ -1501,7 +1502,9 @@ function renderDashboard() {
     else if (['borrador','en_revision','autorizado'].includes(est)) { dirStats[dirId].doc++; totDoc++; }
   });
 
-  document.getElementById('stat-levantamiento').textContent = totLev  || '—';
+  const universo = filteredCats.length;
+  document.getElementById('stat-universo').textContent      = universo;
+  document.getElementById('stat-levantamiento').textContent = totLev   || '—';
   document.getElementById('stat-por-autorizar').textContent = totPorAut|| '—';
   document.getElementById('stat-total').textContent         = totCat;
   document.getElementById('stat-proceso').textContent       = totDoc   || '—';
