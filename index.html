@@ -1517,6 +1517,12 @@ function renderAdvanceActions(pol) {
     </button>`;
   }
   const est = effectiveStatus(pol);
+  // Política autorizada esperando cierre de GC
+  if (est === 'autorizado' && _gcCurrent?.status !== 'autorizado') {
+    html += `<span style="font-size:11px;color:#1565C0;background:#EBF3FD;border:1px solid #90CAF9;border-radius:6px;padding:5px 12px;white-space:nowrap">
+      ⏳ En espera del Gobierno Corporativo
+    </span>`;
+  }
   if (est === 'publicado' || est === 'vencido') {
     html += `<button class="btn btn-ghost btn-sm" onclick="nuevaVersion('${pol.id}')">↺ Nueva Versión</button>`;
   }
@@ -2948,9 +2954,11 @@ async function advanceStatus(polId, newStatus) {
   }
 
   if (newStatus === 'autorizado') {
-    // Autorizar = Publicar automáticamente (un solo paso)
-    update.status = 'publicado';
-    update.publicacion_at = now;
+    // Si el GC ya está cerrado (autorizado), publicar directamente
+    if (_gcCurrent?.status === 'autorizado') {
+      update.status = 'publicado';
+      update.publicacion_at = now;
+    }
     // Vigencia corre desde la fecha de autorización
     const hoy = new Date();
     const meses = politicaActual.vigencia_meses || 6;
@@ -6292,14 +6300,23 @@ async function autorizarGC() {
   if (_gcCurrent.status !== 'borrador') { alert('Esta versión ya fue autorizada.'); return; }
   const nombre = prompt('Nombre completo del autorizador (Dirección General):');
   if (!nombre || !nombre.trim()) return;
+  const ahora = new Date().toISOString();
   const patch = {
     status:        'autorizado',
     autorizado_por: nombre.trim(),
-    firmado_dg_at: new Date().toISOString()
+    firmado_dg_at: ahora
   };
   const { error } = await sb.from('pol_gobierno_corporativo').update(patch).eq('id', _gcCurrent.id);
   if (error) { alert('Error: ' + error.message); return; }
   Object.assign(_gcCurrent, patch);
+
+  // ── Publicar todas las políticas que están en espera (status = 'autorizado') ──
+  const { error: pubErr } = await sb.from('pol_politicas')
+    .update({ status: 'publicado', publicacion_at: ahora })
+    .eq('status', 'autorizado');
+  if (pubErr) console.error('[autorizarGC] publicar políticas:', pubErr.message);
+  else _toast('✓ Gobierno Corporativo cerrado · Políticas autorizadas publicadas.');
+
   await loadGobiernoCorporativo();
 }
 
