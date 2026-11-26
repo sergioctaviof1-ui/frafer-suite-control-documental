@@ -6351,22 +6351,27 @@ async function saveGobiernoCorporativo() {
     _gcCurrent = data;
   }
 
-  // Propagar cambios de GC a políticas:
-  // Reemplaza el BLOQUE GC ANTERIOR dentro del campo de la política,
-  // conservando lo que la división añadió DESPUÉS del bloque GC.
-  // Resultado: [NUEVO BLOQUE GC] + [ENRIQUECIMIENTO DIVISIÓN]
-  const camposGC = ['marco_normativo', 'directrices_valores', 'canal_comunicacion', 'esquema_capacitacion'];
-  for (const campo of camposGC) {
+  // Propagar cambios de GC a políticas
+  // — canal_comunicacion y esquema_capacitacion: 100% GC, sobreescribir incondicionalmente
+  // — marco_normativo y directrices_valores: smart replace (GC base + enriquecimiento división)
+  const camposSoloGC = ['canal_comunicacion', 'esquema_capacitacion'];
+  const soloGCupdate = {};
+  for (const c of camposSoloGC) { if (payload[c] !== undefined) soloGCupdate[c] = payload[c] ?? null; }
+  if (Object.keys(soloGCupdate).length) {
+    await sb.from('pol_politicas').update(soloGCupdate).not('id', 'is', null);
+  }
+
+  // Smart replace: reemplaza bloque GC anterior conservando enriquecimiento de la división
+  for (const campo of ['marco_normativo', 'directrices_valores']) {
     const viejo = (_gcCurrent?.[campo] || '').trim();
     const nuevo  = (payload[campo]       || '').trim();
-    if (!viejo || viejo === nuevo) continue; // Sin cambio en este campo
-    // Traer políticas que tienen este campo con contenido
+    if (!viejo || viejo === nuevo) continue;
     const { data: pols } = await sb.from('pol_politicas').select('id,' + campo).not(campo, 'is', null);
     if (!pols?.length) continue;
     for (const pol of pols) {
       const actual = (pol[campo] || '').trim();
-      if (!actual.includes(viejo)) continue; // No tiene el bloque GC anterior
-      const actualizado = actual.replace(viejo, nuevo); // Reemplaza solo el bloque GC, conserva el resto
+      if (!actual.includes(viejo)) continue;
+      const actualizado = actual.replace(viejo, nuevo);
       if (actualizado !== actual) {
         await sb.from('pol_politicas').update({ [campo]: actualizado }).eq('id', pol.id);
       }
