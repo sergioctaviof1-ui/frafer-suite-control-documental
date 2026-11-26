@@ -2538,21 +2538,32 @@ async function _loadUserProfiles() {
 function _fillUserSelects(divisionCodigo) {
   const users = _userProfilesCache;
   if (!users.length) return;
-  // Usuarios de la misma división + admins/consultores (sin división fija)
-  const relevantes = users.filter(u =>
+  // Usuarios generales: misma división + admins/consultores
+  const generales = users.filter(u =>
     !u.division_codigo || u.division_codigo === divisionCodigo ||
     u.rol === 'admin' || u.rol === 'consultor'
   );
-  const opts = (selected) =>
+  // Autorizantes: solo directores de la misma división (o admin)
+  const autorizantes = users.filter(u =>
+    (u.rol === 'director' || u.rol === 'admin') &&
+    (!u.division_codigo || u.division_codigo === divisionCodigo)
+  );
+  const mkOpts = (lista, selected) =>
     '<option value="">— Seleccionar —</option>' +
-    relevantes.map(u =>
+    lista.map(u =>
       `<option value="${u.nombre_completo}" data-puesto="${u.puesto||''}"${u.nombre_completo===selected?' selected':''}>${u.nombre_completo} — ${u.puesto||u.rol}</option>`
     ).join('');
-  ['pol-resp-elab','pol-autorizado-por','pol-levantado-por','pol-revisado-por'].forEach(id => {
+  const selectConfig = {
+    'pol-resp-elab':     generales,
+    'pol-autorizado-por': autorizantes,
+    'pol-levantado-por': generales,
+    'pol-revisado-por':  generales
+  };
+  Object.entries(selectConfig).forEach(([id, lista]) => {
     const el = document.getElementById(id);
     if (el && el.tagName === 'SELECT') {
       const current = el.value || '';
-      el.innerHTML = opts(current);
+      el.innerHTML = mkOpts(lista, current);
     }
   });
 }
