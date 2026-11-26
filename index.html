@@ -1371,9 +1371,10 @@ input,textarea,select{font-family:inherit}
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Email</th>
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">WhatsApp</th>
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Estado</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Acceso</th>
           </tr>
         </thead>
-        <tbody id="tbody-usuarios"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--fog)">Cargando...</td></tr></tbody>
+        <tbody id="tbody-usuarios"><tr><td colspan="8" style="padding:24px;text-align:center;color:var(--fog)">Cargando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -1962,6 +1963,12 @@ async function loadUsuarios() {
       <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.email}</td>
       <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.whatsapp || '—'}</td>
       <td style="padding:10px 14px"><span style="color:${estadoColor};font-weight:600;font-size:12px">${estadoLabel}</span></td>
+      <td style="padding:10px 14px">
+        <button onclick="generarLinkInvitacion('${u.email}','${u.nombre_completo}')"
+          style="background:var(--navy);color:var(--parchment);border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
+          Generar link
+        </button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -1975,6 +1982,36 @@ function abrirFormUsuario() {
 
 function cerrarFormUsuario() {
   document.getElementById('modal-usuario').style.display = 'none';
+}
+
+async function generarLinkInvitacion(email, nombre) {
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${SB_URL}/functions/v1/generate-invite-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
+      body: JSON.stringify({ email })
+    });
+    const json = await res.json();
+    if (json.error) { alert('Error: ' + json.error); return; }
+    // Mostrar modal con el link para copiar
+    const link = json.link;
+    const msg = `Link de acceso para ${nombre}:\n\n${link}\n\nEste link expira en 24 horas.`;
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(link);
+      alert(`✓ Link copiado al portapapeles.\n\nMándalo por WhatsApp a ${nombre}.\n\nExpira en 24 horas.`);
+    } else {
+      prompt(`Copia este link y mándalo por WhatsApp a ${nombre}:`, link);
+    }
+  } catch(e) {
+    alert('No se pudo conectar con la función de invitación. Verifica que esté desplegada en Supabase.');
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 
 async function guardarUsuario() {
