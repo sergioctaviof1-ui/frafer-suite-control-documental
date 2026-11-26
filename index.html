@@ -1331,8 +1331,9 @@ input,textarea,select{font-family:inherit}
     <!-- Modal agregar usuario -->
     <div id="modal-usuario" style="display:none;position:fixed;inset:0;background:rgba(28,43,58,.55);z-index:900;align-items:center;justify-content:center">
       <div style="background:var(--surface);border-radius:12px;padding:28px 32px;width:460px;max-width:95vw;box-shadow:0 8px 32px rgba(28,43,58,.22)">
-        <h3 style="font-family:var(--ff-display);font-size:20px;font-weight:400;margin-bottom:20px">Nuevo usuario</h3>
+        <h3 id="u-modal-title" style="font-family:var(--ff-display);font-size:20px;font-weight:400;margin-bottom:20px">Nuevo usuario</h3>
         <div style="display:grid;gap:12px">
+          <input type="hidden" id="u-id" value="">
           <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Nombre completo *</label><input id="u-nombre" type="text" placeholder="Nombre Apellido" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
           <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Email *</label><input id="u-email" type="email" placeholder="usuario@morsa.com.mx" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
           <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Puesto</label><input id="u-puesto" type="text" placeholder="Director / Gerente..." style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
@@ -1371,7 +1372,7 @@ input,textarea,select{font-family:inherit}
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Email</th>
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">WhatsApp</th>
             <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Estado</th>
-            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Acceso</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody-usuarios"><tr><td colspan="8" style="padding:24px;text-align:center;color:var(--fog)">Cargando...</td></tr></tbody>
@@ -1935,6 +1936,7 @@ async function repairExistingFolios() {
 }
 
 // ── USUARIOS & PERMISOS ────────────────────────────────────────────────────────
+let _usuariosCache = [];
 const ROL_BADGE = {
   admin:     { bg:'#1C2B3A', color:'#F0E8DC', label:'Admin' },
   consultor: { bg:'#5A8C72', color:'#fff',    label:'Consultor' },
@@ -1950,6 +1952,7 @@ async function loadUsuarios() {
   const { data, error } = await sb.from('pol_user_profiles').select('*').order('rol').order('nombre_completo');
   if (error) { tbody.innerHTML = `<tr><td colspan="7" style="color:red;padding:16px">${error.message}</td></tr>`; return; }
   if (!data?.length) { tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--fog)">Sin usuarios registrados</td></tr>'; return; }
+  _usuariosCache = data;
   tbody.innerHTML = data.map((u, i) => {
     const badge = ROL_BADGE[u.rol] || { bg:'#ccc', color:'#333', label: u.rol };
     const bg = i % 2 === 0 ? '#FDF9F5' : '#F5F0EA';
@@ -1963,19 +1966,32 @@ async function loadUsuarios() {
       <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.email}</td>
       <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.whatsapp || '—'}</td>
       <td style="padding:10px 14px"><span style="color:${estadoColor};font-weight:600;font-size:12px">${estadoLabel}</span></td>
-      <td style="padding:10px 14px">
-        <button onclick="generarLinkInvitacion('${u.email}','${u.nombre_completo}')"
-          style="background:var(--navy);color:var(--parchment);border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
-          Generar link
-        </button>
+      <td style="padding:8px 10px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="editarUsuario('${u.id}')"
+            style="background:var(--ember);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">
+            Editar
+          </button>
+          <button onclick="generarLinkInvitacion(this,'${u.email}','${u.nombre_completo}')"
+            style="background:var(--navy);color:var(--parchment);border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
+            Enviar invitación
+          </button>
+          <button onclick="toggleUsuario('${u.id}',${u.activo})"
+            style="background:${u.activo ? '#5A8C72' : '#B85060'};color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer">
+            ${u.activo ? 'Inactivar' : 'Activar'}
+          </button>
+        </div>
       </td>
     </tr>`;
   }).join('');
 }
 
 function abrirFormUsuario() {
+  document.getElementById('u-id').value = '';
+  document.getElementById('u-modal-title').textContent = 'Nuevo usuario';
   ['u-nombre','u-email','u-puesto','u-div','u-divnombre','u-wa'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   document.getElementById('u-rol').value = 'director';
+  document.getElementById('u-email').disabled = false;
   const m = document.getElementById('modal-usuario');
   m.style.display = 'flex';
 }
@@ -1984,10 +2000,9 @@ function cerrarFormUsuario() {
   document.getElementById('modal-usuario').style.display = 'none';
 }
 
-async function generarLinkInvitacion(email, nombre) {
-  const btn = event.target;
+async function generarLinkInvitacion(btn, email, nombre) {
   const orig = btn.textContent;
-  btn.textContent = 'Generando...';
+  btn.textContent = 'Enviando...';
   btn.disabled = true;
   try {
     const res = await fetch(`${SB_URL}/functions/v1/generate-invite-link`, {
@@ -1997,37 +2012,57 @@ async function generarLinkInvitacion(email, nombre) {
     });
     const json = await res.json();
     if (json.error) { alert('Error: ' + json.error); return; }
-    // Mostrar modal con el link para copiar
-    const link = json.link;
-    const msg = `Link de acceso para ${nombre}:\n\n${link}\n\nEste link expira en 24 horas.`;
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(link);
-      alert(`✓ Link copiado al portapapeles.\n\nMándalo por WhatsApp a ${nombre}.\n\nExpira en 24 horas.`);
-    } else {
-      prompt(`Copia este link y mándalo por WhatsApp a ${nombre}:`, link);
-    }
+    alert(`✓ Invitación enviada a ${nombre}\n(${email})\n\nEl usuario recibirá un correo con instrucciones para acceder. El link expira en 24 horas.`);
   } catch(e) {
-    alert('No se pudo conectar con la función de invitación. Verifica que esté desplegada en Supabase.');
+    alert('Error al conectar con Supabase. Intenta de nuevo.');
   } finally {
     btn.textContent = orig;
     btn.disabled = false;
   }
 }
 
+async function editarUsuario(id) {
+  const u = _usuariosCache.find(x => x.id === id);
+  if (!u) { alert('Usuario no encontrado'); return; }
+  document.getElementById('u-id').value = u.id;
+  document.getElementById('u-modal-title').textContent = 'Editar usuario';
+  document.getElementById('u-nombre').value   = u.nombre_completo || '';
+  document.getElementById('u-email').value    = u.email || '';
+  document.getElementById('u-email').disabled = true;
+  document.getElementById('u-puesto').value   = u.puesto || '';
+  document.getElementById('u-rol').value      = u.rol || 'viewer';
+  document.getElementById('u-div').value      = u.division_codigo || '';
+  document.getElementById('u-divnombre').value= u.division_nombre || '';
+  document.getElementById('u-wa').value       = u.whatsapp || '';
+  document.getElementById('modal-usuario').style.display = 'flex';
+}
+
+async function toggleUsuario(id, activo) {
+  const { error } = await sb.from('pol_user_profiles').update({ activo: !activo }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  loadUsuarios();
+}
+
 async function guardarUsuario() {
   const nombre = document.getElementById('u-nombre').value.trim();
   const email  = document.getElementById('u-email').value.trim().toLowerCase();
   const rol    = document.getElementById('u-rol').value;
+  const uid    = document.getElementById('u-id').value;
   if (!nombre || !email) { alert('Nombre y email son obligatorios'); return; }
-  const { error } = await sb.from('pol_user_profiles').insert({
+  const payload = {
     nombre_completo: nombre,
-    email,
     puesto:          document.getElementById('u-puesto').value.trim() || null,
     rol,
     division_codigo: document.getElementById('u-div').value.trim().toUpperCase() || null,
     division_nombre: document.getElementById('u-divnombre').value.trim() || null,
     whatsapp:        document.getElementById('u-wa').value.trim() || null,
-  });
+  };
+  let error;
+  if (uid) {
+    ({ error } = await sb.from('pol_user_profiles').update(payload).eq('id', uid));
+  } else {
+    ({ error } = await sb.from('pol_user_profiles').insert({ ...payload, email }));
+  }
   if (error) { alert('Error: ' + error.message); return; }
   cerrarFormUsuario();
   loadUsuarios();
