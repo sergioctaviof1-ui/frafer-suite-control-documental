@@ -364,6 +364,7 @@ input,textarea,select{font-family:inherit}
     <button class="nav-btn" onclick="showView('consulta')" data-view="consulta">Consulta</button>
     <button class="nav-btn" onclick="showView('maestro')" data-view="maestro">Maestro</button>
     <button class="nav-btn" onclick="showView('admin')" data-view="admin">Admin</button>
+    <button class="nav-btn" onclick="showView('usuarios')" data-view="usuarios">Usuarios</button>
     <a href="manual.html" class="nav-btn" style="display:flex;align-items:center;text-decoration:none">Manual</a>
   </nav>
   <span class="topbar-user" id="topbar-user"></span>
@@ -1317,6 +1318,66 @@ input,textarea,select{font-family:inherit}
 
   </div>
 
+  <!-- ═══ USUARIOS ══════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-usuarios">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div>
+        <h1>Usuarios &amp; Permisos</h1>
+        <p>Accesos al sistema · Control Documental Grupo Morsa</p>
+      </div>
+      <button onclick="abrirFormUsuario()" style="background:var(--navy);color:var(--parchment);border:none;border-radius:8px;padding:10px 18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">+ Agregar usuario</button>
+    </div>
+
+    <!-- Modal agregar usuario -->
+    <div id="modal-usuario" style="display:none;position:fixed;inset:0;background:rgba(28,43,58,.55);z-index:900;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:12px;padding:28px 32px;width:460px;max-width:95vw;box-shadow:0 8px 32px rgba(28,43,58,.22)">
+        <h3 style="font-family:var(--ff-display);font-size:20px;font-weight:400;margin-bottom:20px">Nuevo usuario</h3>
+        <div style="display:grid;gap:12px">
+          <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Nombre completo *</label><input id="u-nombre" type="text" placeholder="Nombre Apellido" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+          <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Email *</label><input id="u-email" type="email" placeholder="usuario@morsa.com.mx" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+          <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Puesto</label><input id="u-puesto" type="text" placeholder="Director / Gerente..." style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">Rol *</label>
+              <select id="u-rol" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px">
+                <option value="director">Director</option>
+                <option value="elaborador">Elaborador</option>
+                <option value="viewer">Viewer</option>
+                <option value="sponsor">Sponsor</option>
+                <option value="consultor">Consultor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">División (código)</label><input id="u-div" type="text" placeholder="DRH, DCO..." style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+          </div>
+          <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">División (nombre completo)</label><input id="u-divnombre" type="text" placeholder="División de Recursos Humanos..." style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+          <div><label style="font-size:11px;color:var(--fog);display:block;margin-bottom:4px">WhatsApp</label><input id="u-wa" type="text" placeholder="10 dígitos" style="width:100%;border:1px solid var(--stone);border-radius:6px;padding:8px 10px;font-size:13px"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+          <button onclick="cerrarFormUsuario()" style="background:var(--linen);color:var(--ink);border:none;border-radius:6px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer">Cancelar</button>
+          <button onclick="guardarUsuario()" style="background:var(--navy);color:var(--parchment);border:none;border-radius:6px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div style="overflow-x:auto">
+      <table id="tbl-usuarios" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--navy);color:var(--parchment)">
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Nombre</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Puesto</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Rol</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">División</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Email</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">WhatsApp</th>
+            <th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.06em">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-usuarios"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--fog)">Cargando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
 <script>
@@ -1349,6 +1410,7 @@ function showView(name) {
   if (name === 'consulta')      loadConsulta();
   if (name === 'maestro')       loadMaestro();
   if (name === 'admin')       loadAdmin();
+  if (name === 'usuarios')    loadUsuarios();
 }
 
 function switchTab(btn, panelId) {
@@ -1869,6 +1931,69 @@ async function repairExistingFolios() {
   }
   if (errs.length) console.error('[repair] errores:', errs);
   return toFix.length - errs.length;
+}
+
+// ── USUARIOS & PERMISOS ────────────────────────────────────────────────────────
+const ROL_BADGE = {
+  admin:     { bg:'#1C2B3A', color:'#F0E8DC', label:'Admin' },
+  consultor: { bg:'#5A8C72', color:'#fff',    label:'Consultor' },
+  sponsor:   { bg:'#A88858', color:'#fff',    label:'Sponsor' },
+  director:  { bg:'#5888B8', color:'#fff',    label:'Director' },
+  elaborador:{ bg:'#C08898', color:'#fff',    label:'Elaborador' },
+  viewer:    { bg:'#A8A098', color:'#fff',    label:'Viewer' },
+};
+
+async function loadUsuarios() {
+  const tbody = document.getElementById('tbody-usuarios');
+  tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--fog)">Cargando...</td></tr>';
+  const { data, error } = await sb.from('pol_user_profiles').select('*').order('rol').order('nombre_completo');
+  if (error) { tbody.innerHTML = `<tr><td colspan="7" style="color:red;padding:16px">${error.message}</td></tr>`; return; }
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--fog)">Sin usuarios registrados</td></tr>'; return; }
+  tbody.innerHTML = data.map((u, i) => {
+    const badge = ROL_BADGE[u.rol] || { bg:'#ccc', color:'#333', label: u.rol };
+    const bg = i % 2 === 0 ? '#FDF9F5' : '#F5F0EA';
+    const estadoColor = u.activo ? '#5A8C72' : '#B85060';
+    const estadoLabel = u.activo ? 'Activo' : 'Inactivo';
+    return `<tr style="background:${bg}">
+      <td style="padding:10px 14px;font-weight:600">${u.nombre_completo}</td>
+      <td style="padding:10px 14px;color:var(--dust);font-size:12px">${u.puesto || '—'}</td>
+      <td style="padding:10px 14px"><span style="background:${badge.bg};color:${badge.color};padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600">${badge.label}</span></td>
+      <td style="padding:10px 14px;font-size:12px">${u.division_codigo ? `<strong>${u.division_codigo}</strong> · ` : ''}${u.division_nombre || '—'}</td>
+      <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.email}</td>
+      <td style="padding:10px 14px;font-family:var(--ff-mono);font-size:11px;color:var(--dust)">${u.whatsapp || '—'}</td>
+      <td style="padding:10px 14px"><span style="color:${estadoColor};font-weight:600;font-size:12px">${estadoLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function abrirFormUsuario() {
+  ['u-nombre','u-email','u-puesto','u-div','u-divnombre','u-wa'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('u-rol').value = 'director';
+  const m = document.getElementById('modal-usuario');
+  m.style.display = 'flex';
+}
+
+function cerrarFormUsuario() {
+  document.getElementById('modal-usuario').style.display = 'none';
+}
+
+async function guardarUsuario() {
+  const nombre = document.getElementById('u-nombre').value.trim();
+  const email  = document.getElementById('u-email').value.trim().toLowerCase();
+  const rol    = document.getElementById('u-rol').value;
+  if (!nombre || !email) { alert('Nombre y email son obligatorios'); return; }
+  const { error } = await sb.from('pol_user_profiles').insert({
+    nombre_completo: nombre,
+    email,
+    puesto:          document.getElementById('u-puesto').value.trim() || null,
+    rol,
+    division_codigo: document.getElementById('u-div').value.trim().toUpperCase() || null,
+    division_nombre: document.getElementById('u-divnombre').value.trim() || null,
+    whatsapp:        document.getElementById('u-wa').value.trim() || null,
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+  cerrarFormUsuario();
+  loadUsuarios();
 }
 
 // ── REPOSITORIO DE DOCUMENTOS ─────────────────────────────────────────────────
