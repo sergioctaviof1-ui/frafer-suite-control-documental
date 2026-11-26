@@ -4556,6 +4556,7 @@ async function loadAdmin() {
       if(st==='autorizada') c1Aut++; else if(st==='por_autorizar') c1Por++; else c1Lev++;
     });
     const c1Total = c1Lev + c1Por + c1Aut;
+    const totalActs = c1Total;
     const c1pct = c1Total ? Math.round(((c1Por + c1Aut) / c1Total) * 100) : 0;
 
     // Capa 2: todas las pol_politicas PLT — borrador=1pt, revision=2pt, aut/pub=3pt
