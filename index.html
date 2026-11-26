@@ -892,8 +892,8 @@ input,textarea,select{font-family:inherit}
           <div class="form-section-title">Responsables</div>
           <div class="form-grid">
             <div class="form-group"><label>Dirección Responsable</label><input id="pol-resp-dir" placeholder="Ej: Dirección de Recursos Humanos"></div>
-            <div class="form-group"><label>Elaborado por</label><input id="pol-resp-elab" placeholder="Nombre del gerente / supervisor"></div>
-            <div class="form-group"><label>Autorizó</label><input id="pol-autorizado-por" placeholder="Nombre del Director / autoridad competente"></div>
+            <div class="form-group"><label>Elaborado por</label><select id="pol-resp-elab" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
+            <div class="form-group"><label>Autorizó</label><select id="pol-autorizado-por" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
             <div class="form-group full"><label>Colaboradores</label><input id="pol-colab" placeholder="Otras áreas o personas involucradas"></div>
           </div>
         </div>
@@ -922,8 +922,8 @@ input,textarea,select{font-family:inherit}
           <table class="doc-ctrl-table">
             <tbody>
               <tr><td class="dc-lbl">Versión</td><td><input id="pol-version" readonly class="dc-input"></td><td class="dc-lbl">Estatus</td><td><span id="pol-badge-ctrl"></span></td></tr>
-              <tr><td class="dc-lbl">Levantado por</td><td><input id="pol-levantado-por" placeholder="Nombre" class="dc-input"></td><td class="dc-lbl">Fecha Levantamiento</td><td><input id="pol-levantamiento-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td></tr>
-              <tr><td class="dc-lbl">Revisado por</td><td><input id="pol-revisado-por" placeholder="Nombre" class="dc-input"></td><td class="dc-lbl">Fecha Revisión</td><td><input id="pol-revision-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td></tr>
+              <tr><td class="dc-lbl">Levantado por</td><td><select id="pol-levantado-por" class="dc-input" style="width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--stone);border-radius:5px;font-size:12px;padding:3px 6px"><option value="">— Seleccionar —</option></select></td><td class="dc-lbl">Fecha Levantamiento</td><td><input id="pol-levantamiento-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td></tr>
+              <tr><td class="dc-lbl">Revisado por</td><td><select id="pol-revisado-por" class="dc-input" style="width:100%;background:var(--surface);color:var(--ink);border:1px solid var(--stone);border-radius:5px;font-size:12px;padding:3px 6px"><option value="">— Seleccionar —</option></select></td><td class="dc-lbl">Fecha Revisión</td><td><input id="pol-revision-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td></tr>
               <tr><td class="dc-lbl">Autorizó</td><td><span id="pol-autorizado-ctrl" class="dc-display">—</span></td><td class="dc-lbl">Fecha Autorización</td><td><input id="pol-autorizacion-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td></tr>
               <tr><td class="dc-lbl">Publicación</td><td><input id="pol-publicacion-at" type="datetime-local" readonly class="dc-input" style="opacity:.6"></td><td class="dc-lbl">Próxima Revisión</td><td><span id="pol-fecha-venc-ctrl" class="dc-display">—</span></td></tr>
               <tr><td class="dc-lbl"># de Reglas</td><td><span id="pol-num-reglas-ctrl" class="dc-display">—</span></td><td class="dc-lbl">Vigencia (meses)</td><td><span id="pol-vigencia-ctrl" class="dc-display">—</span></td></tr>
@@ -1950,6 +1950,7 @@ async function repairExistingFolios() {
 
 // ── USUARIOS & PERMISOS ────────────────────────────────────────────────────────
 let _usuariosCache = [];
+let _userProfilesCache = []; // usuarios de pol_user_profiles para dropdowns
 const ROL_BADGE = {
   admin:     { bg:'#1C2B3A', color:'#F0E8DC', label:'Admin' },
   consultor: { bg:'#5A8C72', color:'#fff',    label:'Consultor' },
@@ -2524,6 +2525,38 @@ async function openPolitica(catalogoId, polId) {
   // re-render tree to reflect state
 }
 
+async function _loadUserProfiles() {
+  if (_userProfilesCache.length) return _userProfilesCache;
+  const { data } = await sb.from('pol_user_profiles')
+    .select('nombre_completo,puesto,rol,division_codigo')
+    .eq('activo', true)
+    .order('nombre_completo');
+  _userProfilesCache = data || [];
+  return _userProfilesCache;
+}
+
+function _fillUserSelects(divisionCodigo) {
+  const users = _userProfilesCache;
+  if (!users.length) return;
+  // Usuarios de la misma división + admins/consultores (sin división fija)
+  const relevantes = users.filter(u =>
+    !u.division_codigo || u.division_codigo === divisionCodigo ||
+    u.rol === 'admin' || u.rol === 'consultor'
+  );
+  const opts = (selected) =>
+    '<option value="">— Seleccionar —</option>' +
+    relevantes.map(u =>
+      `<option value="${u.nombre_completo}" data-puesto="${u.puesto||''}"${u.nombre_completo===selected?' selected':''}>${u.nombre_completo} — ${u.puesto||u.rol}</option>`
+    ).join('');
+  ['pol-resp-elab','pol-autorizado-por','pol-levantado-por','pol-revisado-por'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.tagName === 'SELECT') {
+      const current = el.value || '';
+      el.innerHTML = opts(current);
+    }
+  });
+}
+
 function fillPoliticaForm(pol) {
   // Campos de gobierno corporativo heredan de pol_gobierno_corporativo si la política no los tiene
   const gc = _gcCurrent || {};
@@ -2554,12 +2587,27 @@ function fillPoliticaForm(pol) {
   });
   // Auto-fill Dirección Responsable desde jerarquía si está vacío
   const respDirEl = document.getElementById('pol-resp-dir');
-  if (respDirEl && !respDirEl.value) {
-    const cat = catalogo.find(c => c.id === pol.catalogo_id);
-    const area = cat ? areas.find(a => a.id === cat.area_id) : null;
-    const dir  = area ? direcciones.find(d => d.id === area.direccion_id) : null;
-    if (dir) respDirEl.value = dir.nombre;
-  }
+  const cat = catalogo.find(c => c.id === pol.catalogo_id);
+  const area = cat ? areas.find(a => a.id === cat.area_id) : null;
+  const dir  = area ? direcciones.find(d => d.id === area.direccion_id) : null;
+  if (respDirEl && !respDirEl.value && dir) respDirEl.value = dir.nombre;
+  // Cargar usuarios y poblar dropdowns filtrados por división
+  _loadUserProfiles().then(() => {
+    _fillUserSelects(dir?.codigo || null);
+    // Restaurar valores guardados en los selects
+    ['pol-resp-elab','pol-autorizado-por','pol-levantado-por','pol-revisado-por'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.tagName !== 'SELECT') return;
+      const keyMap = {
+        'pol-resp-elab': pol.responsable_elaboracion,
+        'pol-autorizado-por': pol.autorizado_por,
+        'pol-levantado-por': pol.levantado_por,
+        'pol-revisado-por': pol.revisado_por
+      };
+      const val = keyMap[id] || '';
+      if (val) el.value = val;
+    });
+  });
   // num_reglas
   const nr = document.getElementById('pol-num-reglas');
   if (nr) nr.value = pol.num_reglas ?? '';
@@ -2778,7 +2826,9 @@ async function loadFirmaQR(polId) {
     if (!data) {
       // Si está en en_revision y no tiene firma, generarla retroactivamente sin cambiar estatus
       if (politicaActual.status === 'en_revision') {
-        const nombre = politicaActual.elaborado_por || politicaActual.autorizado_por || 'Elaborador';
+        const nombre = politicaActual.responsable_elaboracion || politicaActual.elaborado_por || politicaActual.levantado_por || 'Elaborador';
+        const userPerfil = _userProfilesCache.find(u => u.nombre_completo === nombre);
+        const cargo = userPerfil?.puesto || nombre;
         const doc_content = [
           politicaActual.id, politicaActual.titulo, politicaActual.objeto,
           politicaActual.contenido, nombre, new Date().toISOString()
@@ -2788,7 +2838,7 @@ async function loadFirmaQR(polId) {
           headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
           body: JSON.stringify({
             politica_id: polId, nombre_autorizante: nombre,
-            cargo_autorizante: nombre, email_autorizante: null,
+            cargo_autorizante: cargo, email_autorizante: null,
             doc_content, status_al_firmar: 'en_revision'
           })
         });
@@ -2844,8 +2894,11 @@ async function advanceStatus(polId, newStatus) {
 
   if (newStatus === 'en_revision') {
     // ── Firma electrónica — se genera al enviar a revisión ──
-    const nombre_autorizante = document.getElementById('pol-elaborado-por')?.value?.trim()
-      || politicaActual.elaborado_por || politicaActual.autorizado_por || 'Elaborador';
+    const elabEl = document.getElementById('pol-resp-elab');
+    const nombre_autorizante = (elabEl?.value?.trim())
+      || politicaActual.responsable_elaboracion || politicaActual.elaborado_por || 'Elaborador';
+    const userPerfil = _userProfilesCache.find(u => u.nombre_completo === nombre_autorizante);
+    const cargo_autorizante = userPerfil?.puesto || nombre_autorizante;
     const doc_content = [
       politicaActual.id,
       politicaActual.titulo,
@@ -2861,7 +2914,7 @@ async function advanceStatus(polId, newStatus) {
       body: JSON.stringify({
         politica_id: polId,
         nombre_autorizante,
-        cargo_autorizante: nombre_autorizante,
+        cargo_autorizante,
         email_autorizante: null,
         doc_content,
         status_al_firmar: 'en_revision'
