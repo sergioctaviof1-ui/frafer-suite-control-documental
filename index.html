@@ -3777,7 +3777,7 @@ function _buildPolicyPDFDef(d, versHist) {
   const grpLabel = txt => ({ text:txt.toUpperCase(), bold:true, color:GRAY, fontSize:7, decoration:'underline', margin:[0,12,0,4] });
   const statusColors = { en_catalogo:MORSA, borrador:MORSA, en_revision:'#1565C0', autorizado:'#2E7D32', publicado:'#1B5E20' };
   const statusLabels = { en_catalogo:'EN CATÁLOGO', borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
-  const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.status]||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.status]||MORSA, alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
+  const statusBadge = { table:{ widths:['*'], body:[[{ text: statusLabels[d.statusRaw]||d.status||'BORRADOR', bold:true, fontSize:9, color:WHITE, fillColor: statusColors[d.statusRaw]||MORSA, alignment:'center', margin:[0,5,0,5] }]] }, layout:'noBorders', margin:[160,0,160,8] };
   const titleBlock = { margin:[0,0,0,10],
     table:{ widths:['62%','38%'], body:[
       [
@@ -3843,10 +3843,10 @@ function _buildPolicyPDFDef(d, versHist) {
       { canvas:[{type:'line',x1:0,y1:0,x2:522,y2:0,lineWidth:1,lineColor:MORSA}], margin:[45,4,45,0] }
     ]}),
     footer:(currentPage, pageCount) => {
-      const isAutorizado = d.status==='autorizado'||d.status==='publicado';
+      const isAutorizado = d.statusRaw==='autorizado'||d.statusRaw==='publicado';
       const trackLeft = isAutorizado
-        ? `v${versionNum} · ${statusLabels[d.status]||''} · Elaboró: ${dk(d.respElab)} · Autorizó: ${dk(d.autorizadoPor)} · Vigencia: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`
-        : `v${versionNum} · ${statusLabels[d.status]||'BORRADOR'} · Elaboró: ${dk(d.respElab)}`;
+        ? `v${versionNum} · ${statusLabels[d.statusRaw]||d.status||''} · Elaboró: ${dk(d.respElab)} · Autorizó: ${dk(d.autorizadoPor)} · Vigencia: ${dk(d.fechaAutorizacion)} – ${dk(d.fechaVencimiento)}`
+        : `v${versionNum} · ${statusLabels[d.statusRaw]||d.status||'BORRADOR'} · Elaboró: ${dk(d.respElab)}`;
       return { stack:[
         { canvas:[{type:'line',x1:45,y1:0,x2:567,y2:0,lineWidth:0.5,lineColor:BORDER}], margin:[0,0,0,3] },
         { columns:[
