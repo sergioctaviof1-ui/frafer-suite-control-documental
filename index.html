@@ -2863,37 +2863,10 @@ async function loadFirmaQR(polId) {
   let firma = politicaActual._firma;
 
   if (!firma) {
-    // Consultar Supabase
+    // Consultar Supabase — NUNCA crear firma aquí; solo leer la existente
     const { data } = await sb.from('pol_firmas').select('*').eq('politica_id', polId).order('firmado_at', { ascending: false }).limit(1).single();
-    if (!data) {
-      // Si está en en_revision y no tiene firma, generarla retroactivamente sin cambiar estatus
-      if (politicaActual.status === 'en_revision') {
-        const nombre = politicaActual.responsable_elaboracion || politicaActual.elaborado_por || politicaActual.levantado_por || 'Elaborador';
-        const userPerfil = _userProfilesCache.find(u => u.nombre_completo === nombre);
-        const cargo = userPerfil?.puesto || nombre;
-        const doc_content = [
-          politicaActual.id, politicaActual.titulo, politicaActual.objeto,
-          politicaActual.contenido, nombre, new Date().toISOString()
-        ].join('|');
-        const res = await fetch(`${SB_URL}/functions/v1/firmar-politica`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
-          body: JSON.stringify({
-            politica_id: polId, nombre_autorizante: nombre,
-            cargo_autorizante: cargo, email_autorizante: null,
-            doc_content, status_al_firmar: 'en_revision'
-          })
-        });
-        const generada = await res.json();
-        if (generada.error || !generada.ok) { section.style.display = 'none'; return; }
-        firma = generada;
-        politicaActual._firma = firma;
-      } else {
-        section.style.display = 'none'; return;
-      }
-    } else {
-      firma = data;
-    }
+    if (!data) { section.style.display = 'none'; return; }
+    firma = data;
   }
 
   section.style.display = '';
@@ -2936,8 +2909,8 @@ async function advanceStatus(polId, newStatus) {
 
   if (newStatus === 'en_revision') {
     // ── Firma electrónica — se genera al enviar a revisión ──
-    const elabEl = document.getElementById('pol-resp-elab');
-    const nombre_autorizante = (elabEl?.value?.trim())
+    // El firmante es quien está logueado y tomando la acción, NO quien está en el formulario
+    const nombre_autorizante = _currentUserProfile?.nombre_completo
       || politicaActual.responsable_elaboracion || politicaActual.elaborado_por || 'Elaborador';
     const userPerfil = _userProfilesCache.find(u => u.nombre_completo === nombre_autorizante);
     const cargo_autorizante = userPerfil?.puesto || nombre_autorizante;
@@ -2980,6 +2953,32 @@ async function advanceStatus(polId, newStatus) {
     const venc = new Date(hoy); venc.setMonth(venc.getMonth() + meses);
     update.fecha_vencimiento = venc.toISOString().split('T')[0];
     if (!politicaActual.vigencia_meses) update.vigencia_meses = 6;
+
+    // ── Firma electrónica del autorizante ──
+    const autoEl = document.getElementById('pol-autorizado-por');
+    const nombre_aut = _currentUserProfile?.nombre_completo
+      || autoEl?.value?.trim()
+      || politicaActual.autorizado_por || 'Autorizante';
+    const userPerfilAut = _userProfilesCache.find(u => u.nombre_completo === nombre_aut);
+    const doc_content_aut = [
+      politicaActual.id, politicaActual.titulo, politicaActual.objeto,
+      politicaActual.contenido, nombre_aut, now
+    ].join('|');
+    const firmaAutRes = await fetch(`${SB_URL}/functions/v1/firmar-politica`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
+      body: JSON.stringify({
+        politica_id: polId,
+        nombre_autorizante: nombre_aut,
+        cargo_autorizante: userPerfilAut?.puesto || nombre_aut,
+        email_autorizante: _currentUserProfile?.email || null,
+        doc_content: doc_content_aut,
+        status_al_firmar: update.status  // 'autorizado' o 'publicado' si GC ya cerrado
+      })
+    });
+    const firmaAut = await firmaAutRes.json();
+    if (firmaAut.error) { alert('Error al generar firma de autorización: ' + firmaAut.error); return; }
+    politicaActual._firma = firmaAut;
   }
 
   const { error } = await sb.from('pol_politicas').update(update).eq('id', polId);
