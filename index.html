@@ -6351,16 +6351,26 @@ async function saveGobiernoCorporativo() {
     _gcCurrent = data;
   }
 
-  // Propagar CAMPO 10 (canal) y CAMPO 11 (capacitación) a políticas
-  // — SOLO donde la política tiene exactamente el valor GC anterior o está vacía
-  // — NUNCA toca marco_normativo ni directrices_valores (pueden tener texto propio enriquecido)
-  for (const campo of ['canal_comunicacion', 'esquema_capacitacion']) {
-    const valAnterior = _gcCurrent?.[campo] || null;
-    const valNuevo    = payload[campo] ?? null;
-    if (valAnterior) {
-      await sb.from('pol_politicas').update({ [campo]: valNuevo }).eq(campo, valAnterior);
+  // Propagar cambios de GC a políticas:
+  // Reemplaza el BLOQUE GC ANTERIOR dentro del campo de la política,
+  // conservando lo que la división añadió DESPUÉS del bloque GC.
+  // Resultado: [NUEVO BLOQUE GC] + [ENRIQUECIMIENTO DIVISIÓN]
+  const camposGC = ['marco_normativo', 'directrices_valores', 'canal_comunicacion', 'esquema_capacitacion'];
+  for (const campo of camposGC) {
+    const viejo = (_gcCurrent?.[campo] || '').trim();
+    const nuevo  = (payload[campo]       || '').trim();
+    if (!viejo || viejo === nuevo) continue; // Sin cambio en este campo
+    // Traer políticas que tienen este campo con contenido
+    const { data: pols } = await sb.from('pol_politicas').select('id,' + campo).not(campo, 'is', null);
+    if (!pols?.length) continue;
+    for (const pol of pols) {
+      const actual = (pol[campo] || '').trim();
+      if (!actual.includes(viejo)) continue; // No tiene el bloque GC anterior
+      const actualizado = actual.replace(viejo, nuevo); // Reemplaza solo el bloque GC, conserva el resto
+      if (actualizado !== actual) {
+        await sb.from('pol_politicas').update({ [campo]: actualizado }).eq('id', pol.id);
+      }
     }
-    await sb.from('pol_politicas').update({ [campo]: valNuevo }).is(campo, null);
   }
 
   const b = document.getElementById('gc-sql-banner'); if (b) b.remove();
