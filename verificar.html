@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verificación de Firma · Grupo Morsa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --navy:    #1C2B3A;
+      --ember:   #C45C26;
+      --gold:    #A88840;
+      --ink:     #1A2030;
+      --fog:     #7A7060;
+      --stone:   #C8C0B0;
+      --linen:   #F5F0E8;
+      --surface: #FDFAF6;
+      --green:   #2D6B47;
+      --red:     #B03A2E;
+      --bg:      #F2EDE5;
+      --ff-serif: 'EB Garamond', Georgia, serif;
+      --ff-sans:  'Inter', system-ui, sans-serif;
+      --ff-mono:  'JetBrains Mono', monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --navy: #2A3F56; --ink: #EDE8DF; --fog: #9A9080;
+        --linen: #1E2830; --surface: #232C36; --bg: #161E26;
+        --stone: #3A4858;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--ff-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 64px;
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .logo-title {
+      font-family: var(--ff-serif);
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+    .logo-sub {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--fog);
+      margin-top: 2px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: 0 4px 24px rgba(28,43,58,.10);
+      padding: 36px 40px;
+      width: 100%;
+      max-width: 560px;
+    }
+    .veredicto {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 24px;
+      border-radius: 10px;
+      margin-bottom: 28px;
+    }
+    .veredicto.valido   { background: #EAF4EE; border: 1.5px solid #2D6B4740; }
+    .veredicto.invalido { background: #FDECEA; border: 1.5px solid #B03A2E40; }
+    .veredicto.pending  { background: var(--linen); border: 1.5px solid var(--stone); }
+    .veredicto-icon { font-size: 36px; flex-shrink: 0; }
+    .veredicto-titulo {
+      font-family: var(--ff-serif);
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .veredicto.valido   .veredicto-titulo { color: var(--green); }
+    .veredicto.invalido .veredicto-titulo { color: var(--red); }
+    .veredicto.pending  .veredicto-titulo { color: var(--fog); }
+    .veredicto-sub { font-size: 12px; color: var(--fog); margin-top: 3px; }
+    .vigencia-pill {
+      display: inline-block;
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .08em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 6px;
+    }
+    .vigencia-pill.vigente    { background: #EAF4EE; color: var(--green); }
+    .vigencia-pill.vencido    { background: #FDECEA; color: var(--red); }
+    .vigencia-pill.sin-info   { background: var(--linen); color: var(--fog); }
+    .section-label {
+      font-family: var(--ff-mono);
+      font-size: 9px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ember);
+      margin-bottom: 10px;
+    }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .info-table td { padding: 8px 0; vertical-align: top; border-bottom: 1px solid var(--linen); }
+    .info-table td:first-child {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      letter-spacing: .06em;
+      color: var(--fog);
+      text-transform: uppercase;
+      width: 130px;
+      padding-right: 16px;
+    }
+    .info-table td:last-child { font-size: 13px; color: var(--ink); }
+    .codigo-big {
+      font-family: var(--ff-mono);
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--ember);
+      letter-spacing: .08em;
+    }
+    .hash-text {
+      font-family: var(--ff-mono);
+      font-size: 10px;
+      color: var(--fog);
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--fog);
+      line-height: 1.8;
+    }
+    .spinner {
+      border: 3px solid var(--stone);
+      border-top-color: var(--ember);
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      animation: spin .8s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="logo">
+  <div class="logo-title">Grupo Morsa</div>
+  <div class="logo-sub">Sistema de Control Documental · Verificación de Firma</div>
+</div>
+
+<div class="card">
+  <div id="contenido"><div class="spinner"></div></div>
+</div>
+
+<div class="footer">
+  Frafer Suite · Control Documental<br>
+  Esta verificación es pública y no requiere inicio de sesión.<br>
+  El resultado es definitivo al momento de la consulta.
+</div>
+
+<script>
+const SB_URL  = 'https://lygpotmaneqgewjcetzw.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx5Z3BvdG1hbmVxZ2V3amNldHp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NTA3MjYsImV4cCI6MjEwMzQyNjcyNn0.0nIHvEuH6AKRymb_IjlxS_zfYTw8aXhGxUTxYUorNbM';
+
+const params = new URLSearchParams(location.search);
+const codigo = params.get('c') || '';
+
+function fmtDT(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-MX', {
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+  });
+}
+
+function vigenciaPill(pol) {
+  if (!pol?.fecha_vencimiento) return '<span class="vigencia-pill sin-info">Sin fecha de vencimiento</span>';
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(pol.fecha_vencimiento + 'T00:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (dias < 0) return `<span class="vigencia-pill vencido">VENCIDA · hace ${Math.abs(dias)} días</span>`;
+  return `<span class="vigencia-pill vigente">VIGENTE · vence en ${dias} días</span>`;
+}
+
+async function verificar() {
+  const el = document.getElementById('contenido');
+
+  if (!codigo) {
+    el.innerHTML = `
+      <div class="veredicto invalido">
+        <div class="veredicto-icon">⚠️</div>
+        <div>
+          <div class="veredicto-titulo">Código no proporcionado</div>
+          <div class="veredicto-sub">La URL no contiene un código de verificación válido.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Buscar firma en Supabase (política pública)
+  const res = await fetch(
+    `${SB_URL}/rest/v1/pol_firmas?codigo_verificacion=eq.${encodeURIComponent(codigo)}&select=*`,
+    { headers: { 'apikey': SB_ANON, 'Accept': 'application/json' } }
+  );
+  const data = await res.json();
+
+  if (!Array.isArray(data) || data.length === 0) {
+    el.innerHTML = `
+      <div class="veredicto invalido">
+        <div class="veredicto-icon">❌</div>
+        <div>
+          <div class="veredicto-titulo">Firma no encontrada</div>
+          <div class="veredicto-sub">El código <strong>${codigo}</strong> no existe en el registro oficial.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const firma = data[0];
+
+  // Consultar política para estado de vigencia
+  let pol = null;
+  if (firma.politica_id) {
+    const pRes = await fetch(
+      `${SB_URL}/rest/v1/pol_politicas?id=eq.${firma.politica_id}&select=titulo,status,fecha_vencimiento`,
+      { headers: { 'apikey': SB_ANON, 'Accept': 'application/json' } }
+    );
+    const pData = await pRes.json();
+    if (Array.isArray(pData) && pData.length) pol = pData[0];
+  }
+
+  const statusDoc = pol?.status || firma.status_al_firmar || '—';
+  const isReemplazado = pol && ['vencido','publicado'].includes(statusDoc) && statusDoc !== firma.status_al_firmar;
+
+  el.innerHTML = `
+    <div class="veredicto valido">
+      <div class="veredicto-icon">✅</div>
+      <div>
+        <div class="veredicto-titulo">Firma Válida</div>
+        <div class="veredicto-sub">Este documento fue autorizado oficialmente y su registro es auténtico.</div>
+        ${pol ? vigenciaPill(pol) : ''}
+      </div>
+    </div>
+
+    <div class="section-label">Datos de la Firma</div>
+    <table class="info-table">
+      <tr>
+        <td>Código</td>
+        <td><span class="codigo-big">${firma.codigo_verificacion}</span></td>
+      </tr>
+      <tr>
+        <td>Autorizó</td>
+        <td>${firma.nombre_autorizante || '—'}</td>
+      </tr>
+      <tr>
+        <td>Cargo</td>
+        <td>${firma.cargo_autorizante || '—'}</td>
+      </tr>
+      <tr>
+        <td>Fecha y hora</td>
+        <td>${fmtDT(firma.firmado_at)}</td>
+      </tr>
+      <tr>
+        <td>IP de firma</td>
+        <td><span style="font-family:var(--ff-mono);font-size:12px">${firma.ip_address || '—'}</span></td>
+      </tr>
+      ${pol ? `<tr><td>Documento</td><td>${pol.titulo || '—'}</td></tr>` : ''}
+      <tr>
+        <td>Estado del doc.</td>
+        <td><span style="font-family:var(--ff-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em">${statusDoc}</span></td>
+      </tr>
+    </table>
+
+    <div class="section-label">Huella Digital (HMAC-SHA256)</div>
+    <div class="hash-text">${firma.hmac_signature}</div>
+    <div style="margin-top:8px;font-size:11px;color:var(--fog)">
+      Esta huella criptográfica es única e inviolable. Cualquier alteración al documento produce una huella diferente.
+    </div>
+  `;
+}
+
+verificar();
+</script>
+</body>
+</html>
