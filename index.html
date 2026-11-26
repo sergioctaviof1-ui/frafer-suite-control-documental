@@ -4275,11 +4275,18 @@ async function _generateWordCore(d, download=true) {
     // Tabla de firma electrónica (solo si existe)
     const firmaSection = (firmaWord && qrWordBytes) ? (() => {
       const fmtDTW = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const sfW = firmaWord.status_al_firmar || 'en_revision';
+      const accionLblW = { en_revision:'Envió a revisión', autorizado:'Autorizó', publicado:'Publicó' }[sfW] || 'Firmó';
+      const fechaLblW  = { en_revision:'Fecha de envío a revisión', autorizado:'Fecha de autorización', publicado:'Fecha de publicación' }[sfW] || 'Fecha y hora';
+      const statusLblW = { en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' }[sfW] || sfW.toUpperCase();
+      const statusClrW = { en_revision:'1565C0', autorizado:'2D6B47', publicado:'1B5E20' }[sfW] || MORSA;
       return [
         new Paragraph({spacing:{before:280,after:0},text:''}),
         new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
           new TableRow({children:[new TableCell({columnSpan:2,shading:{type:ShadingType.SOLID,color:MORSA},borders:BN,
             children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  FIRMA ELECTRÓNICA · VERIFICACIÓN DIGITAL',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
+          new TableRow({children:[new TableCell({columnSpan:2,shading:{type:ShadingType.SOLID,color:statusClrW},borders:BN,
+            children:[new Paragraph({spacing:{before:50,after:50},alignment:AlignmentType.CENTER,children:[new TextRun({text:`ESTATUS DEL DOCUMENTO: ${statusLblW}`,bold:true,color:WHITE,font:'Calibri',size:17})]})]})] }),
           new TableRow({ children:[
             new TableCell({ width:{size:Math.round(TW*0.28),type:WidthType.DXA}, borders:BT, verticalAlign:VerticalAlign.TOP,
               children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:80,after:80},
@@ -4288,8 +4295,8 @@ async function _generateWordCore(d, download=true) {
               children:[
                 new Paragraph({spacing:{before:60,after:30},children:[new TextRun({text:'Código de Verificación',bold:true,color:GRAY,font:'Calibri',size:13})]}),
                 new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:firmaWord.codigo_verificacion||'—',bold:true,color:MORSA,font:'Calibri',size:26})]}),
-                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`Autorizó: ${dk(firmaWord.nombre_autorizante||d.autorizadoPor)}`,font:'Calibri',size:17})]}),
-                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`Fecha y hora: ${fmtDTW(firmaWord.firmado_at)}`,font:'Calibri',size:17})]}),
+                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`${accionLblW}: ${dk(firmaWord.nombre_autorizante||d.autorizadoPor)}`,font:'Calibri',size:17})]}),
+                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`${fechaLblW}: ${fmtDTW(firmaWord.firmado_at)}`,font:'Calibri',size:17})]}),
                 new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`IP de firma: ${firmaWord.ip_address||'—'}`,color:GRAY,font:'Calibri',size:17})]}),
                 new Paragraph({spacing:{before:30,after:20},children:[new TextRun({text:'Huella HMAC-SHA256:',bold:true,color:GRAY,font:'Calibri',size:13})]}),
                 new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:(firmaWord.hmac_signature||'').slice(0,64)+'…',color:GRAY,font:'Calibri',size:13})]}),
