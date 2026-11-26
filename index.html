@@ -2775,8 +2775,33 @@ async function loadFirmaQR(polId) {
   if (!firma) {
     // Consultar Supabase
     const { data } = await sb.from('pol_firmas').select('*').eq('politica_id', polId).order('firmado_at', { ascending: false }).limit(1).single();
-    if (!data) { section.style.display = 'none'; return; }
-    firma = data;
+    if (!data) {
+      // Si está en en_revision y no tiene firma, generarla retroactivamente sin cambiar estatus
+      if (politicaActual.status === 'en_revision') {
+        const nombre = politicaActual.elaborado_por || politicaActual.autorizado_por || 'Elaborador';
+        const doc_content = [
+          politicaActual.id, politicaActual.titulo, politicaActual.objeto,
+          politicaActual.contenido, nombre, new Date().toISOString()
+        ].join('|');
+        const res = await fetch(`${SB_URL}/functions/v1/firmar-politica`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
+          body: JSON.stringify({
+            politica_id: polId, nombre_autorizante: nombre,
+            cargo_autorizante: nombre, email_autorizante: null,
+            doc_content, status_al_firmar: 'en_revision'
+          })
+        });
+        const generada = await res.json();
+        if (generada.error || !generada.ok) { section.style.display = 'none'; return; }
+        firma = generada;
+        politicaActual._firma = firma;
+      } else {
+        section.style.display = 'none'; return;
+      }
+    } else {
+      firma = data;
+    }
   }
 
   section.style.display = '';
@@ -2847,30 +2872,6 @@ async function advanceStatus(polId, newStatus) {
   }
 
   if (newStatus === 'autorizado') {
-    // Fallback: si el documento no tiene firma aún (venía de en_revision previo), generarla ahora
-    if (!politicaActual._firma) {
-      const { data: firmaExistente } = await sb.from('pol_firmas')
-        .select('id').eq('politica_id', polId).limit(1).single();
-      if (!firmaExistente) {
-        const nombre_fb = document.getElementById('pol-elaborado-por')?.value?.trim()
-          || politicaActual.elaborado_por || politicaActual.autorizado_por || 'Elaborador';
-        const doc_content_fb = [
-          politicaActual.id, politicaActual.titulo, politicaActual.objeto,
-          politicaActual.contenido, nombre_fb, now
-        ].join('|');
-        const fbRes = await fetch(`${SB_URL}/functions/v1/firmar-politica`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
-          body: JSON.stringify({
-            politica_id: polId, nombre_autorizante: nombre_fb,
-            cargo_autorizante: nombre_fb, email_autorizante: null,
-            doc_content: doc_content_fb, status_al_firmar: 'autorizado'
-          })
-        });
-        const fbFirma = await fbRes.json();
-        if (!fbFirma.error) politicaActual._firma = fbFirma;
-      }
-    }
     // Vigencia corre desde la fecha de autorización
     const hoy = new Date();
     const meses = politicaActual.vigencia_meses || 6;
