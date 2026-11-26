@@ -3807,15 +3807,29 @@ function _buildPolicyPDFDef(d, versHist) {
       histTable,
       ...(d.qrDataUrl && d.firma ? (() => {
         const fmtDTF = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        const sf = d.firma.status_al_firmar || 'en_revision';
+        const accionLabel = { en_revision:'Envió a revisión', autorizado:'Autorizó', publicado:'Publicó' }[sf] || 'Firmó';
+        const statusFirmaLabel = { en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' }[sf] || sf.toUpperCase();
+        const statusFirmaColor = { en_revision:'1565C0', autorizado:'2D6B47', publicado:'1B5E20' }[sf] || MORSA;
         return [{ margin:[0,18,0,0],
           table:{ widths:['auto','*'], body:[
             [{text:'FIRMA ELECTRÓNICA · VERIFICACIÓN DIGITAL',bold:true,color:WHITE,fontSize:8.5,colSpan:2,margin:[6,3,6,3],fillColor:MORSA},{} ],
             [
               { image: d.qrDataUrl, width:90, height:90, margin:[8,8,8,8], rowSpan:4 },
               { stack:[
-                  {text:'Código de Verificación',bold:true,color:GRAY,fontSize:6.5,margin:[0,8,0,2]},
+                  { columns:[
+                      {text:'Código de Verificación',bold:true,color:GRAY,fontSize:6.5,margin:[0,8,0,2]},
+                      {text:statusFirmaLabel,bold:true,fontSize:7,color:WHITE,background:statusFirmaColor,
+                       margin:[0,6,0,0],alignment:'right',
+                       // pdfmake no soporta background en texto inline; usamos fillColor en tabla anidada
+                      }
+                    ]
+                  },
+                  // Badge de estatus como tabla de una celda
+                  { table:{ widths:['auto'], body:[[{text:statusFirmaLabel,bold:true,fontSize:7,color:WHITE,fillColor:statusFirmaColor,margin:[6,2,6,2]}]] },
+                    layout:'noBorders', margin:[0,0,0,4] },
                   {text:d.firma.codigo_verificacion||'—',bold:true,color:MORSA,fontSize:13,font:'Roboto',margin:[0,0,0,6]},
-                  {text:`Autorizó: ${dk(d.firma.nombre_autorizante||d.autorizadoPor)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
+                  {text:`${accionLabel}: ${dk(d.firma.nombre_autorizante||d.respElab)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
                   {text:`Fecha y hora: ${fmtDTF(d.firma.firmado_at)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
                   {text:`IP de firma: ${d.firma.ip_address||'—'}`,fontSize:8,color:GRAY,margin:[0,0,0,6]},
                   {text:'Huella HMAC-SHA256:',bold:true,color:GRAY,fontSize:6.5,margin:[0,0,0,2]},
