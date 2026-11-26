@@ -6350,8 +6350,21 @@ async function saveGobiernoCorporativo() {
     if (error) { _gcShowSQLBanner(error.message); alert('Error al crear registro: ' + error.message); return; }
     _gcCurrent = data;
   }
+
+  // Propagar CAMPO 10 (canal) y CAMPO 11 (capacitación) a políticas
+  // — SOLO donde la política tiene exactamente el valor GC anterior o está vacía
+  // — NUNCA toca marco_normativo ni directrices_valores (pueden tener texto propio enriquecido)
+  for (const campo of ['canal_comunicacion', 'esquema_capacitacion']) {
+    const valAnterior = _gcCurrent?.[campo] || null;
+    const valNuevo    = payload[campo] ?? null;
+    if (valAnterior) {
+      await sb.from('pol_politicas').update({ [campo]: valNuevo }).eq(campo, valAnterior);
+    }
+    await sb.from('pol_politicas').update({ [campo]: valNuevo }).is(campo, null);
+  }
+
   const b = document.getElementById('gc-sql-banner'); if (b) b.remove();
-  alert('✓ Guardado en Supabase.');
+  alert('✓ Guardado en Supabase · Políticas actualizadas.');
 }
 
 async function autorizarGC() {
