@@ -1965,6 +1965,7 @@ async function repairExistingFolios() {
 // ── USUARIOS & PERMISOS ────────────────────────────────────────────────────────
 let _usuariosCache = [];
 let _userProfilesCache = []; // usuarios de pol_user_profiles para dropdowns
+let _currentUserProfile = null; // perfil del usuario logueado
 const ROL_BADGE = {
   admin:     { bg:'#1C2B3A', color:'#F0E8DC', label:'Admin' },
   consultor: { bg:'#5A8C72', color:'#fff',    label:'Consultor' },
@@ -2637,6 +2638,11 @@ function fillPoliticaForm(pol) {
         u.rol === 'director' && u.division_codigo === dir.codigo
       );
       if (directorDiv) autoEl.value = directorDiv.nombre_completo;
+    }
+    // Auto-llenar Elaborado por desde el usuario logueado si está vacío
+    const elabEl = document.getElementById('pol-resp-elab');
+    if (elabEl && !elabEl.value && _currentUserProfile?.nombre_completo) {
+      elabEl.value = _currentUserProfile.nombre_completo;
     }
     // Spans de solo lectura en TRACKING
     const levCtrl = document.getElementById('pol-levantado-por-ctrl');
@@ -7164,6 +7170,17 @@ async function initApp() {
   ]);
   direcciones = dirs || [];
   if (gcData?.length) _gcCurrent = gcData[0];
+
+  // Cargar perfil del usuario logueado
+  try {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user?.email) {
+      const { data: perfil } = await sb.from('pol_user_profiles')
+        .select('*').eq('email', user.email).eq('activo', true).single();
+      if (perfil) _currentUserProfile = perfil;
+    }
+  } catch(_e) {}
+
   loadDashboard();
   // Reparar BD en background — no bloquea UI
   _backgroundRepair();
