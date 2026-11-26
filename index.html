@@ -2823,9 +2823,10 @@ async function loadFirmaQR(polId) {
   const row = (l, v) => `<tr><td style="padding:4px 10px 4px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);letter-spacing:.05em;white-space:nowrap">${l}</td><td style="padding:4px 0;font-size:12px;color:var(--ink)">${v}</td></tr>`;
   infoTbl.innerHTML = [
     row('CÓDIGO', `<strong style="font-family:var(--ff-mono);color:var(--ember-deep);font-size:13px">${firma.codigo_verificacion}</strong>`),
-    row('AUTORIZÓ', firma.nombre_autorizante || '—'),
-    row('CARGO', firma.cargo_autorizante || '—'),
-    row('FECHA', fmtDT(firma.firmado_at)),
+    row('ELABORÓ', politicaActual.elaborado_por || politicaActual.responsable_elaboracion || firma.nombre_autorizante || '—'),
+    row('REVISÓ', politicaActual.revisado_por || '—'),
+    row('AUTORIZÓ', politicaActual.autorizado_por || (firma.status_al_firmar === 'autorizado' ? firma.nombre_autorizante : '—')),
+    row('FECHA FIRMA', fmtDT(firma.firmado_at)),
     row('IP', firma.ip_address || '—'),
     row('HUELLA', `<span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog);word-break:break-all">${firma.hmac_signature?.slice(0,32)}…</span>`),
     row('VERIFICAR', `<a href="${verUrl}" target="_blank" style="color:var(--ember-deep);font-size:11px">Abrir página de verificación →</a>`)
@@ -3250,6 +3251,7 @@ function _getDocData() {
     numReglas:            g('pol-num-reglas'),
     respDir:          g('pol-resp-dir'),
     respElab:         g('pol-resp-elab'),
+    revisadoPor:      g('pol-revisado-por'),
     autorizadoPor:    g('pol-autorizado-por'),
     colaboradores:    g('pol-colab'),
     canal:            g('pol-canal-comunicacion')   || (_gcCurrent?.canal_comunicacion)   || '',
@@ -3370,7 +3372,7 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
 <tr><td colspan="3" class="sign-hdr">Control de Aprobaciones</td></tr>
 <tr>
   <td class="sbox"><div class="srole">Elaboró</div><div class="ssp"></div><div class="sname">${dash(d.respElab)}</div><div class="sdate">Nombre y Firma</div></td>
-  <td class="sbox"><div class="srole">Revisó</div><div class="ssp"></div><div class="sname">___________________________</div><div class="sdate">Nombre y Firma</div></td>
+  <td class="sbox"><div class="srole">Revisó</div><div class="ssp"></div><div class="sname">${dash(d.revisadoPor)}</div><div class="sdate">Nombre y Firma</div></td>
   <td class="sbox"><div class="srole">Autorizó</div><div class="ssp"></div><div class="sname">${dash(d.autorizadoPor)}</div><div class="sdate">Nombre y Firma</div></td>
 </tr>
 </table>`;
@@ -3473,7 +3475,7 @@ ${sec('Directrices y Valores Asociados',d.directrices)}`;
       `\\pard\\intbl\\f1\\fs20 \\par\\pard\\intbl\\par\\pard\\intbl\\par\\pard\\intbl\\par\\cell\\row\n` +
       `\\trowd\\trgaph54${VC(W3a)}${VC(W3b)}${VC(TW)}` +
       `\\pard\\intbl\\qc\\f1\\fs19\\b ${dr(d.respElab)}\\b0\\cell` +
-      `\\pard\\intbl\\qc\\f1\\fs19\\b ___________________________\\b0\\cell` +
+      `\\pard\\intbl\\qc\\f1\\fs19\\b ${dr(d.revisadoPor)||'___________________________'}\\b0\\cell` +
       `\\pard\\intbl\\qc\\f1\\fs19\\b ${dr(d.autorizadoPor)}\\b0\\cell\\row\n` +
       `\\trowd\\trgaph54${VC(W3a)}${VC(W3b)}${VC(TW)}` +
       `\\pard\\intbl\\qc\\f1\\fs14\\cf3 Nombre y Firma\\cell` +
@@ -3658,7 +3660,7 @@ function _buildPolicyPDFDef(d, versHist) {
       [{text:'CONTROL DE APROBACIONES',bold:true,color:WHITE,fontSize:8.5,colSpan:3,margin:[6,3,6,3],fillColor:MORSA},{},{}],
       [{text:'ELABORÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'REVISÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]},{text:'AUTORIZÓ',bold:true,color:GRAY,fontSize:7,alignment:'center',fillColor:CREAM,margin:[0,3,0,3]}],
       [{text:'\n\n\n'},{text:'\n\n\n'},{text:'\n\n\n'}],
-      [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:'___________________________',alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
+      [{text:dk(d.respElab),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:dk(d.revisadoPor)||'___________________________',bold:!!d.revisadoPor,fontSize:9,alignment:'center',margin:[0,3,0,2]},{text:dk(d.autorizadoPor),bold:true,fontSize:9,alignment:'center',margin:[0,3,0,2]}],
       [{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]},{text:'Nombre y Firma',color:GRAY,fontSize:6.5,alignment:'center',margin:[0,0,0,4]}]
     ]},
     layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
@@ -4023,7 +4025,7 @@ async function _generateWordCore(d, download=true) {
       new TableRow({height:{value:900,rule:HeightRule.ATLEAST},children:[sigSpace(W3),sigSpace(W3),sigSpace(TW-W3b)]}),
       new TableRow({children:[
         new TableCell({width:{size:W3,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:dk(d.respElab),bold:true,font:'Calibri',size:19})]})]}),
-        new TableCell({width:{size:W3,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'___________________________',font:'Calibri',size:18})]})]}),
+        new TableCell({width:{size:W3,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:d.revisadoPor?dk(d.revisadoPor):'___________________________',bold:!!d.revisadoPor,font:'Calibri',size:d.revisadoPor?19:18})]})]}),
         new TableCell({width:{size:TW-W3b,type:WidthType.DXA},borders:BT,children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:dk(d.autorizadoPor),bold:true,font:'Calibri',size:19})]})]}),
       ]}),
       new TableRow({children:['Nombre y Firma','Nombre y Firma','Nombre y Firma'].map((t,i)=>new TableCell({
