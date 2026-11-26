@@ -2572,8 +2572,8 @@ function fillPoliticaForm(pol) {
   const fmtDT = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
   const setDisp = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   setDisp('pol-autorizado-ctrl',  pol.autorizado_por     || '—');
-  // Firma electrónica — cargar QR si ya está autorizado
-  if (pol.id && (pol.status === 'autorizado' || pol.status === 'publicado')) {
+  // Firma electrónica — cargar QR desde en_revision en adelante
+  if (pol.id && (pol.status === 'en_revision' || pol.status === 'autorizado' || pol.status === 'publicado')) {
     loadFirmaQR(pol.id);
   } else {
     const s = document.getElementById('firma-electronica-section');
@@ -2816,11 +2816,10 @@ async function advanceStatus(polId, newStatus) {
   const update = { status: newStatus };
   if (tsField) update[tsField] = now;
 
-  if (newStatus === 'autorizado') {
-    // ── Firma electrónica ──
-    const nombre_autorizante = document.getElementById('pol-autorizado-por')?.value?.trim()
-      || politicaActual.autorizado_por || 'Autorizante';
-    // Contenido del documento para hash (todos los campos relevantes)
+  if (newStatus === 'en_revision') {
+    // ── Firma electrónica — se genera al enviar a revisión ──
+    const nombre_autorizante = document.getElementById('pol-elaborado-por')?.value?.trim()
+      || politicaActual.elaborado_por || politicaActual.autorizado_por || 'Elaborador';
     const doc_content = [
       politicaActual.id,
       politicaActual.titulo,
@@ -2838,13 +2837,16 @@ async function advanceStatus(polId, newStatus) {
         nombre_autorizante,
         cargo_autorizante: nombre_autorizante,
         email_autorizante: null,
-        doc_content
+        doc_content,
+        status_al_firmar: 'en_revision'
       })
     });
     const firma = await firmaRes.json();
     if (firma.error) { alert('Error al generar firma: ' + firma.error); return; }
     politicaActual._firma = firma;
+  }
 
+  if (newStatus === 'autorizado') {
     // Vigencia corre desde la fecha de autorización
     const hoy = new Date();
     const meses = politicaActual.vigencia_meses || 6;
