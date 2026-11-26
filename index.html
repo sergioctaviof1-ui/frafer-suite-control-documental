@@ -2987,6 +2987,11 @@ async function advanceStatus(polId, newStatus) {
     politicaActual = { ...politicaActual, ...update };
     fillPoliticaForm(politicaActual);
     loadCatalogo();
+    // Regenerar documentos con el estatus actualizado
+    try {
+      await _generateWordCore(_getDocData(), false);
+      await generatePDF(false);
+    } catch(_e) { console.error('[advanceStatus] regenerar docs:', _e); }
   }
 }
 
@@ -3835,6 +3840,7 @@ function _buildPolicyPDFDef(d, versHist) {
         const fmtDTF = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
         const sf = d.firma.status_al_firmar || 'en_revision';
         const accionLabel = { en_revision:'Envió a revisión', autorizado:'Autorizó', publicado:'Publicó' }[sf] || 'Firmó';
+        const fechaAccionLabel = { en_revision:'Fecha de envío a revisión', autorizado:'Fecha de autorización', publicado:'Fecha de publicación' }[sf] || 'Fecha y hora';
         const statusFirmaLabel = { en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' }[sf] || sf.toUpperCase();
         const statusFirmaColor = { en_revision:'1565C0', autorizado:'2D6B47', publicado:'1B5E20' }[sf] || MORSA;
         return [{ margin:[0,18,0,0],
@@ -3856,7 +3862,7 @@ function _buildPolicyPDFDef(d, versHist) {
                     layout:'noBorders', margin:[0,0,0,4] },
                   {text:d.firma.codigo_verificacion||'—',bold:true,color:MORSA,fontSize:13,font:'Roboto',margin:[0,0,0,6]},
                   {text:`${accionLabel}: ${dk(d.firma.nombre_autorizante||d.respElab)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
-                  {text:`Fecha y hora: ${fmtDTF(d.firma.firmado_at)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
+                  {text:`${fechaAccionLabel}: ${fmtDTF(d.firma.firmado_at)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
                   {text:`IP de firma: ${d.firma.ip_address||'—'}`,fontSize:8,color:GRAY,margin:[0,0,0,6]},
                   {text:'Huella HMAC-SHA256:',bold:true,color:GRAY,fontSize:6.5,margin:[0,0,0,2]},
                   {text:(d.firma.hmac_signature||'').slice(0,64)+'…',fontSize:7,color:GRAY,font:'Roboto',margin:[0,0,0,2]},
