@@ -3874,7 +3874,7 @@ async function generatePDF(download=true) {
     const versionNum = parseInt(d.version) || 1;
 
     // Firma electrónica y QR para incrustar en el PDF
-    if (d.politicaId && (d.status==='en_revision'||d.status==='autorizado'||d.status==='publicado')) {
+    if (d.politicaId && (d.statusRaw==='en_revision'||d.statusRaw==='autorizado'||d.statusRaw==='publicado')) {
       try {
         let firma = politicaActual?._firma;
         if (!firma) {
