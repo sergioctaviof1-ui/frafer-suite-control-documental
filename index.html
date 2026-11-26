@@ -2630,6 +2630,14 @@ function fillPoliticaForm(pol) {
       const val = keyMap[id] || '';
       if (val) el.value = val;
     });
+    // Auto-seleccionar director de la división si Autorizó está vacío
+    const autoEl = document.getElementById('pol-autorizado-por');
+    if (autoEl && !autoEl.value && dir?.codigo) {
+      const directorDiv = _userProfilesCache.find(u =>
+        u.rol === 'director' && u.division_codigo === dir.codigo
+      );
+      if (directorDiv) autoEl.value = directorDiv.nombre_completo;
+    }
     // Spans de solo lectura en TRACKING
     const levCtrl = document.getElementById('pol-levantado-por-ctrl');
     const revCtrl = document.getElementById('pol-revisado-por-ctrl');
