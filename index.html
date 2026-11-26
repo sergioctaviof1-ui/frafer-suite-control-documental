@@ -3868,7 +3868,10 @@ async function generatePDF(download=true) {
         .select('version,fuente,created_at,elaboro,autorizo')
         .eq('politica_id', d.politicaId)
         .order('created_at', { ascending: true });
-      versHist = data || [];
+      // Dedup: una fila por número de versión (la más reciente gana)
+      const _vMap = {};
+      (data||[]).forEach(v => { _vMap[v.version] = v; });
+      versHist = Object.values(_vMap).sort((a,b) => a.version - b.version);
     }
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
@@ -3946,7 +3949,10 @@ async function _generateWordCore(d, download=true) {
         .select('version,fuente,created_at,elaboro,autorizo')
         .eq('politica_id', d.politicaId)
         .order('created_at', { ascending: true });
-      versiones = vData || [];
+      // Dedup: una fila por número de versión (la más reciente gana)
+      const _vMap2 = {};
+      (vData||[]).forEach(v => { _vMap2[v.version] = v; });
+      versiones = Object.values(_vMap2).sort((a,b) => a.version - b.version);
     }
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
