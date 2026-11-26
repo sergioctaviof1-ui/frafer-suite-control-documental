@@ -2578,8 +2578,9 @@ function fillPoliticaForm(pol) {
   const govFallback = {
     marco_normativo:      pol.marco_normativo      || gc.marco_normativo      || '',
     directrices_valores:  pol.directrices_valores  || gc.directrices_valores  || '',
-    canal_comunicacion:   pol.canal_comunicacion   || gc.canal_comunicacion   || '',
-    esquema_capacitacion: pol.esquema_capacitacion || gc.esquema_capacitacion || '',
+    // canal y esquema son 100% GC — GC siempre gana, aunque la política tenga valor guardado
+    canal_comunicacion:   gc.canal_comunicacion    || pol.canal_comunicacion  || '',
+    esquema_capacitacion: gc.esquema_capacitacion  || pol.esquema_capacitacion || '',
   };
   const polWithGov = { ...pol, ...govFallback };
 
