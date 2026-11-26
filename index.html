@@ -931,18 +931,8 @@ input,textarea,select{font-family:inherit}
             </tbody>
           </table>
         </div>
-        <!-- FIRMA ELECTRÓNICA — visible solo cuando está autorizado o publicado -->
-        <div class="form-section" id="firma-electronica-section" style="display:none">
-          <div class="form-section-title">Firma Electrónica</div>
-          <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
-            <div id="firma-qr-container" style="flex-shrink:0"></div>
-            <div style="flex:1;min-width:220px">
-              <table style="width:100%;border-collapse:collapse;font-size:12px">
-                <tbody id="firma-info-rows"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <!-- FIRMA ELECTRÓNICA — bloque dinámico por evento (en_revision / autorizado / publicado) -->
+        <div class="form-section" id="firma-electronica-section" style="display:none"></div>
         <div class="form-section">
           <div class="form-section-title">Avanzar en el Flujo</div>
           <div id="advance-actions" style="display:flex;gap:10px;flex-wrap:wrap"></div>
@@ -2855,47 +2845,97 @@ function qrToDataUrl(text, size) {
 
 async function loadFirmaQR(polId) {
   const section = document.getElementById('firma-electronica-section');
-  const qrDiv   = document.getElementById('firma-qr-container');
-  const infoTbl = document.getElementById('firma-info-rows');
-  if (!section || !qrDiv || !infoTbl) return;
+  if (!section) return;
 
-  // Si ya tenemos la firma en memoria (recién firmado), la usamos
-  let firma = politicaActual._firma;
+  // Cargar TODAS las firmas del documento — una por evento (en_revision, autorizado, publicado)
+  const { data: firmas } = await sb.from('pol_firmas')
+    .select('*').eq('politica_id', polId).order('firmado_at', { ascending: true });
 
-  if (!firma) {
-    // Consultar Supabase — NUNCA crear firma aquí; solo leer la existente
-    const { data } = await sb.from('pol_firmas').select('*').eq('politica_id', polId).order('firmado_at', { ascending: false }).limit(1).single();
-    if (!data) { section.style.display = 'none'; return; }
-    firma = data;
-  }
+  if (!firmas || firmas.length === 0) { section.style.display = 'none'; return; }
 
   section.style.display = '';
 
-  // URL de verificación
-  const verUrl = `${location.origin}/verificar.html?c=${firma.codigo_verificacion}`;
-
-  // Renderizar QR
-  qrDiv.innerHTML = '';
-  new QRCode(qrDiv, {
-    text: verUrl,
-    width: 112, height: 112,
-    correctLevel: QRCode.CorrectLevel.M
-  });
-  qrDiv.title = verUrl;
-
-  // Tabla de info
   const fmtDT = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  const row = (l, v) => `<tr><td style="padding:4px 10px 4px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);letter-spacing:.05em;white-space:nowrap">${l}</td><td style="padding:4px 0;font-size:12px;color:var(--ink)">${v}</td></tr>`;
-  infoTbl.innerHTML = [
-    row('CÓDIGO', `<strong style="font-family:var(--ff-mono);color:var(--ember-deep);font-size:13px">${firma.codigo_verificacion}</strong>`),
-    row('ELABORÓ', politicaActual.elaborado_por || politicaActual.responsable_elaboracion || firma.nombre_autorizante || '—'),
-    row('REVISÓ', politicaActual.revisado_por || '—'),
-    row('AUTORIZÓ', politicaActual.autorizado_por || (firma.status_al_firmar === 'autorizado' ? firma.nombre_autorizante : '—')),
-    row('FECHA FIRMA', fmtDT(firma.firmado_at)),
-    row('IP', firma.ip_address || '—'),
-    row('HUELLA', `<span style="font-family:var(--ff-mono);font-size:9px;color:var(--fog);word-break:break-all">${firma.hmac_signature?.slice(0,32)}…</span>`),
-    row('VERIFICAR', `<a href="${verUrl}" target="_blank" style="color:var(--ember-deep);font-size:11px">Abrir página de verificación →</a>`)
-  ].join('');
+
+  const evtLabel = { en_revision:'Enviado a Revisión', autorizado:'Autorizado', publicado:'Publicado' };
+  const evtStyle = {
+    en_revision:{ bg:'#EBF3FD', color:'#1565C0', border:'#90CAF9' },
+    autorizado:  { bg:'#EAF4EE', color:'#2D6B47', border:'#81C784' },
+    publicado:   { bg:'#E8F5E9', color:'#1A7A3C', border:'#66BB6A' }
+  };
+
+  // Estatus actual del documento — mostrar de forma prominente
+  const estActual = politicaActual.status || '';
+  const estLbl    = STATUS_LABEL[estActual] || estActual;
+  const estSt     = evtStyle[estActual] || { bg:'var(--linen)', color:'var(--fog)', border:'var(--stone)' };
+
+  let html = `
+    <div class="form-section-title">Firma Electrónica</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:11px 16px;background:${estSt.bg};border:1.5px solid ${estSt.border};border-radius:8px">
+      <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--fog)">ESTATUS ACTUAL</span>
+      <span style="font-family:var(--ff-mono);font-size:15px;font-weight:700;color:${estSt.color};letter-spacing:.06em;text-transform:uppercase">${estLbl}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+  `;
+
+  for (const firma of firmas) {
+    const st  = firma.status_al_firmar || 'en_revision';
+    const sc  = evtStyle[st] || evtStyle.en_revision;
+    const lbl = evtLabel[st] || st;
+    const verUrl = `${location.origin}/verificar.html?c=${firma.codigo_verificacion}`;
+    const qrId   = 'qr-' + firma.codigo_verificacion;
+
+    html += `
+      <div style="border:1.5px solid ${sc.border};border-radius:10px;padding:14px;background:${sc.bg}22">
+        <div style="margin-bottom:10px">
+          <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:${sc.color};padding:3px 10px;border-radius:12px;background:${sc.bg};border:1px solid ${sc.border}">${lbl}</span>
+        </div>
+        <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+          <div id="${qrId}" style="flex-shrink:0"></div>
+          <div style="flex:1;min-width:200px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">CÓDIGO</td>
+                <td style="font-family:var(--ff-mono);font-size:13px;font-weight:700;color:var(--ember-deep)">${firma.codigo_verificacion}</td>
+              </tr>
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">FIRMANTE</td>
+                <td style="padding:3px 0;font-size:12px">${firma.nombre_autorizante || '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">CARGO</td>
+                <td style="padding:3px 0;font-size:12px">${firma.cargo_autorizante || '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">FECHA</td>
+                <td style="padding:3px 0;font-size:12px">${fmtDT(firma.firmado_at)}</td>
+              </tr>
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">IP</td>
+                <td style="padding:3px 0;font-family:var(--ff-mono);font-size:12px;font-weight:700;color:${sc.color}">${firma.ip_address || '—'}</td>
+              </tr>
+              <tr>
+                <td style="padding:3px 10px 3px 0;font-size:10px;color:var(--fog);font-family:var(--ff-mono);white-space:nowrap">HUELLA</td>
+                <td style="padding:3px 0;font-family:var(--ff-mono);font-size:9px;color:var(--fog);word-break:break-all">${firma.hmac_signature?.slice(0,32)}…</td>
+              </tr>
+              <tr><td colspan="2" style="padding:6px 0 0"><a href="${verUrl}" target="_blank" style="color:var(--ember-deep);font-size:11px">Verificar firma →</a></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  section.innerHTML = html;
+
+  // Generar QR para cada bloque
+  for (const firma of firmas) {
+    const qrId   = 'qr-' + firma.codigo_verificacion;
+    const verUrl = `${location.origin}/verificar.html?c=${firma.codigo_verificacion}`;
+    const el = document.getElementById(qrId);
+    if (el) new QRCode(el, { text: verUrl, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+  }
 }
 
 async function advanceStatus(polId, newStatus) {
