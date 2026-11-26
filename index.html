@@ -1456,7 +1456,8 @@ const STATUS_LABEL = {
 };
 const STATUS_NEXT = {
   en_catalogo:'borrador',
-  borrador:'en_revision', en_revision:'autorizado', autorizado:'publicado'
+  borrador:'en_revision', en_revision:'autorizado'
+  // autorizado = publicado automáticamente en advanceStatus
 };
 const STATUS_NEXT_LABEL = {
   en_catalogo:'Iniciar Borrador',
@@ -2947,6 +2948,9 @@ async function advanceStatus(polId, newStatus) {
   }
 
   if (newStatus === 'autorizado') {
+    // Autorizar = Publicar automáticamente (un solo paso)
+    update.status = 'publicado';
+    update.publicacion_at = now;
     // Vigencia corre desde la fecha de autorización
     const hoy = new Date();
     const meses = politicaActual.vigencia_meses || 6;
