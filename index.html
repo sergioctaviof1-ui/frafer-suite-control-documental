@@ -979,10 +979,16 @@ input,textarea,select{font-family:inherit}
     <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
         <div class="page-title">Consulta de Políticas</div>
-        <div class="page-sub">Grupo Morsa · Respuestas fundamentadas en el repositorio institucional</div>
+        <div class="page-sub" id="consulta-mode-sub">Grupo Morsa · Respuestas fundamentadas en el repositorio institucional</div>
       </div>
-      <span id="consulta-ai-badge" style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:4px 14px;border-radius:20px;border:1px solid var(--stone);color:var(--fog)">Verificando IA…</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="consulta-ai-badge" style="font-size:10px;font-weight:700;letter-spacing:.06em;padding:4px 14px;border-radius:20px;border:1px solid var(--stone);color:var(--fog)">Verificando IA…</span>
+        <button onclick="toggleConsultaModo()" id="consulta-modo-btn" title="Cambiar modo de consulta"
+          style="padding:4px 12px;border-radius:20px;border:1px solid var(--stone);background:var(--linen);color:var(--ink);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:.04em;white-space:nowrap">⚙ MODO</button>
+      </div>
     </div>
+    <!-- Banner modo no-producción -->
+    <div id="consulta-modo-banner" style="display:none;padding:10px 16px;border-radius:8px;font-size:12px;margin-bottom:12px;line-height:1.5"></div>
 
     <!-- Chat container -->
     <div id="consulta-chat" style="display:flex;flex-direction:column;gap:0;border:1px solid var(--stone);border-radius:12px;overflow:hidden;background:var(--bg);max-height:520px">
@@ -6376,7 +6382,78 @@ const CONSULTA_FN = 'https://lygpotmaneqgewjcetzw.supabase.co/functions/v1/consu
 let _orgContext = '';
 let _catalogoPLT = '';  // Catálogo completo de políticas (PLT), cargado al abrir la pestaña
 
+// ── MODO CONSULTA ─────────────────────────────────────────────────────────────
+// 'produccion' → solo autorizado+publicado | 'proceso' → todos | 'mixto' → ambos con distinción
+const CONSULTA_MODOS = ['produccion', 'proceso', 'mixto'];
+const CONSULTA_MODO_LABELS = { produccion:'PRODUCCIÓN', proceso:'PROCESO', mixto:'MIXTO' };
+const CONSULTA_MODO_COLORS = { produccion:'#2D6B47', proceso:'#1565C0', mixto:'#7B3F00' };
+const CONSULTA_MODO_ICONS  = { produccion:'✓', proceso:'🔧', mixto:'◑' };
+
+function _getConsultaModo() {
+  try { return localStorage.getItem('consulta_modo') || 'produccion'; } catch(_) { return 'produccion'; }
+}
+function _setConsultaModo(m) {
+  try { localStorage.setItem('consulta_modo', m); } catch(_) {}
+}
+
+function _applyConsultaModoUI() {
+  const modo   = _getConsultaModo();
+  const btn    = document.getElementById('consulta-modo-btn');
+  const banner = document.getElementById('consulta-modo-banner');
+  const sub    = document.getElementById('consulta-mode-sub');
+  if (btn) {
+    btn.textContent = `⚙ ${CONSULTA_MODO_ICONS[modo]} ${CONSULTA_MODO_LABELS[modo]}`;
+    btn.style.borderColor = CONSULTA_MODO_COLORS[modo] + '66';
+    btn.style.color = CONSULTA_MODO_COLORS[modo];
+  }
+  if (banner) {
+    if (modo === 'produccion') {
+      banner.style.display = 'none';
+    } else if (modo === 'proceso') {
+      banner.style.display = 'block';
+      banner.style.background = '#EBF3FD';
+      banner.style.border = '1.5px solid #1565C066';
+      banner.style.color = '#1565C0';
+      banner.innerHTML = '🔧 <strong>Modo Proceso activo</strong> — La consulta incluye documentos en borrador y en revisión. El contenido puede cambiar. Para respuestas oficiales, cambia a modo Producción.';
+    } else {
+      banner.style.display = 'block';
+      banner.style.background = '#FFF8F0';
+      banner.style.border = '1.5px solid #7B3F0066';
+      banner.style.color = '#7B3F00';
+      banner.innerHTML = '◑ <strong>Modo Mixto activo</strong> — Las respuestas se basan en políticas autorizadas. También se mostrará qué políticas están en proceso sobre el mismo tema.';
+    }
+  }
+  if (sub) {
+    const labels = {
+      produccion: 'Grupo Morsa · Solo políticas autorizadas y publicadas',
+      proceso:    'Grupo Morsa · Todos los documentos (incluye borradores y en revisión)',
+      mixto:      'Grupo Morsa · Respuestas desde políticas autorizadas + visibilidad de proceso'
+    };
+    sub.textContent = labels[modo];
+  }
+  // Actualizar bienvenida si existe
+  const bienvenidaEl = document.querySelector('#consulta-bienvenida div:last-child p');
+  if (bienvenidaEl) {
+    if (modo === 'proceso') {
+      bienvenidaEl.textContent = 'Modo Proceso activo. Puedo responder con base en todos los documentos del repositorio, incluyendo borradores y políticas en revisión.';
+    } else if (modo === 'mixto') {
+      bienvenidaEl.textContent = 'Modo Mixto activo. Respondo desde políticas autorizadas y te indico si hay documentos sobre el mismo tema que están en proceso de autorización.';
+    } else {
+      bienvenidaEl.textContent = 'Hola. Puedo responder preguntas sobre las políticas de Grupo Morsa. Pregúntame sobre procesos, autorizaciones, responsabilidades o cualquier lineamiento institucional.';
+    }
+  }
+}
+
+function toggleConsultaModo() {
+  const actual = _getConsultaModo();
+  const idx = CONSULTA_MODOS.indexOf(actual);
+  const siguiente = CONSULTA_MODOS[(idx + 1) % CONSULTA_MODOS.length];
+  _setConsultaModo(siguiente);
+  _applyConsultaModoUI();
+}
+
 async function loadConsulta() {
+  _applyConsultaModoUI();
   const badge = document.getElementById('consulta-ai-badge');
   badge.textContent = '● IA activa';
   badge.style.color = '#2e7d32';
@@ -6451,28 +6528,68 @@ async function enviarConsulta() {
     .filter(w => w.length > 2 && !_STOP.has(w))
     .slice(0,6);
 
+  const modo = _getConsultaModo();
+  const statusBadgeStyle = {
+    borrador:    'background:#FFF3CD;color:#7B5800;border-color:#F0C040',
+    en_revision: 'background:#EBF3FD;color:#1565C0;border-color:#90CAF9',
+    autorizado:  'background:#EAF4EE;color:#2D6B47;border-color:#81C784',
+    publicado:   'background:#E8F5E9;color:#1B5E20;border-color:#66BB6A',
+  };
+  const statusLabel = { borrador:'BORRADOR', en_revision:'EN REVISIÓN', autorizado:'AUTORIZADO', publicado:'PUBLICADO' };
+
   let documentadas = [];
+  let enProceso = [];   // solo para modo mixto
   if (terminosClave.length) {
     const filtrosPol = terminosClave.map(t=>`titulo.ilike.%${t}%,contenido.ilike.%${t}%,objetivo.ilike.%${t}%`).join(',');
-    const { data: polItems } = await sb.from('pol_politicas')
-      .select('id,titulo,contenido,objetivo,alcance,folio,status')
-      .or(filtrosPol).limit(5);
-    documentadas = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,400), status:p.status }));
+
+    let query = sb.from('pol_politicas').select('id,titulo,contenido,objetivo,alcance,folio,status').or(filtrosPol).limit(8);
+
+    if (modo === 'produccion') {
+      query = query.in('status', ['autorizado','publicado']);
+    } else if (modo === 'mixto') {
+      // Para mixto: dos queries separadas
+      const { data: authItems } = await sb.from('pol_politicas')
+        .select('id,titulo,contenido,objetivo,alcance,folio,status')
+        .or(filtrosPol).in('status', ['autorizado','publicado']).limit(5);
+      const { data: procItems } = await sb.from('pol_politicas')
+        .select('id,titulo,folio,status')
+        .or(filtrosPol).in('status', ['borrador','en_revision']).limit(5);
+      documentadas = (authItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,400), status:p.status }));
+      enProceso    = (procItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, status:p.status }));
+      query = null; // ya hicimos las queries
+    }
+
+    if (query) {
+      const { data: polItems } = await query;
+      documentadas = (polItems||[]).map(p=>({ folio:p.folio||'—', titulo:p.titulo, resumen:(p.objetivo||p.contenido||'').slice(0,400), status:p.status }));
+    }
   }
 
-  // Mostrar políticas documentadas encontradas como fuentes (si las hay)
+  // Mostrar fuentes encontradas con badge de estatus
   const fuentesDiv = document.getElementById('consulta-fuentes');
   const fuentesLista = document.getElementById('consulta-fuentes-lista');
-  if (documentadas.length) {
+  const todasFuentes = [...documentadas, ...enProceso];
+  if (todasFuentes.length) {
     fuentesDiv.style.display = 'block';
-    fuentesLista.innerHTML = documentadas.map(p=>`
+    fuentesLista.innerHTML = todasFuentes.map(p => {
+      const bs = statusBadgeStyle[p.status] || 'background:var(--linen);color:var(--fog)';
+      const bl = statusLabel[p.status] || p.status;
+      return `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--stone);border-radius:6px;background:var(--linen)">
         <span style="font-family:var(--ff-mono);font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap">${p.folio||'—'}</span>
         <span style="font-size:11px;color:var(--ink);flex:1">${p.titulo}</span>
-        <span style="font-size:10px;color:var(--fog)">${p.status}</span>
-      </div>`).join('');
+        <span style="font-family:var(--ff-mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid;white-space:nowrap;${bs}">${bl}</span>
+      </div>`;
+    }).join('');
   } else {
     fuentesDiv.style.display = 'none';
+  }
+
+  // Contexto extra para el AI en modo mixto: mencionar documentos en proceso
+  let enProcesoCtx = '';
+  if (enProceso.length) {
+    enProcesoCtx = '\n\nDOCUMENTOS EN PROCESO (no usar como fuente autorizada, solo mencionar):\n' +
+      enProceso.map(p=>`- [${p.folio}] ${p.titulo} (${statusLabel[p.status]||p.status})`).join('\n');
   }
 
   // Llamar Edge Function con: catálogo PLT completo + políticas documentadas + estructura org
@@ -6481,7 +6598,7 @@ async function enviarConsulta() {
     const res = await fetch(CONSULTA_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: pregunta, catalogoPLT: _catalogoPLT, documentadas, orgContext: _orgContext })
+      body: JSON.stringify({ question: pregunta, catalogoPLT: _catalogoPLT, documentadas, orgContext: _orgContext, modoConsulta: modo, enProcesoCtx })
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
