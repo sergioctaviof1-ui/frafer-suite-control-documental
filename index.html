@@ -3728,7 +3728,32 @@ function _buildPolicyPDFDef(d, versHist) {
       ...mkSec('Directrices y Valores Asociados',d.directrices),
       ...mkSec('Documentos y Políticas Relacionadas', d.documentosRelacionados),
       sigTable,
-      histTable
+      histTable,
+      ...(d.qrDataUrl && d.firma ? (() => {
+        const fmtDTF = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        return [{ margin:[0,18,0,0],
+          table:{ widths:['auto','*'], body:[
+            [{text:'FIRMA ELECTRÓNICA · VERIFICACIÓN DIGITAL',bold:true,color:WHITE,fontSize:8.5,colSpan:2,margin:[6,3,6,3],fillColor:MORSA},{} ],
+            [
+              { image: d.qrDataUrl, width:90, height:90, margin:[8,8,8,8], rowSpan:4 },
+              { stack:[
+                  {text:'Código de Verificación',bold:true,color:GRAY,fontSize:6.5,margin:[0,8,0,2]},
+                  {text:d.firma.codigo_verificacion||'—',bold:true,color:MORSA,fontSize:13,font:'Roboto',margin:[0,0,0,6]},
+                  {text:`Autorizó: ${dk(d.firma.nombre_autorizante||d.autorizadoPor)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
+                  {text:`Fecha y hora: ${fmtDTF(d.firma.firmado_at)}`,fontSize:8,color:'#1a1a1a',margin:[0,0,0,2]},
+                  {text:`IP de firma: ${d.firma.ip_address||'—'}`,fontSize:8,color:GRAY,margin:[0,0,0,6]},
+                  {text:'Huella HMAC-SHA256:',bold:true,color:GRAY,fontSize:6.5,margin:[0,0,0,2]},
+                  {text:(d.firma.hmac_signature||'').slice(0,64)+'…',fontSize:7,color:GRAY,font:'Roboto',margin:[0,0,0,2]},
+                  {text:'Escanea el QR o visita la URL de verificación para validar la autenticidad de este documento.',italics:true,fontSize:7,color:GRAY,margin:[0,8,8,8]}
+                ], margin:[0,0,8,0]
+              }
+            ],[{},{text:'',border:[false,false,false,false]}],
+            [{},{text:'',border:[false,false,false,false]}],
+            [{},{text:'',border:[false,false,false,false]}]
+          ]},
+          layout:{ hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>BORDER, vLineColor:()=>BORDER }
+        }];
+      })() : [])
     ],
     defaultStyle:{ font:'Roboto', fontSize:10, lineHeight:1.3 },
     images:{ logoFrafer: FRAFER_LOGO, logoMorsa: MORSA_LOGO }
@@ -3771,6 +3796,24 @@ async function generatePDF(download=true) {
     }
     // Versión viene del contenido guardado (pol_politicas.version), no del nro. de generaciones
     const versionNum = parseInt(d.version) || 1;
+
+    // Firma electrónica y QR para incrustar en el PDF
+    if (d.politicaId && (d.status==='en_revision'||d.status==='autorizado'||d.status==='publicado')) {
+      try {
+        let firma = politicaActual?._firma;
+        if (!firma) {
+          const { data: fData } = await sb.from('pol_firmas').select('*')
+            .eq('politica_id', d.politicaId).order('firmado_at',{ascending:false}).limit(1).single();
+          firma = fData;
+        }
+        if (firma) {
+          d.firma = firma;
+          const verUrl = `${location.origin}/verificar.html?c=${firma.codigo_verificacion}`;
+          d.qrDataUrl = await qrToDataUrl(verUrl, 160);
+        }
+      } catch(_e) { /* firma opcional, no bloquear generación */ }
+    }
+
     const dd = _buildPolicyPDFDef(d, versHist);
 
     // Obtener blob para descargar Y subir a Storage
@@ -4036,6 +4079,59 @@ async function _generateWordCore(d, download=true) {
       })]})
     ]});
 
+    // ── Firma electrónica + QR para incrustar ───────────────────────────────
+    let firmaWord = null, qrWordBytes = null;
+    if (d.politicaId && (rawStatus==='en_revision'||rawStatus==='autorizado'||rawStatus==='publicado')) {
+      try {
+        let fw = politicaActual?._firma;
+        if (!fw) {
+          const { data: fwData } = await sb.from('pol_firmas').select('*')
+            .eq('politica_id', d.politicaId).order('firmado_at',{ascending:false}).limit(1).single();
+          fw = fwData;
+        }
+        if (fw) {
+          firmaWord = fw;
+          const verUrl = `${location.origin}/verificar.html?c=${fw.codigo_verificacion}`;
+          const qrB64 = await qrToDataUrl(verUrl, 160);
+          if (qrB64) {
+            const b64Data = qrB64.split(',')[1];
+            const bin = atob(b64Data);
+            const bytes = new Uint8Array(bin.length);
+            for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+            qrWordBytes = bytes;
+          }
+        }
+      } catch(_e) { /* firma opcional */ }
+    }
+
+    // Tabla de firma electrónica (solo si existe)
+    const firmaSection = (firmaWord && qrWordBytes) ? (() => {
+      const fmtDTW = iso => new Date(iso).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      return [
+        new Paragraph({spacing:{before:280,after:0},text:''}),
+        new Table({ width:{size:TW,type:WidthType.DXA}, rows:[
+          new TableRow({children:[new TableCell({columnSpan:2,shading:{type:ShadingType.SOLID,color:MORSA},borders:BN,
+            children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:'  FIRMA ELECTRÓNICA · VERIFICACIÓN DIGITAL',bold:true,color:WHITE,font:'Calibri',size:18})]})]})] }),
+          new TableRow({ children:[
+            new TableCell({ width:{size:Math.round(TW*0.28),type:WidthType.DXA}, borders:BT, verticalAlign:VerticalAlign.TOP,
+              children:[new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:80,after:80},
+                children:[new ImageRun({data:qrWordBytes,transformation:{width:90,height:90},type:'png'})]})] }),
+            new TableCell({ width:{size:Math.round(TW*0.72),type:WidthType.DXA}, borders:BT,
+              children:[
+                new Paragraph({spacing:{before:60,after:30},children:[new TextRun({text:'Código de Verificación',bold:true,color:GRAY,font:'Calibri',size:13})]}),
+                new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:firmaWord.codigo_verificacion||'—',bold:true,color:MORSA,font:'Calibri',size:26})]}),
+                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`Autorizó: ${dk(firmaWord.nombre_autorizante||d.autorizadoPor)}`,font:'Calibri',size:17})]}),
+                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`Fecha y hora: ${fmtDTW(firmaWord.firmado_at)}`,font:'Calibri',size:17})]}),
+                new Paragraph({spacing:{before:0,after:30},children:[new TextRun({text:`IP de firma: ${firmaWord.ip_address||'—'}`,color:GRAY,font:'Calibri',size:17})]}),
+                new Paragraph({spacing:{before:30,after:20},children:[new TextRun({text:'Huella HMAC-SHA256:',bold:true,color:GRAY,font:'Calibri',size:13})]}),
+                new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:(firmaWord.hmac_signature||'').slice(0,64)+'…',color:GRAY,font:'Calibri',size:13})]}),
+                new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:'Escanea el QR o visita la URL de verificación para validar la autenticidad de este documento.',italics:true,color:GRAY,font:'Calibri',size:15})]})
+              ] })
+          ]})
+        ]})
+      ];
+    })() : [];
+
     // ── ARMAR DOCUMENTO ──────────────────────────────────────────────────────
     const doc = new Document({
       creator:'Frafer Suite — Control Documental', title:dk(d.nombre),
@@ -4066,6 +4162,7 @@ async function _generateWordCore(d, download=true) {
           sigTable,
           new Paragraph({spacing:{before:280,after:0},text:''}),
           histTable,
+          ...firmaSection,
         ]
       }]
     });
