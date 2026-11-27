@@ -114,6 +114,20 @@ input,textarea,select{font-family:inherit}
 .badge-publicado{color:var(--green);background:#4a8c6a10;border:1px solid #4a8c6a30}.badge-publicado::before{background:var(--green)}
 .badge-vencido{color:var(--red);background:#b8505010;border:1px solid #b8505030}.badge-vencido::before{background:var(--red)}
 
+/* DIRECTOR — solo lectura: ocultar tabs, acciones, controles de edición */
+body[data-rol="director"] [data-view="entrevista-dg"],
+body[data-rol="director"] [data-view="maestro"],
+body[data-rol="director"] [data-view="usuarios"] { display:none !important }
+body[data-rol="director"] #btn-guardar-pol,
+body[data-rol="director"] #btn-adjuntar { display:none !important }
+body[data-rol="director"] #tab-contenido textarea,
+body[data-rol="director"] #tab-contenido select:not(#pol-autorizado-por) { pointer-events:none; opacity:.65 }
+body[data-rol="director"] #tab-contenido input:not([readonly]) { pointer-events:none; opacity:.65 }
+body[data-rol="director"] #view-admin .admin-table th:last-child,
+body[data-rol="director"] #view-admin .admin-table td:last-child { display:none !important }
+body[data-rol="director"] [onclick*="renderAdminBorrador"] { display:none !important }
+body[data-rol="director"] [onclick*="saveGobiernoCorporativo"] { display:none !important }
+
 /* REPOSITORIO — sticky headers dentro del scroll unificado */
 #view-repositorio .cat-table th{position:sticky;top:0;z-index:2;background:var(--surface)}
 #repo-scroll-top{overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--stone);margin-bottom:-1px}
@@ -794,7 +808,7 @@ input,textarea,select{font-family:inherit}
         <input type="file" id="input-adjuntar" style="display:none" accept=".docx" onchange="handleAdjunto(this)">
         <button id="btn-gen-pdf" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generatePDF()" title="Generar PDF de esta política">PDF</button>
         <button id="btn-gen-word" class="btn" style="display:none;background:transparent;border:1px solid rgba(200,191,181,.5);color:rgba(255,255,255,.6);font-size:11px;padding:6px 11px;font-family:var(--ff-mono);letter-spacing:.05em" onclick="generateWord()" title="Descargar plantilla Word editable">Word</button>
-        <button class="btn btn-primary" onclick="savePolitica()">Guardar</button>
+        <button id="btn-guardar-pol" class="btn btn-primary" onclick="savePolitica()">Guardar</button>
       </div>
     </div>
 
@@ -1503,6 +1517,16 @@ function renderFlow(pol) {
 }
 
 function renderAdvanceActions(pol) {
+  // Director: solo puede Autorizar políticas de su división en en_revision
+  if (_currentUserProfile?.rol === 'director') {
+    const esSuDiv = politicaActual?._dirCodigo === _currentUserProfile?.direccion_codigo;
+    const puedeAut = pol.status === 'en_revision' && esSuDiv;
+    document.getElementById('advance-actions').innerHTML = puedeAut
+      ? `<button class="btn btn-advance" onclick="advanceStatus('${pol.id}','autorizado')">→ Autorizar</button>`
+      : `<span style="font-size:11px;color:var(--fog)">Sin acciones disponibles en este documento.</span>`;
+    return;
+  }
+
   const next = STATUS_NEXT[pol.status];
   let html = '';
   if (next) {
@@ -2326,6 +2350,15 @@ async function loadRepositorio() {
     </table>
     </div>`;
 
+  // Director: pre-filtrar y bloquear su división en el selector
+  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.direccion_codigo) {
+    const myDir = dirs.find(d => d.codigo === _currentUserProfile.direccion_codigo);
+    if (myDir) {
+      const sel = document.getElementById('repo-fdir');
+      if (sel) { sel.value = myDir.id; sel.disabled = true; }
+    }
+  }
+
   renderRepo();
 
   // Sincronizar barra de scroll superior ↔ tabla
@@ -2625,6 +2658,8 @@ function fillPoliticaForm(pol) {
   const area = cat ? areas.find(a => a.id === cat.area_id) : null;
   const dir  = area ? direcciones.find(d => d.id === area.direccion_id) : null;
   if (respDirEl && !respDirEl.value && dir) respDirEl.value = dir.nombre;
+  // Guardar código de dirección para control de permisos de director
+  if (politicaActual) politicaActual._dirCodigo = dir?.codigo || _getDirCodigo(pol.catalogo_id) || null;
   // Cargar usuarios y poblar dropdowns filtrados por división
   _loadUserProfiles().then(() => {
     _fillUserSelects(dir?.codigo || null);
@@ -7283,6 +7318,21 @@ async function registerUser() {
   }
 }
 
+function _getDirCodigo(catalogo_id) {
+  const cat  = catalogo.find(c => c.id === catalogo_id); if (!cat) return null;
+  const act  = actividades.find(a => a.id === cat.actividad_id); if (!act) return null;
+  const dept = departamentos.find(d => d.id === act.departamento_id); if (!dept) return null;
+  const area = areas.find(a => a.id === dept.area_id); if (!area) return null;
+  const dir  = direcciones.find(d => d.id === area.direccion_id);
+  return dir?.codigo || null;
+}
+
+function applyRoleRestrictions() {
+  const rol = _currentUserProfile?.rol;
+  if (!rol) return;
+  document.body.dataset.rol = rol;
+}
+
 async function initApp() {
   const [{ data: dirs }, { data: gcData }] = await Promise.all([
     sb.from('pol_direcciones').select('*').order('orden'),
@@ -7301,6 +7351,7 @@ async function initApp() {
     }
   } catch(_e) {}
 
+  applyRoleRestrictions();
   loadDashboard();
   // Reparar BD en background — no bloquea UI
   _backgroundRepair();
