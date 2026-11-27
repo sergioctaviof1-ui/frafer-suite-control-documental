@@ -1831,6 +1831,15 @@ async function loadCatalogo() {
   window._latestVersDocx = latestVersDocx;
   window._latestVersPDF  = latestVersPDF;
 
+  // Pre-filtrar catálogo para director — solo su división
+  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
+    const myDir = dirs.find(d => d.codigo === _currentUserProfile.division_codigo);
+    if (myDir) {
+      const sel = document.getElementById('cat-fdir');
+      if (sel) { sel.value = myDir.id; sel.disabled = true; }
+    }
+  }
+
   window.renderCatTable = function() {
     const fDir    = document.getElementById('cat-fdir')?.value    || '';
     const fArea   = document.getElementById('cat-farea')?.value   || '';
