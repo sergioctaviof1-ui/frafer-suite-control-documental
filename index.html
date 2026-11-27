@@ -3305,7 +3305,10 @@ function filterPolSearch(q) {
     const area = dept ? areas.find(a=>a.id===dept.area_id) : null;
     const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
     if (!act||!dept||!area||!dir) return;
-    if (_currentUserProfile?.rol==='director' && _currentUserProfile?.division_codigo && dir.codigo!==_currentUserProfile.division_codigo) return;
+    const _divFilter = _currentUserProfile?.division_codigo;
+    const _rolFilter = _currentUserProfile?.rol;
+    const _esSponsorOperativo = _rolFilter==='sponsor' && window._polDirCodes?.includes(_divFilter);
+    if ((_rolFilter==='director' || _esSponsorOperativo) && _divFilter && dir.codigo!==_divFilter) return;
     const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
     const actIdx = deptActs.indexOf(act);
