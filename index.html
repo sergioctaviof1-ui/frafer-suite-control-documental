@@ -3286,6 +3286,7 @@ function filterPolSearch(q) {
     const area = dept ? areas.find(a=>a.id===dept.area_id) : null;
     const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
     if (!act||!dept||!area||!dir) return;
+    if (_currentUserProfile?.rol==='director' && _currentUserProfile?.division_codigo && dir.codigo!==_currentUserProfile.division_codigo) return;
     const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
     const actIdx = deptActs.indexOf(act);
