@@ -2638,10 +2638,15 @@ function fillPoliticaForm(pol) {
     if (elabEl && !elabEl.value && _currentUserProfile?.nombre_completo) {
       elabEl.value = _currentUserProfile.nombre_completo;
     }
+    // Auto-llenar Levantado por desde el usuario logueado si está vacío
+    const levEl = document.getElementById('pol-levantado-por');
+    if (levEl && !levEl.value && _currentUserProfile?.nombre_completo) {
+      levEl.value = _currentUserProfile.nombre_completo;
+    }
     // Spans de solo lectura en TRACKING
     const levCtrl = document.getElementById('pol-levantado-por-ctrl');
     const revCtrl = document.getElementById('pol-revisado-por-ctrl');
-    if (levCtrl) levCtrl.textContent = pol.levantado_por || '—';
+    if (levCtrl) levCtrl.textContent = pol.levantado_por || levEl?.value || '—';
     if (revCtrl) revCtrl.textContent = pol.revisado_por  || '—';
   });
   // num_reglas
