@@ -2095,7 +2095,7 @@ async function generarLinkInvitacion(btn, email, nombre) {
     // Abrir WhatsApp con mensaje pre-redactado
     const puesto = btn.dataset.puesto || '';
     const wa = btn.dataset.wa || '';
-    const mensaje = `${nombre}, buen día.\n\nTe informo que hemos habilitado tu acceso al Sistema de Control Documental de Grupo Morsa, desarrollado por Frafer Consulting.\n\nPuedes ingresar a través del siguiente link:\n${json.link}\n\nEl link tiene vigencia de 24 horas. Al abrirlo podrás establecer tu contraseña y acceder de inmediato.\n\nQuedo al pendiente para cualquier duda.`;
+    const mensaje = `${nombre}, buen día.\n\nTe informo que hemos habilitado tu acceso al Sistema de Control Documental de Grupo Morsa, desarrollado por Frafer Consulting.\n\nTus datos de acceso son:\n• Usuario: ${email}\n• Contraseña: la establecerás al abrir el link\n\nAccede a través del siguiente link:\n${json.link}\n\nEl link tiene vigencia de 24 horas. Al abrirlo podrás establecer tu contraseña e ingresar de inmediato. Para futuros accesos utiliza tu correo y la contraseña que registres.\n\nQuedo al pendiente para cualquier duda.`;
     const waNum = wa.replace(/\D/g,'');
     const waUrl = `https://wa.me/52${waNum}?text=${encodeURIComponent(mensaje)}`;
     window.open(waUrl, '_blank');
