@@ -2049,6 +2049,8 @@ async function loadUsuarios() {
             Editar
           </button>
           <button onclick="generarLinkInvitacion(this,'${u.email}','${u.nombre_completo}')"
+            data-wa="${u.whatsapp || ''}"
+            data-puesto="${u.puesto || ''}"
             style="background:var(--navy);color:var(--parchment);border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
             Enviar invitación
           </button>
@@ -2090,8 +2092,13 @@ async function generarLinkInvitacion(btn, email, nombre) {
     if (json.error) { alert('Error: ' + json.error); return; }
     // Mostrar link para copiar y enviar manualmente
     const copied = navigator.clipboard ? await navigator.clipboard.writeText(json.link).then(()=>true).catch(()=>false) : false;
-    // Siempre mostrar el link visible para validar antes de enviar
-    prompt(`Link de acceso para ${nombre} (${email})\nCopia y envía por WhatsApp — expira en 24 horas:`, json.link);
+    // Abrir WhatsApp con mensaje pre-redactado
+    const puesto = btn.dataset.puesto || '';
+    const wa = btn.dataset.wa || '';
+    const mensaje = `${nombre}, buen día.\n\nTe informo que hemos habilitado tu acceso al Sistema de Control Documental de Grupo Morsa, desarrollado por Frafer Consulting.\n\nPuedes ingresar a través del siguiente link:\n${json.link}\n\nEl link tiene vigencia de 24 horas. Al abrirlo podrás establecer tu contraseña y acceder de inmediato.\n\nQuedo al pendiente para cualquier duda.`;
+    const waNum = wa.replace(/\D/g,'');
+    const waUrl = `https://wa.me/52${waNum}?text=${encodeURIComponent(mensaje)}`;
+    window.open(waUrl, '_blank');
   } catch(e) {
     alert('Error al conectar con Supabase. Intenta de nuevo.');
   } finally {
