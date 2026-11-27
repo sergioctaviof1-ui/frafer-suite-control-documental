@@ -1850,7 +1850,7 @@ async function loadCatalogo() {
   window._latestVersPDF  = latestVersPDF;
 
   // Pre-filtrar catálogo para director — solo su división
-  if ((_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') && _currentUserProfile?.division_codigo) {
+  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
     const myDir = dirs.find(d => d.codigo === _currentUserProfile.division_codigo);
     if (myDir) {
       const sel = document.getElementById('cat-fdir');
@@ -2379,7 +2379,7 @@ async function loadRepositorio() {
     </div>`;
 
   // Director: pre-filtrar y bloquear su división en el selector
-  if ((_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') && _currentUserProfile?.division_codigo) {
+  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
     const myDir = dirs.find(d => d.codigo === _currentUserProfile.division_codigo);
     if (myDir) {
       const sel = document.getElementById('repo-fdir');
@@ -3304,7 +3304,7 @@ function filterPolSearch(q) {
     const area = dept ? areas.find(a=>a.id===dept.area_id) : null;
     const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
     if (!act||!dept||!area||!dir) return;
-    if ((_currentUserProfile?.rol==='director' || _currentUserProfile?.rol==='sponsor') && _currentUserProfile?.division_codigo && direcciones.some(d=>d.codigo===_currentUserProfile.division_codigo) && dir.codigo!==_currentUserProfile.division_codigo) return;
+    if (_currentUserProfile?.rol==='director' && _currentUserProfile?.division_codigo && dir.codigo!==_currentUserProfile.division_codigo) return;
     const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
     const actIdx = deptActs.indexOf(act);
