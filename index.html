@@ -2660,7 +2660,7 @@ function fillPoliticaForm(pol) {
   const dir  = area ? direcciones.find(d => d.id === area.direccion_id) : null;
   if (respDirEl && !respDirEl.value && dir) respDirEl.value = dir.nombre;
   // Guardar código de dirección para control de permisos de director
-  if (politicaActual) politicaActual._dirCodigo = dir?.codigo || _getDirCodigo(pol.catalogo_id) || null;
+  if (politicaActual) politicaActual._dirCodigo = pol.dir_codigo || dir?.codigo || _getDirCodigo(pol.catalogo_id) || null;
   // Cargar usuarios y poblar dropdowns filtrados por división
   _loadUserProfiles().then(() => {
     _fillUserSelects(dir?.codigo || null);
