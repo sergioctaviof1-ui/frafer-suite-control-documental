@@ -114,20 +114,33 @@ input,textarea,select{font-family:inherit}
 .badge-publicado{color:var(--green);background:#4a8c6a10;border:1px solid #4a8c6a30}.badge-publicado::before{background:var(--green)}
 .badge-vencido{color:var(--red);background:#b8505010;border:1px solid #b8505030}.badge-vencido::before{background:var(--red)}
 
-/* DIRECTOR — solo lectura: ocultar tabs, acciones, controles de edición */
+/* DIRECTOR / SPONSOR — solo lectura: ocultar tabs, acciones, controles de edición */
 body[data-rol="director"] [data-view="entrevista-dg"],
 body[data-rol="director"] [data-view="maestro"],
-body[data-rol="director"] [data-view="usuarios"] { display:none !important }
+body[data-rol="director"] [data-view="usuarios"],
+body[data-rol="sponsor"]  [data-view="entrevista-dg"],
+body[data-rol="sponsor"]  [data-view="maestro"],
+body[data-rol="sponsor"]  [data-view="usuarios"] { display:none !important }
 body[data-rol="director"] #btn-guardar-pol,
-body[data-rol="director"] #btn-adjuntar { display:none !important }
+body[data-rol="director"] #btn-adjuntar,
+body[data-rol="sponsor"]  #btn-guardar-pol,
+body[data-rol="sponsor"]  #btn-adjuntar { display:none !important }
 body[data-rol="director"] #tab-contenido textarea,
-body[data-rol="director"] #tab-contenido select:not(#pol-autorizado-por) { pointer-events:none; opacity:.65 }
-body[data-rol="director"] #tab-contenido input:not([readonly]) { pointer-events:none; opacity:.65 }
+body[data-rol="director"] #tab-contenido select:not(#pol-autorizado-por),
+body[data-rol="sponsor"]  #tab-contenido textarea,
+body[data-rol="sponsor"]  #tab-contenido select:not(#pol-autorizado-por) { pointer-events:none; opacity:.65 }
+body[data-rol="director"] #tab-contenido input:not([readonly]),
+body[data-rol="sponsor"]  #tab-contenido input:not([readonly]) { pointer-events:none; opacity:.65 }
 body[data-rol="director"] #view-admin .admin-table th:last-child,
-body[data-rol="director"] #view-admin .admin-table td:last-child { display:none !important }
-body[data-rol="director"] [onclick*="renderAdminBorrador"] { display:none !important }
+body[data-rol="director"] #view-admin .admin-table td:last-child,
+body[data-rol="sponsor"]  #view-admin .admin-table th:last-child,
+body[data-rol="sponsor"]  #view-admin .admin-table td:last-child { display:none !important }
+body[data-rol="director"] [onclick*="renderAdminBorrador"],
+body[data-rol="sponsor"]  [onclick*="renderAdminBorrador"] { display:none !important }
 body[data-rol="director"] [onclick*="saveGobiernoCorporativo"],
-body[data-rol="director"] [onclick*="nuevaVersionGC"] { display:none !important }
+body[data-rol="director"] [onclick*="nuevaVersionGC"],
+body[data-rol="sponsor"]  [onclick*="saveGobiernoCorporativo"],
+body[data-rol="sponsor"]  [onclick*="nuevaVersionGC"] { display:none !important }
 
 /* REPOSITORIO — sticky headers dentro del scroll unificado */
 #view-repositorio .cat-table th{position:sticky;top:0;z-index:2;background:var(--surface)}
@@ -1519,8 +1532,12 @@ function renderFlow(pol) {
 
 function renderAdvanceActions(pol) {
   // Director: solo puede Autorizar políticas de su división en en_revision
-  if (_currentUserProfile?.rol === 'director') {
-    const esSuDiv = politicaActual?._dirCodigo === _currentUserProfile?.division_codigo;
+  if (_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') {
+    const divCodigo = _currentUserProfile?.division_codigo;
+    const esSuDiv = _currentUserProfile.rol === 'director'
+      ? politicaActual?._dirCodigo === divCodigo
+      // sponsor: si su división no es un código de dirección operativa, puede autorizar todo
+      : !divCodigo || politicaActual?._dirCodigo === divCodigo || !window._polDirCodes?.includes(divCodigo);
     const puedeAut = pol.status === 'en_revision' && esSuDiv;
     document.getElementById('advance-actions').innerHTML = puedeAut
       ? `<button class="btn btn-advance" onclick="advanceStatus('${pol.id}','autorizado')">→ Autorizar</button>`
@@ -1753,6 +1770,7 @@ async function loadCatalogo() {
   ]);
   direcciones = dirsData||[]; areas = areasData||[];
   departamentos = deptos||[]; actividades = acts||[]; catalogo = cats||[];
+  window._polDirCodes = direcciones.map(d => d.codigo);
 
   const latestPols = {};
   (pols||[]).forEach(p => {
@@ -1832,7 +1850,7 @@ async function loadCatalogo() {
   window._latestVersPDF  = latestVersPDF;
 
   // Pre-filtrar catálogo para director — solo su división
-  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
+  if ((_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') && _currentUserProfile?.division_codigo) {
     const myDir = dirs.find(d => d.codigo === _currentUserProfile.division_codigo);
     if (myDir) {
       const sel = document.getElementById('cat-fdir');
@@ -2361,8 +2379,8 @@ async function loadRepositorio() {
     </div>`;
 
   // Director: pre-filtrar y bloquear su división en el selector
-  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
-    const myDir = dirs.find(d => d.codigo === _currentUserProfile.direccion_codigo);
+  if ((_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') && _currentUserProfile?.division_codigo) {
+    const myDir = dirs.find(d => d.codigo === _currentUserProfile.division_codigo);
     if (myDir) {
       const sel = document.getElementById('repo-fdir');
       if (sel) { sel.value = myDir.id; sel.disabled = true; }
@@ -3286,7 +3304,7 @@ function filterPolSearch(q) {
     const area = dept ? areas.find(a=>a.id===dept.area_id) : null;
     const dir  = area ? direcciones.find(d=>d.id===area.direccion_id) : null;
     if (!act||!dept||!area||!dir) return;
-    if (_currentUserProfile?.rol==='director' && _currentUserProfile?.division_codigo && dir.codigo!==_currentUserProfile.division_codigo) return;
+    if ((_currentUserProfile?.rol==='director' || _currentUserProfile?.rol==='sponsor') && _currentUserProfile?.division_codigo && direcciones.some(d=>d.codigo===_currentUserProfile.division_codigo) && dir.codigo!==_currentUserProfile.division_codigo) return;
     const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
     const actIdx = deptActs.indexOf(act);
@@ -6394,8 +6412,8 @@ async function loadGobiernoCorporativo() {
 
   // Botón Autorizar solo en borrador y solo para admin/consultor (no director)
   const btnAutorizar = document.getElementById('btn-gc-autorizar');
-  const esDirector = _currentUserProfile?.rol === 'director';
-  if (btnAutorizar) btnAutorizar.style.display = (!esDirector && d.status === 'borrador') ? 'inline-block' : 'none';
+  const esDirectorOSponsor = _currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor';
+  if (btnAutorizar) btnAutorizar.style.display = (!esDirectorOSponsor && d.status === 'borrador') ? 'inline-block' : 'none';
 
   // Historial
   const hist = document.getElementById('gc-historial');
