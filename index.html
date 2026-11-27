@@ -126,7 +126,8 @@ body[data-rol="director"] #tab-contenido input:not([readonly]) { pointer-events:
 body[data-rol="director"] #view-admin .admin-table th:last-child,
 body[data-rol="director"] #view-admin .admin-table td:last-child { display:none !important }
 body[data-rol="director"] [onclick*="renderAdminBorrador"] { display:none !important }
-body[data-rol="director"] [onclick*="saveGobiernoCorporativo"] { display:none !important }
+body[data-rol="director"] [onclick*="saveGobiernoCorporativo"],
+body[data-rol="director"] [onclick*="nuevaVersionGC"] { display:none !important }
 
 /* REPOSITORIO — sticky headers dentro del scroll unificado */
 #view-repositorio .cat-table th{position:sticky;top:0;z-index:2;background:var(--surface)}
@@ -1519,7 +1520,7 @@ function renderFlow(pol) {
 function renderAdvanceActions(pol) {
   // Director: solo puede Autorizar políticas de su división en en_revision
   if (_currentUserProfile?.rol === 'director') {
-    const esSuDiv = politicaActual?._dirCodigo === _currentUserProfile?.direccion_codigo;
+    const esSuDiv = politicaActual?._dirCodigo === _currentUserProfile?.division_codigo;
     const puedeAut = pol.status === 'en_revision' && esSuDiv;
     document.getElementById('advance-actions').innerHTML = puedeAut
       ? `<button class="btn btn-advance" onclick="advanceStatus('${pol.id}','autorizado')">→ Autorizar</button>`
@@ -2351,7 +2352,7 @@ async function loadRepositorio() {
     </div>`;
 
   // Director: pre-filtrar y bloquear su división en el selector
-  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.direccion_codigo) {
+  if (_currentUserProfile?.rol === 'director' && _currentUserProfile?.division_codigo) {
     const myDir = dirs.find(d => d.codigo === _currentUserProfile.direccion_codigo);
     if (myDir) {
       const sel = document.getElementById('repo-fdir');
@@ -6381,9 +6382,10 @@ async function loadGobiernoCorporativo() {
     ? `Autorizado por: ${d.autorizado_por} · ${new Date(d.firmado_dg_at).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}`
     : '';
 
-  // Botón Autorizar solo en borrador
+  // Botón Autorizar solo en borrador y solo para admin/consultor (no director)
   const btnAutorizar = document.getElementById('btn-gc-autorizar');
-  if (btnAutorizar) btnAutorizar.style.display = d.status === 'borrador' ? 'inline-block' : 'none';
+  const esDirector = _currentUserProfile?.rol === 'director';
+  if (btnAutorizar) btnAutorizar.style.display = (!esDirector && d.status === 'borrador') ? 'inline-block' : 'none';
 
   // Historial
   const hist = document.getElementById('gc-historial');
