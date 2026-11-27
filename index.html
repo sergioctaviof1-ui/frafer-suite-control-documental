@@ -893,6 +893,7 @@ input,textarea,select{font-family:inherit}
           <div class="form-grid">
             <div class="form-group"><label>Dirección Responsable</label><input id="pol-resp-dir" placeholder="Ej: Dirección de Recursos Humanos"></div>
             <div class="form-group"><label>Elaborado por</label><select id="pol-resp-elab" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
+            <div class="form-group"><label>Levantado por</label><select id="pol-levantado-por" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
             <div class="form-group"><label>Revisado por</label><select id="pol-revisado-por" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
             <div class="form-group"><label>Autorizó</label><select id="pol-autorizado-por" style="width:100%;padding:7px 10px;border:1px solid var(--stone);border-radius:7px;font-size:13px;background:var(--surface);color:var(--ink)"><option value="">— Seleccionar —</option></select></div>
             <div class="form-group full"><label>Colaboradores</label><input id="pol-colab" placeholder="Otras áreas o personas involucradas"></div>
@@ -2560,6 +2561,7 @@ function _fillUserSelects(divisionCodigo) {
     ).join('');
   const selectConfig = {
     'pol-resp-elab':      generales,
+    'pol-levantado-por':  generales,
     'pol-revisado-por':   generales,
     'pol-autorizado-por': autorizantes
   };
@@ -2611,11 +2613,12 @@ function fillPoliticaForm(pol) {
   _loadUserProfiles().then(() => {
     _fillUserSelects(dir?.codigo || null);
     // Restaurar valores guardados en los selects
-    ['pol-resp-elab','pol-revisado-por','pol-autorizado-por'].forEach(id => {
+    ['pol-resp-elab','pol-levantado-por','pol-revisado-por','pol-autorizado-por'].forEach(id => {
       const el = document.getElementById(id);
       if (!el || el.tagName !== 'SELECT') return;
       const keyMap = {
         'pol-resp-elab':      pol.responsable_elaboracion,
+        'pol-levantado-por':  pol.levantado_por,
         'pol-revisado-por':   pol.revisado_por,
         'pol-autorizado-por': pol.autorizado_por
       };
@@ -2720,7 +2723,7 @@ async function savePolitica() {
     vigencia_meses:           parseInt(document.getElementById('pol-vigencia-meses').value)||null,
     fecha_inicio_vigencia:    document.getElementById('pol-fecha-inicio').value||null,
     fecha_vencimiento:        document.getElementById('pol-fecha-venc').value||null,
-    levantado_por:            politicaActual?.levantado_por || '',
+    levantado_por:            document.getElementById('pol-levantado-por')?.value || politicaActual?.levantado_por || '',
     revisado_por:             document.getElementById('pol-revisado-por').value,
     autorizado_por:           document.getElementById('pol-autorizado-por').value,
   };
