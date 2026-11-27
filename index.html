@@ -2091,9 +2091,9 @@ async function generarLinkInvitacion(btn, email, nombre) {
     // Mostrar link para copiar y enviar manualmente
     const copied = navigator.clipboard ? await navigator.clipboard.writeText(json.link).then(()=>true).catch(()=>false) : false;
     if (copied) {
-      alert(`✓ Link de acceso para ${nombre} copiado al portapapeles.\n\nEnvíaselo por WhatsApp o correo.\nExpira en 24 horas.`);
+      alert(`✓ Link de acceso para ${nombre} (${email})\nCopiado al portapapeles.\n\nEnvíaselo por WhatsApp o correo.\nExpira en 24 horas.`);
     } else {
-      prompt(`Link de acceso para ${nombre} (copia y envía por WhatsApp):`, json.link);
+      prompt(`Link de acceso para ${nombre} (${email})\nCopia y envía por WhatsApp:`, json.link);
     }
   } catch(e) {
     alert('Error al conectar con Supabase. Intenta de nuevo.');
