@@ -7331,6 +7331,18 @@ function applyRoleRestrictions() {
   const rol = _currentUserProfile?.rol;
   if (!rol) return;
   document.body.dataset.rol = rol;
+  // Mostrar usuario actual en topbar
+  const tbu = document.getElementById('topbar-user');
+  if (tbu) {
+    const nombre = _currentUserProfile.nombre_completo || _currentUserProfile.email || '';
+    const rolLabel = { admin:'Admin', consultor:'Consultor', director:'Director', viewer:'Viewer', sponsor:'Sponsor' }[rol] || rol;
+    tbu.innerHTML = `<span style="color:rgba(255,255,255,.35)">|</span> <span style="color:rgba(255,255,255,.65)">${nombre}</span> <span style="color:var(--ember-glow);font-size:9px">${rolLabel}</span> <button onclick="signOut()" style="margin-left:8px;background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.45);border-radius:4px;padding:2px 7px;font-size:9px;cursor:pointer;font-family:var(--ff-mono)" title="Cerrar sesión">Salir</button>`;
+  }
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  location.reload();
 }
 
 async function initApp() {
