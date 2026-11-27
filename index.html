@@ -2078,7 +2078,7 @@ function cerrarFormUsuario() {
 
 async function generarLinkInvitacion(btn, email, nombre) {
   const orig = btn.textContent;
-  btn.textContent = 'Enviando...';
+  btn.textContent = 'Generando...';
   btn.disabled = true;
   try {
     const res = await fetch(`${SB_URL}/functions/v1/generate-invite-link`, {
@@ -2088,7 +2088,13 @@ async function generarLinkInvitacion(btn, email, nombre) {
     });
     const json = await res.json();
     if (json.error) { alert('Error: ' + json.error); return; }
-    alert(`✓ Invitación enviada a ${nombre}\n(${email})\n\nEl usuario recibirá un correo con instrucciones para acceder. El link expira en 24 horas.`);
+    // Mostrar link para copiar y enviar manualmente
+    const copied = navigator.clipboard ? await navigator.clipboard.writeText(json.link).then(()=>true).catch(()=>false) : false;
+    if (copied) {
+      alert(`✓ Link de acceso para ${nombre} copiado al portapapeles.\n\nEnvíaselo por WhatsApp o correo.\nExpira en 24 horas.`);
+    } else {
+      prompt(`Link de acceso para ${nombre} (copia y envía por WhatsApp):`, json.link);
+    }
   } catch(e) {
     alert('Error al conectar con Supabase. Intenta de nuevo.');
   } finally {
