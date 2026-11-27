@@ -2732,6 +2732,9 @@ async function savePolitica() {
     payload.catalogo_id = politicaActual.catalogo_id;
     payload.version     = 1;
     if (!payload.fecha_inicio_vigencia) payload.fecha_inicio_vigencia = hoy;
+    if (!payload.levantado_por && _currentUserProfile?.nombre_completo) {
+      payload.levantado_por = _currentUserProfile.nombre_completo;
+    }
     const { data: newPol, error } = await sb.from('pol_politicas').insert(payload).select().single();
     if (!error && newPol) {
       politicaActual = newPol;
@@ -4746,11 +4749,19 @@ async function handleAdjunto(input) {
     contentPayload[field] = finalVal;
   }
 
+  const levantadoPor = politicaActual.levantado_por
+    || _currentUserProfile?.nombre_completo
+    || '';
+  const levantadoPayload = {};
+  if (levantadoPor && !politicaActual.levantado_por) levantadoPayload.levantado_por = levantadoPor;
+  if (!politicaActual.levantamiento_at) levantadoPayload.levantamiento_at = new Date().toISOString();
+
   const { error: dbErr } = await sb.from('pol_politicas').update({
     documento_adjunto_url: storagePath,
     documento_adjunto_nombre: file.name,
     version: nextVer,
-    ...contentPayload
+    ...contentPayload,
+    ...levantadoPayload
   }).eq('id', politicaActual.id);
   if (dbErr) {
     sEl.classList.remove('show');
@@ -4770,7 +4781,8 @@ async function handleAdjunto(input) {
     documento_adjunto_url: signedUrl || storagePath,
     documento_adjunto_nombre: file.name,
     version: nextVer,
-    ...contentPayload
+    ...contentPayload,
+    ...levantadoPayload
   });
   renderDocAdjunto();
   if (Object.keys(contentPayload).length) fillPoliticaForm(politicaActual);
