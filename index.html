@@ -2643,11 +2643,14 @@ function fillPoliticaForm(pol) {
     if (levEl && !levEl.value && _currentUserProfile?.nombre_completo) {
       levEl.value = _currentUserProfile.nombre_completo;
     }
-    // Spans de solo lectura en TRACKING
-    const levCtrl = document.getElementById('pol-levantado-por-ctrl');
-    const revCtrl = document.getElementById('pol-revisado-por-ctrl');
-    if (levCtrl) levCtrl.textContent = pol.levantado_por || levEl?.value || '—';
-    if (revCtrl) revCtrl.textContent = pol.revisado_por  || '—';
+    // Spans de solo lectura en TRACKING — fallback al select si BD está vacío
+    const levCtrl  = document.getElementById('pol-levantado-por-ctrl');
+    const revCtrl  = document.getElementById('pol-revisado-por-ctrl');
+    const autoCtrl = document.getElementById('pol-autorizado-ctrl');
+    const revEl    = document.getElementById('pol-revisado-por');
+    if (levCtrl)  levCtrl.textContent  = pol.levantado_por  || levEl?.value  || '—';
+    if (revCtrl)  revCtrl.textContent  = pol.revisado_por   || revEl?.value  || '—';
+    if (autoCtrl) autoCtrl.textContent = pol.autorizado_por || autoEl?.value || '—';
   });
   // num_reglas
   const nr = document.getElementById('pol-num-reglas');
@@ -2660,7 +2663,7 @@ function fillPoliticaForm(pol) {
   // Tabla Control de Documento (displays)
   const fmtDT = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}) : '—';
   const setDisp = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-  setDisp('pol-autorizado-ctrl',  pol.autorizado_por     || '—');
+  // pol-autorizado-ctrl se actualiza dentro de _loadUserProfiles().then() con fallback al select
   // Firma electrónica — cargar QR desde en_revision en adelante
   if (pol.id && (pol.status === 'en_revision' || pol.status === 'autorizado' || pol.status === 'publicado')) {
     loadFirmaQR(pol.id);
