@@ -3307,7 +3307,7 @@ function filterPolSearch(q) {
     if (!act||!dept||!area||!dir) return;
     const _divFilter = _currentUserProfile?.division_codigo;
     const _rolFilter = _currentUserProfile?.rol;
-    const _esSponsorOperativo = _rolFilter==='sponsor' && window._polDirCodes?.includes(_divFilter);
+    const _esSponsorOperativo = _rolFilter==='sponsor' && direcciones.some(d=>d.codigo===_divFilter);
     if ((_rolFilter==='director' || _esSponsorOperativo) && _divFilter && dir.codigo!==_divFilter) return;
     const deptActs = actividades.filter(a=>a.departamento_id===dept.id && a.activa)
       .sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
