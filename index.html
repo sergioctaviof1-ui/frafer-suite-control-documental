@@ -1533,10 +1533,12 @@ function renderFlow(pol) {
 function renderAdvanceActions(pol) {
   // Director: solo puede Autorizar políticas de su división en en_revision
   if (_currentUserProfile?.rol === 'director' || _currentUserProfile?.rol === 'sponsor') {
-    const isSponsor = _currentUserProfile.rol === 'sponsor';
-    // Sponsor: puede autorizar cualquier política en revisión (sin filtro de división)
-    // Director: solo puede autorizar políticas de su propia dirección
-    const esSuDiv = isSponsor || politicaActual?._dirCodigo === _currentUserProfile?.division_codigo;
+    const divCodigo = _currentUserProfile?.division_codigo;
+    // Sponsor sin división operativa (ej. Consejo de Admin): autoriza todo
+    // Sponsor con división operativa (ej. DRH): solo autoriza su división
+    // Director: solo autoriza su división
+    const esSuDiv = (_currentUserProfile.rol === 'sponsor' && (!divCodigo || !window._polDirCodes?.includes(divCodigo)))
+      || politicaActual?._dirCodigo === divCodigo;
     const puedeAut = pol.status === 'en_revision' && esSuDiv;
     document.getElementById('advance-actions').innerHTML = puedeAut
       ? `<button class="btn btn-advance" onclick="advanceStatus('${pol.id}','autorizado')">→ Autorizar</button>`
