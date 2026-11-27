@@ -114,8 +114,11 @@ input,textarea,select{font-family:inherit}
 .badge-publicado{color:var(--green);background:#4a8c6a10;border:1px solid #4a8c6a30}.badge-publicado::before{background:var(--green)}
 .badge-vencido{color:var(--red);background:#b8505010;border:1px solid #b8505030}.badge-vencido::before{background:var(--red)}
 
-/* REPOSITORIO — override: thead no-sticky dentro de overflow-x:auto */
-#view-repositorio .cat-table th{position:relative;top:auto;z-index:1}
+/* REPOSITORIO — sticky headers dentro del scroll unificado */
+#view-repositorio .cat-table th{position:sticky;top:0;z-index:2;background:var(--surface)}
+#repo-scroll-top{overflow-x:auto;overflow-y:hidden;border-bottom:1px solid var(--stone);margin-bottom:-1px}
+#repo-scroll-top-inner{height:1px}
+#repo-scroll-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px)}
 
 /* CATÁLOGO — TABLA FLAT */
 .cat-summary{display:flex;gap:32px;padding:4px 0 20px;flex-wrap:wrap;border-bottom:1px solid var(--stone);margin-bottom:16px}
@@ -2303,26 +2306,39 @@ async function loadRepositorio() {
       <input id="repo-search" class="cat-search" placeholder="Buscar folio, política, área, elaboró…" oninput="renderRepo()">
       <span id="repo-count" style="font-size:11px;color:var(--fog);white-space:nowrap;margin-left:auto"></span>
     </div>
-    <div style="overflow-x:auto">
-    <table class="cat-table" style="min-width:1100px">
+    <div id="repo-scroll-top"><div id="repo-scroll-top-inner"></div></div>
+    <div id="repo-scroll-wrap">
+    <table class="cat-table" id="repo-table" style="min-width:1200px">
       <thead><tr>
         <th style="width:36px;text-align:right">#</th>
-        <th>Dirección</th>
-        <th>Área</th>
-        <th>Departamento</th>
-        <th>Documento</th>
-        <th style="text-align:center">Tipo</th>
-        <th style="text-align:center">Estatus</th>
-        <th style="text-align:center">📝 Word</th>
-        <th style="text-align:center">📄 PDF</th>
-        <th style="white-space:nowrap">Últ. Versión</th>
-        <th style="white-space:nowrap">Vigencia</th>
+        <th style="min-width:160px">Dirección</th>
+        <th style="min-width:180px">Área</th>
+        <th style="min-width:140px">Departamento</th>
+        <th style="min-width:260px">Documento</th>
+        <th style="text-align:center;min-width:80px">Tipo</th>
+        <th style="text-align:center;min-width:100px">Estatus</th>
+        <th style="text-align:center;min-width:70px">📝 Word</th>
+        <th style="text-align:center;min-width:70px">📄 PDF</th>
+        <th style="white-space:nowrap;min-width:110px">Últ. Versión</th>
+        <th style="white-space:nowrap;min-width:110px">Vigencia</th>
       </tr></thead>
       <tbody id="repo-tbody"></tbody>
     </table>
     </div>`;
 
   renderRepo();
+
+  // Sincronizar barra de scroll superior ↔ tabla
+  const repoWrap = document.getElementById('repo-scroll-wrap');
+  const repoTop  = document.getElementById('repo-scroll-top');
+  const repoTopInner = document.getElementById('repo-scroll-top-inner');
+  function syncTopBar() { repoTopInner.style.width = repoWrap.scrollWidth + 'px'; }
+  syncTopBar();
+  repoWrap.addEventListener('scroll', () => { repoTop.scrollLeft = repoWrap.scrollLeft; });
+  repoTop.addEventListener('scroll',  () => { repoWrap.scrollLeft = repoTop.scrollLeft; });
+  // Re-sync después de cada renderRepo (el ancho puede cambiar con los filtros)
+  const _origRenderRepo = window.renderRepo;
+  window.renderRepo = function() { _origRenderRepo(); syncTopBar(); };
 }
 
 // ── CATÁLOGO MAESTRO ──────────────────────────────────────────────────────────
